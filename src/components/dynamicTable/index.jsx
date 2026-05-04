@@ -1,0 +1,1919 @@
+import {
+  Box,
+  Chip,
+  IconButton,
+  Stack,
+  Avatar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  Typography,
+  MenuItem,
+  Menu,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
+} from "@mui/material";
+import React, { useMemo, useState } from "react";
+
+import TableSkeleton from "../skeleton/TableSkeleton";
+import { MoreVerticalIcon } from "lucide-react";
+import { Link } from "lucide-react";
+import CustomButton from "../customButton";
+import download from "../../assets/icons/download.svg";
+import viewIcon from "../../assets/icons/view.svg";
+import Delete from "../../assets/icons/delete-icon-inactive.svg";
+import Edit from "../../assets/icons/editIcon.svg"
+import ProgressBar from "../progressBar";
+
+const STATUS_CONFIG = {
+  Active:        { bg: "#D1FAE5", color: "#059669" },
+  Completed:     { bg: "#D1FAE5", color: "#059669" },   
+  Approved:      { bg: "#D1FAE5", color: "#059669" },
+  Planning:      { bg: "#E9D5FF", color: "#7C3AED" },
+  Pending:       { bg: "#FEF3C7", color: "#D97706" },
+  "In Progress": { bg: "#FEF3C7", color: "#D97706" },   
+  Development:   { bg: "#DBEAFE", color: "#2563EB" },
+  Testing:       { bg: "#E0E7FF", color: "#4F46E5" },
+  Review:        { bg: "#FEF9C3", color: "#CA8A04" },
+  Inactive:      { bg: "#FECACA", color: "#DC2626" },
+  Rejected:      { bg: "#FECACA", color: "#DC2626" },
+  Overdue:       { bg: "#FECACA", color: "#DC2626" },
+};
+
+// ── Priority color map ────────────────────────────────────────────────────
+const PRIORITY_CONFIG = {
+  High:   { bg: "#FECACA", color: "#DC2626" },   // red   
+  Medium: { bg: "#FEF3C7", color: "#D97706" },   // amber
+  Low:    { bg: "#DBEAFE", color: "#2563EB" },   // blue
+};
+
+ const ATTENDANCE_STATUS_CONFIG = {
+   Present: { bg: "#04C3731A", color: "#04C373" },
+   Absent:  { bg: "#FF00001A", color: "#FF0000" },
+   Late:    { bg: "#F973161A", color: "#F97316" },
+   Leave:   { bg: "#2B6EFF1A", color: "#2B6EFF" },
+   Holiday: { bg: "#AA24931A", color: "#AA2493" },
+   Weekend: { bg: "#F5F5F5",   color: "#9CA3AF" },
+ };
+
+ 
+
+export default function PaginatedTable({
+  tableWidth,
+  tableHeader,
+  tableData,
+  displayRows,
+  isLoading,
+  showPagination = true,
+  hidepagination = false,
+  headerBgColor = "primary.lightGray",
+  serverSidePagination = false,
+  totalCount = 0,
+  page: externalPage,
+  rowsPerPage: externalRowsPerPage,
+  onPageChange,
+  onRowsPerPageChange,
+  getRowId = (row) => row.id || row._id || JSON.stringify(row),
+  customRenderCell,
+  viewIcon,
+  editIcon: EditIcon,
+  onEditClick,
+  onViewClick,
+  downloadIcon,
+  onDownloadClick,
+  onDeleteClick,
+  deleteIcon: DeleteIcon,
+  menuIcon,
+  menuOptions,
+  onMenuAction,
+  selectedRows = [],
+  onSelectRow,
+  onSelectAll,
+}) {
+  const [internalPage, setInternalPage] = useState(0);
+  const [internalRowsPerPage, setInternalRowsPerPage] = useState(10);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedRow, setSelectedRow] = useState(null);
+  const openMenu = Boolean(anchorEl);
+
+  const page = serverSidePagination ? externalPage ?? 0 : internalPage;
+  const rowsPerPage = serverSidePagination ? externalRowsPerPage ?? 10 : internalRowsPerPage;
+
+  const columnKeys = useMemo(
+    () => (Array.isArray(displayRows) ? displayRows : []),
+    [displayRows]
+  );
+
+  const handleChangePage = (event, newPage) => {
+    serverSidePagination && onPageChange
+      ? onPageChange(event, newPage)
+      : setInternalPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    const value = parseInt(event.target.value, 10);
+    serverSidePagination && onRowsPerPageChange
+      ? onRowsPerPageChange(event, value)
+      : (setInternalRowsPerPage(value), setInternalPage(0));
+  };
+
+  const handleMenuClick = (event, row) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedRow(row);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedRow(null);
+  };
+
+  const handleMenuItemClick = (action) => {
+    if (onMenuAction && selectedRow) onMenuAction(action, selectedRow);
+    handleMenuClose();
+  };
+
+  const renderCell = (row, val, index) => {
+    if (customRenderCell) {
+      const custom = customRenderCell(row, val, index);
+      if (custom) return custom;
+    }
+
+    switch (val) {
+
+      // ── Employee avatar + name + role ─────────────────────────────────────
+      case "employee_details":
+        return (
+          <TableCell key={val}>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Avatar src={row.image} alt={row.name || row.employee} sx={{ width: 40, height: 40 }} />
+              <Stack>
+                <Typography fontSize="12px" fontWeight={700} color="text.black">
+                  {row.employee || row.name}
+                </Typography>
+                {row.role && (
+                  <Typography fontSize="10px" color="text.secondary">
+                    {row.role}
+                  </Typography>
+                )}
+              </Stack>
+            </Stack>
+          </TableCell>
+        );
+
+      // ── Task assignee — avatar + name ─────────────────────────────────────
+      case "task_assignee":
+        return (
+          <TableCell key={val}>
+            <Stack direction="row" alignItems="center" gap={1}>
+              <Avatar
+                src={row.assigneeAvatar}
+                alt={row.assigneeName}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                }}
+              >
+                {row.assigneeName?.charAt(0) || "A"}
+              </Avatar>
+              <Typography fontSize="13px" fontWeight={500} color="text.black">
+                {row.assigneeName || "-"}
+              </Typography>
+            </Stack>
+          </TableCell>
+        );
+
+      // ── Task priority chip ────────────────────────────────────────────────
+      case "task_priority": {
+        const pcfg = PRIORITY_CONFIG[row.priority] || { bg: "#F5F5F5", color: "#757575" };
+        return (
+          <TableCell key={val}>
+            <Chip
+              label={row.priority}
+              sx={{
+                height: "24px",
+                fontSize: "12px",
+                fontWeight: 500,
+                px: 1,
+                borderRadius: "12px",
+                backgroundColor: pcfg.bg,
+                color: pcfg.color,
+              }}
+            />
+          </TableCell>
+        );
+      }
+
+      // ── Status chip (generic + project) ──────────────────────────────────
+      case "status_chip":
+      case "project_status": {
+        const cfg = STATUS_CONFIG[row.status] || { bg: "#F5F5F5", color: "#757575" };
+        return (
+          <TableCell key={val}>
+            <Chip
+              label={row.status}
+              sx={{
+                height: "26px",
+                fontSize: "12px",
+                fontWeight: 500,
+                px: 1.5,
+                borderRadius: "12px",
+                backgroundColor: cfg.bg,
+                color: cfg.color,
+              }}
+            />
+          </TableCell>
+        );
+      }
+
+      // ── Project progress bar ──────────────────────────────────────────────
+      case "project_progress":
+        return (
+          <TableCell key={val}>
+            <Box minWidth="140px">
+              <ProgressBar
+                value={row.progress ?? 0}
+                showPercentage={true}
+                percentage={`${row.progress ?? 0}%`}
+                height={6}
+              />
+            </Box>
+          </TableCell>
+        );
+
+      // ── Generic progress bar ──────────────────────────────────────────────
+      case "progress_bar":
+        return (
+          <TableCell key={val}>
+            <Box display="flex" alignItems="center" gap={1.5} sx={{ width: "160px" }}>
+              <Box sx={{ width: "100px" }}>
+                <ProgressBar value={row.progress ?? 0} showPercentage={false} height={6} sx={{ mb: 0 }} />
+              </Box>
+              <Typography fontSize="12px" fontWeight={500} color="text.secondary">
+                {row.progress ?? 0}%
+              </Typography>
+            </Box>
+          </TableCell>
+        );
+
+      // ── Three-dot menu ────────────────────────────────────────────────────
+      case "actions_menu":
+        return (
+          <TableCell key={val}>
+            <IconButton
+              size="small"
+              onClick={(e) => handleMenuClick(e, row)}
+              sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+            >
+              <MoreVerticalIcon size={18} />
+            </IconButton>
+          </TableCell>
+        );
+
+      // ── Icon buttons: view / edit / download / delete ─────────────────────
+      case "actions":
+        return (
+          <TableCell key={val}>
+            <Box display="flex" alignItems="center" gap={0.5}>
+              {viewIcon && (
+                <IconButton size="small" sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }} onClick={() => onViewClick?.(row)}>
+                  <img src={viewIcon} alt="view" style={{ width: 20, height: 20 }} />
+                </IconButton>
+              )}
+              {EditIcon && (
+                <IconButton size="small" sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }} onClick={() => onEditClick?.(row)}>
+                  {React.isValidElement(EditIcon) ? EditIcon : React.createElement(EditIcon, { style: { width: 20, height: 20 } })}
+                </IconButton>
+              )}
+              {downloadIcon && (
+                <IconButton size="small" sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }} onClick={() => onDownloadClick?.(row)}>
+                  <img src={download} alt="download" style={{ width: 20, height: 20 }} />
+                </IconButton>
+              )}
+              {DeleteIcon && (
+              <IconButton
+                size="small"
+                sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+                onClick={() => onDeleteClick?.(row)}
+              >
+                {React.isValidElement(DeleteIcon)
+                  ? DeleteIcon
+                  : typeof DeleteIcon === "string"
+                    ? <img src={DeleteIcon} alt="delete" style={{ width: 20, height: 20 }} />
+                    : React.createElement(DeleteIcon, { style: { width: 20, height: 20 } })}
+              </IconButton>
+            )}
+            </Box>
+          </TableCell>
+        );
+
+        // ── Team member — avatar + name ───────────────────────────────────────
+        case "team_member":
+          return (
+            <TableCell key={val}>
+              <Stack direction="row" alignItems="center" gap={1.5}>
+                <Avatar
+                  src={row.avatar}
+                  alt={row.name}
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                  }}
+                >
+                  {row.name?.charAt(0) || "A"}
+                </Avatar>
+                <Typography fontSize="13px" fontWeight={500} color="text.black">
+                  {row.name}
+                </Typography>
+              </Stack>
+            </TableCell>
+          );
+
+        case "perf_member":
+        return (
+          <TableCell key={val}>
+            <Stack direction="row" alignItems="center" gap={1.5}>
+              <Avatar
+                src={row.avatar}
+                alt={row.name}
+                sx={{
+                  width: 34,
+                  height: 34,
+                  background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                }}
+              >
+                {row.name?.charAt(0) || "A"}
+              </Avatar>
+              <Typography fontSize="13px" fontWeight={500} color="text.black">
+                {row.name}
+              </Typography>
+            </Stack>
+          </TableCell>
+        );
+ 
+      // ── Performance tab — assigned count ──────────────────────────────────
+      case "perf_assigned":
+        return (
+          <TableCell key={val}>
+            <Typography fontSize="13px" fontWeight={500} color="text.black">
+              {row.assigned ?? "-"}
+            </Typography>
+          </TableCell>
+        );
+ 
+      // ── Performance tab — completed count ─────────────────────────────────
+      case "perf_completed":
+        return (
+          <TableCell key={val}>
+            <Typography fontSize="13px" fontWeight={500} color="text.black">
+              {row.completed ?? "-"}
+            </Typography>
+          </TableCell>
+        );
+ 
+      // ── Performance tab — in progress count ───────────────────────────────
+      case "perf_in_progress":
+        return (
+          <TableCell key={val}>
+            <Typography fontSize="13px" fontWeight={500} color="text.black">
+              {row.inProgress ?? "-"}
+            </Typography>
+          </TableCell>
+        );
+ 
+      // ── Performance tab — delayed count ───────────────────────────────────
+      case "perf_delayed":
+        return (
+          <TableCell key={val}>
+            <Typography
+              fontSize="13px"
+              fontWeight={500}
+              color={row.delayed > 0 ? "#FF0000" : "text.black"}
+            >
+              {row.delayed ?? "-"}
+            </Typography>
+          </TableCell>
+        );
+ 
+      // ── Performance tab — completion rate with mini progress bar ──────────
+      case "perf_completion_rate":
+        return (
+          <TableCell key={val}>
+            <Box display="flex" alignItems="center" gap={1.5}>
+              <Box
+                sx={{
+                  width: "80px",
+                  height: "6px",
+                  borderRadius: "3px",
+                  backgroundColor: "#F0F0F0",
+                  overflow: "hidden",
+                  flexShrink: 0,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: `${row.completionRate ?? 0}%`,
+                    height: "100%",
+                    borderRadius: "3px",
+                    background: "linear-gradient(90deg, #022179 0%, #AA2493 100%)",
+                  }}
+                />
+              </Box>
+              <Typography fontSize="13px" fontWeight={600} color="text.black">
+                {row.completionRate ?? 0}%
+              </Typography>
+            </Box>
+          </TableCell>
+        );
+
+
+// ── Document name with file icon ──────────────────────────────────────────
+case "doc_name":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1.5}>
+        <Typography fontSize="13px" fontWeight={500} color="text.black">
+          {row.fileName || "-"}
+        </Typography>
+      </Stack>
+    </TableCell>
+  );
+
+// ── Document type chip ────────────────────────────────────────────────────
+case "doc_type":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.type || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Document file size ────────────────────────────────────────────────────
+case "doc_file_size":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.fileSize || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Document uploaded by ──────────────────────────────────────────────────
+case "doc_uploaded_by":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.uploadedBy || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+  // ── Employee type chip (Full-time / Contract) ─────────────────────────────
+case "emp_type": {
+  const typeCfg =
+    row.type === "Full-time" ? { bg: "#04C3731A", color: "#04C373" } :
+    row.type === "Contract"  ? { bg: "#AA24931A", color: "#AA2493" } :
+                               { bg: "#F5F5F5",   color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.type}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: typeCfg.bg, color: typeCfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Employee role chip ────────────────────────────────────────────────────
+case "emp_role": {
+  const roleCfg =
+    row.role === "Developer"        ? { bg: "#04C3731A", color: "#04C373" } :
+    row.role === "Project Manager"  ? { bg: "#2B6EFF1A", color: "#2B6EFF" } :
+    row.role === "Designer"         ? { bg: "#AA24931A", color: "#AA2493" } :
+    row.role === "QA Tester"        ? { bg: "#FF972F1A", color: "#FF972F" } :
+    row.role === "HR Manager"       ? { bg: "#AA24931A", color: "#AA2493" } :
+                                      { bg: "#F5F5F5",   color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.role}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: roleCfg.bg, color: roleCfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Employee status chip (Active / Inactive) ──────────────────────────────
+case "emp_status": {
+  const isActive = row.status === "Active";
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: isActive ? "#04C3731A" : "#FF00001A",
+          color:           isActive ? "#04C373"   : "#FF0000",
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Payslip bonus — green text ────────────────────────────────────────────
+case "payslip_bonus":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#04C373">
+        {row.bonus != null ? `Rs${row.bonus.toLocaleString()}` : "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payslip deductions — red text ─────────────────────────────────────────
+case "payslip_deductions":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#FF0000">
+        {row.deductions != null ? `Rs${row.deductions.toLocaleString()}` : "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payslip status chip (Paid / Pending) ──────────────────────────────────
+case "payslip_status": {
+  const isPaid = row.payslipStatus === "Paid";
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.payslipStatus}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: isPaid ? "#04C3731A" : "#AA24931A",
+          color:           isPaid ? "#04C373"   : "#AA2493",
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Payslip download action ───────────────────────────────────────────────
+case "payslip_download":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={() => onDownloadClick?.(row)}
+        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        <img src={download} alt="download" style={{ width: 20, height: 20 }} />
+      </IconButton>
+    </TableCell>
+  );
+
+  // ── Attendance date ───────────────────────────────────────────────────────────
+case "attendance_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.date}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Attendance check-in time ──────────────────────────────────────────────────
+case "attendance_check_in":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="13px"
+        fontWeight={500}
+        color={row.checkIn === "—" ? "text.secondary" : "text.primary"}
+      >
+        {row.checkIn}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Attendance check-out time ─────────────────────────────────────────────────
+case "attendance_check_out":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="13px"
+        fontWeight={500}
+        color={row.checkOut === "—" ? "text.secondary" : "text.primary"}
+      >
+        {row.checkOut}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Attendance total hours ────────────────────────────────────────────────────
+case "attendance_hours":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="13px"
+        fontWeight={500}
+        color={row.hours === "—" ? "text.secondary" : "text.primary"}
+      >
+        {row.hours}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Attendance status chip ────────────────────────────────────────────────────
+case "attendance_status": {
+  const cfg = ATTENDANCE_STATUS_CONFIG[row.attendanceStatus] || { bg: "#F5F5F5", color: "#9CA3AF" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.attendanceStatus}
+        sx={{
+          height: "26px",
+          fontSize: "12px",
+          fontWeight: 500,
+          px: 1,
+          borderRadius: "12px",
+          backgroundColor: cfg.bg,
+          color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+case "task_name":
+   return (
+     <TableCell key={val}>
+       <Typography fontSize="13px" fontWeight={500} color="text.primary">
+         {row.taskName || "-"}
+       </Typography>
+     </TableCell>
+   );
+
+// ── Task project (plain text) ─────────────────────────────────────────────
+ case "task_project":
+   return (
+     <TableCell key={val}>
+       <Typography fontSize="13px" fontWeight={400} color="text.black">
+         {row.project || "-"}
+       </Typography>
+     </TableCell>
+   );
+
+// ── Task module (plain text, secondary colour for em dash) ────────────────
+ case "task_module":
+   return (
+     <TableCell key={val}>
+       <Typography
+                fontSize="13px"
+         fontWeight={400}
+         color={row.module === "—" ? "text.secondary" : "text.black"}
+       >
+         {row.module || "-"}
+       </Typography>
+     </TableCell>
+   );
+
+// ── Performance avg time ──────────────────────────────────────────────────
+case "perf_avg_time":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.avgTime ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Performance view action (eye icon) ───────────────────────────────────
+case "perf_view":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={() => onViewClick?.(row)}
+        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        <img src={viewIcon} alt="view" style={{ width: 20, height: 20 }} />
+      </IconButton>
+    </TableCell>
+  );
+
+  case "perf_days_overdue":
+  return (
+    <TableCell key={val}>
+      {row.daysOverdue > 0 ? (
+        <Chip
+          label={`${row.daysOverdue} days`}
+          sx={{
+            height: "26px",
+            fontSize: "12px",
+            fontWeight: 500,
+            px: 1,
+            borderRadius: "12px",
+            backgroundColor: "#FECACA",
+            color: "#DC2626",
+          }}
+        />
+      ) : (
+        <Typography fontSize="13px" fontWeight={500} color="text.secondary">
+          —
+        </Typography>
+      )}
+    </TableCell>
+  );
+
+  case "role_name":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        {row.roleName || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Role description ──────────────────────────────────────────────────────
+case "role_description":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.description || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Role employee count ───────────────────────────────────────────────────
+case "role_employees":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.employees ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+  // ── Document type chip (colored) ──────────────────────────────────────────
+case "doc_type_chip": {
+  const DOC_TYPE_CONFIG = {
+    "NDA":                    { bg: "#AA24931A", color: "#AA2493" },
+    "Employment Contract":    { bg: "#2B6EFF1A", color: "#2B6EFF" },
+    "Project Documentation":  { bg: "#FF972F1A", color: "#FF972F" },
+    "Client Agreement":       { bg: "#04C3731A", color: "#04C373" },
+    "Other":                  { bg: "#F5F5F5",   color: "#757575" },
+  };
+  const cfg = DOC_TYPE_CONFIG[row.type] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.type}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Document name (bold) ──────────────────────────────────────────────────
+case "doc_name_bold":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        {row.fileName || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Document uploaded by ──────────────────────────────────────────────────
+case "doc_uploader":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.uploadedBy || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Document date ─────────────────────────────────────────────────────────
+case "doc_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.date || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Document file size ────────────────────────────────────────────────────
+case "doc_size":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.fileSize || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Document actions (download + delete via 3-dot menu) ───────────────────
+case "doc_actions_menu":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={(e) => handleMenuClick(e, row)}
+        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        <MoreVerticalIcon size={18} />
+      </IconButton>
+    </TableCell>
+  );
+
+  // ── Task due date ─────────────────────────────────────────────────────────
+case "task_due_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.dueDate || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Task status chip ──────────────────────────────────────────────────────
+case "task_status_chip": {
+  const TASK_STATUS_CONFIG = {
+    "New":         { bg: "#2B6EFF1A", color: "#2B6EFF" },
+    "In Progress": { bg: "#FF972F1A", color: "#FF972F" },
+    "Review":      { bg: "#9E9E9E1A", color: "#9E9E9E" },
+    "Completed":   { bg: "#04C3731A", color: "#04C373" },
+  };
+  const cfg = TASK_STATUS_CONFIG[row.status] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Project name (plain) ──────────────────────────────────────────────────
+case "proj_name":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.projectName || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Project PM ────────────────────────────────────────────────────────────
+case "proj_pm":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.pm || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Project start date ────────────────────────────────────────────────────
+case "proj_start_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.startDate || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Project end date ──────────────────────────────────────────────────────
+case "proj_end_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.endDate || "-"}
+      </Typography>
+    </TableCell>
+  );
+  // ── Attendance report — employee name ─────────────────────────────────────
+case "att_report_member":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.name || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance report — present (green) ───────────────────────────────────
+case "att_report_present":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="#04C373">
+        {row.present ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance report — absent (red) ──────────────────────────────────────
+case "att_report_absent":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="#FF0000">
+        {row.absent ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance report — late (orange) ────────────────────────────────────
+case "att_report_late":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="#F97316">
+        {row.late ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance report — leave (blue) ─────────────────────────────────────
+case "att_report_leave":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="#2B6EFF">
+        {row.leave ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance report — rate with progress bar ────────────────────────────
+case "att_report_rate":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1.5}>
+        <Box
+          sx={{
+            width: "80px",
+            height: "6px",
+            borderRadius: "3px",
+            backgroundColor: "#F0F0F0",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          <Box
+            sx={{
+              width: `${row.attendanceRate ?? 0}%`,
+              height: "100%",
+              borderRadius: "3px",
+              background: "linear-gradient(90deg, #022179 0%, #AA2493 100%)",
+            }}
+          />
+        </Box>
+        <Typography fontSize="13px" fontWeight={600} color="text.black">
+          {row.attendanceRate ?? 0}%
+        </Typography>
+      </Box>
+    </TableCell>
+  );
+
+  case "leave_report_member":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.name || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "leave_report_type":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.leaveType || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "leave_report_from":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.fromDate || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "leave_report_to":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.toDate || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "leave_report_days":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.days ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "leave_report_approved_by":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color={row.approvedBy === "—" ? "text.secondary" : "text.black"}>
+        {row.approvedBy || "—"}
+      </Typography>
+    </TableCell>
+  );
+
+case "leave_report_status": {
+  const LEAVE_STATUS_CONFIG = {
+    "Pending":  { bg: "#FF972F1A", color: "#FF972F" },
+    "Approved": { bg: "#04C3731A", color: "#04C373" },
+    "Rejected": { bg: "#FF00001A", color: "#FF0000" },
+  };
+  const cfg = LEAVE_STATUS_CONFIG[row.leaveStatus] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.leaveStatus}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+case "payroll_member":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.name || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "payroll_base_salary":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        Rs{row.baseSalary?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "payroll_bonus":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#04C373">
+        Rs{row.bonus?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "payroll_deductions":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#FF0000">
+        Rs{row.deductions?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "payroll_net_pay":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        Rs{row.netPay?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+  case "intg_no":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.no ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "intg_project_id":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.projectId || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "intg_project_name":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.projectName || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "intg_git_url":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="12px"
+        fontWeight={400}
+        color="#2B6EFF"
+        sx={{ cursor: "pointer", "&:hover": { textDecoration: "underline" } }}
+      >
+        {row.gitUrl || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "intg_commits":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.commits ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "intg_status": {
+  const isConnected = row.status === "Connected";
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: isConnected ? "#04C3731A" : "#F5F5F5",
+          color:           isConnected ? "#04C373"   : "#9E9E9E",
+        }}
+      />
+    </TableCell>
+  );
+}
+
+case "commit_hash":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="12px" fontWeight={500} color="text.secondary"
+        sx={{ fontFamily: "monospace" }}>
+        {row.commitHash || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "commit_message":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.message || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "commit_branch":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.branch || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "commit_author":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.author || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "commit_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.date || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "commit_linked_task":
+  return (
+    <TableCell key={val}>
+      {row.isLinked ? (
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <Link size={12} color="#67768B" />
+          <Typography fontSize="12px" fontWeight={500} color="text.secondary">
+             {row.linkedTask}
+          </Typography>
+        </Box>
+      ) : (
+        <Chip
+          label="Link Task"
+          sx={{
+            height: "24px", fontSize: "12px", fontWeight: 500,
+            px: 1, borderRadius: "12px",
+            backgroundColor: "#04C3731A", color: "#04C373",
+            cursor: "pointer",
+          }}
+        />
+      )}
+    </TableCell>
+  );
+
+  // In paginatedTable — add these cases to the switch statement
+
+case "hr_leave_employee":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1}>
+        <Avatar
+          src={row.avatar}
+          sx={{
+            width:      28,
+            height:     28,
+            fontSize:   "11px",
+            background: "linear-gradient(135deg, #AA2493, #022179)",
+            color:      "#fff",
+          }}
+        >
+          {row.name?.charAt(0)}
+        </Avatar>
+        <Typography fontSize="12px" fontWeight={500} color="text.primary">
+          {row.name}
+        </Typography>
+      </Stack>
+    </TableCell>
+  );
+
+case "hr_leave_type":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="12px" color="text.secondary">
+        {row.leaveType || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "hr_leave_dates":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="11px" color="text.secondary" lineHeight={1.6}>
+        {row.fromDate}
+      </Typography>
+      <Typography fontSize="11px" color="text.secondary" lineHeight={1.6}>
+        {row.toDate}
+      </Typography>
+    </TableCell>
+  );
+
+case "hr_leave_status": {
+  const HR_LEAVE_STATUS = {
+    Pending:  { bg: "#FEF3C7", color: "#D97706" }, 
+    Approved: { bg: "#04C3731A", color: "#04C373" },
+    Rejected: { bg: "#FF00001A", color: "#FF0000" },
+  };
+  const cfg = HR_LEAVE_STATUS[row.status] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        size="small"
+        sx={{
+          fontSize:        "11px",
+          fontWeight:      500,
+          backgroundColor: cfg.bg,
+          color:           cfg.color,
+          height:          "auto",
+          py:              0.25,
+        }}
+      />
+    </TableCell>
+  );
+}
+case "hr_leave_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" gap={0.75}>
+        {/* Approve */}
+        <Box
+          onClick={() => onApproveClick?.(row)}
+          sx={{
+            px:              "12px",
+            py:              "4px",
+            borderRadius:    "6px",
+            backgroundColor: "#04C3731A",
+            color:           "#04C373",
+            fontSize:        "12px",
+            fontWeight:      500,
+            fontFamily:      '"Poppins", sans-serif',
+            cursor:          "pointer",
+            userSelect:      "none",
+            "&:hover":       { backgroundColor: "#04C37330" },
+          }}
+        >
+          Approve
+        </Box>
+
+        {/* Reject */}
+        <Box
+          onClick={() => onRejectClick?.(row)}
+          sx={{
+            px:              "12px",
+            py:              "4px",
+            borderRadius:    "6px",
+            backgroundColor: "#FF00001A",
+            color:           "#FF0000",
+            fontSize:        "12px",
+            fontWeight:      500,
+            fontFamily:      '"Poppins", sans-serif',
+            cursor:          "pointer",
+            userSelect:      "none",
+            "&:hover":       { backgroundColor: "#FF000030" },
+          }}
+        >
+          Reject
+        </Box>
+      </Box>
+    </TableCell>
+  );
+
+  // ── Attendance monitoring — employee avatar + name ─────────────────────────
+case "att_mon_employee":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1}>
+        <Avatar
+          src={row.avatar}
+          alt={row.name}
+          sx={{
+            width: 34, height: 34,
+            background: "linear-gradient(135deg, #AA2493, #022179)",
+            fontSize: "13px", fontWeight: 600,
+          }}
+        >
+          {row.name?.charAt(0)}
+        </Avatar>
+        <Typography fontSize="13px" fontWeight={500} color="text.primary">
+          {row.name}
+        </Typography>
+      </Stack>
+    </TableCell>
+  );
+
+// ── Attendance monitoring — date ──────────────────────────────────────────
+case "att_mon_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">
+        {row.date || "—"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance monitoring — check in ─────────────────────────────────────
+case "att_mon_check_in":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color={!row.checkIn || row.checkIn === "—" ? "text.secondary" : "text.black"}>
+        {row.checkIn || "—"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance monitoring — check out ────────────────────────────────────
+case "att_mon_check_out":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color={!row.checkOut || row.checkOut === "—" ? "text.secondary" : "text.black"}>
+        {row.checkOut || "—"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance monitoring — hours ─────────────────────────────────────────
+case "att_mon_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color={!row.hours || row.hours === "—" ? "text.secondary" : "text.black"}>
+        {row.hours || "—"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance monitoring — status chip ───────────────────────────────────
+case "att_mon_status": {
+  const ATT_MON_CONFIG = {
+    Present: { bg: "#AA24931A", color: "#AA2493" },
+    Absent:  { bg: "#FF00001A", color: "#FF0000" },
+    Late:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
+    Leave:   { bg: "#04C3731A", color: "#04C373" },
+  };
+  const cfg = ATT_MON_CONFIG[row.attendanceStatus] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.attendanceStatus}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Attendance monitoring — notes ─────────────────────────────────────────
+case "att_mon_notes":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="12px" color={!row.notes ? "text.secondary" : "text.black"}>
+        {row.notes || "—"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Attendance monitoring — view action ───────────────────────────────────
+case "att_mon_view":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={() => onViewClick?.(row)}
+        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        <img src={viewIcon} alt="view" style={{ width: 20, height: 20 }} />
+      </IconButton>
+    </TableCell>
+  );
+
+  // ── Leave management — employee ───────────────────────────────────────────
+case "lm_employee":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1}>
+        <Avatar
+          src={row.avatar}
+          sx={{
+            width: 34, height: 34,
+            background: "linear-gradient(135deg, #AA2493, #022179)",
+            fontSize: "13px", fontWeight: 600,
+          }}
+        >
+          {row.name?.charAt(0)}
+        </Avatar>
+        <Typography fontSize="13px" fontWeight={500} color="text.primary">
+          {row.name}
+        </Typography>
+      </Stack>
+    </TableCell>
+  );
+
+// ── Leave management — type ───────────────────────────────────────────────
+case "lm_type":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">
+        {row.leaveType || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Leave management — from & to dates stacked ────────────────────────────
+case "lm_dates":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="12px" color="text.secondary" lineHeight={1.8}>
+        {row.fromDate}
+      </Typography>
+      <Typography fontSize="12px" color="text.secondary" lineHeight={1.8}>
+        {row.toDate}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Leave management — days ───────────────────────────────────────────────
+case "lm_days":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.days ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Leave management — reason ─────────────────────────────────────────────
+case "lm_reason":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="12px"
+        color="text.secondary"
+        sx={{
+          maxWidth: "160px",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {row.reason || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Leave management — submitted date ─────────────────────────────────────
+case "lm_submitted":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="12px" color="text.secondary">
+        {row.submittedDate || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Leave management — status chip ────────────────────────────────────────
+case "lm_status": {
+  const LM_STATUS = {
+    Pending:  { bg: "#FF972F1A", color: "#FF972F" },
+    Approved: { bg: "#04C3731A", color: "#04C373" },
+    Rejected: { bg: "#FF00001A", color: "#FF0000" },
+  };
+  const cfg = LM_STATUS[row.status] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Leave management — approve/reject + view actions ──────────────────────
+case "lm_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1}>
+        {row.status === "Pending" ? (
+          <>
+            <Box
+              onClick={() => onApproveClick?.(row)}
+              sx={{
+                px: "12px", py: "5px",
+                borderRadius: "12px",
+                backgroundColor: "#04C3731A",
+                color: "#04C373",
+                fontSize: "12px", fontWeight: 500,
+                fontFamily: '"Poppins", sans-serif',
+                cursor: "pointer",
+                userSelect: "none",
+                "&:hover": { backgroundColor: "#04C37330" },
+              }}
+            >
+              Approve
+            </Box>
+            <Box
+              onClick={() => onRejectClick?.(row)}
+              sx={{
+                px: "12px", py: "5px",
+                borderRadius: "12px",
+                backgroundColor: "#FF00001A",
+                color: "#FF0000",
+                fontSize: "12px", fontWeight: 500,
+                fontFamily: '"Poppins", sans-serif',
+                cursor: "pointer",
+                userSelect: "none",
+                "&:hover": { backgroundColor: "#FF000030" },
+              }}
+            >
+              Reject
+            </Box>
+          </>
+        ) : (
+          // placeholder same width as Approve + Reject + gap
+          <Box sx={{ width: "141px" }} />
+        )}
+        <IconButton
+          size="small"
+          onClick={() => onViewClick?.(row)}
+          sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+        >
+          <img src={viewIcon} alt="view" style={{ width: 18, height: 18 }} />
+        </IconButton>
+      </Box>
+    </TableCell>
+  );
+  // ── Payroll — checkbox ────────────────────────────────────────────────────
+case "payroll_checkbox":
+  return (
+    <TableCell key={val} sx={{ width: "50px" }}>
+      <Checkbox
+        checked={selectedRows?.includes(row.id)}
+        onChange={() => onSelectRow?.(row.id)}
+        sx={{
+          color: "#D1D5DB",
+          "&.Mui-checked": {
+            color: "#AA2493",
+          },
+        }}
+      />
+    </TableCell>
+  );
+
+// ── Payroll — emp ID ──────────────────────────────────────────────────────
+case "payroll_emp_id":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="12px" fontWeight={500} color="text.secondary">
+        {row.empId || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — employee avatar + name + designation ────────────────────────
+case "payroll_employee":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1}>
+        <Avatar
+          src={row.avatar}
+          sx={{
+            width: 36, height: 36,
+            background: "linear-gradient(135deg, #AA2493, #022179)",
+            fontSize: "13px", fontWeight: 600,
+          }}
+        >
+          {row.name?.charAt(0)}
+        </Avatar>
+        <Box>
+          <Typography fontSize="13px" fontWeight={600} color="text.primary">
+            {row.name}
+          </Typography>
+          <Typography fontSize="11px" color="text.secondary">
+            {row.designation}
+          </Typography>
+        </Box>
+      </Stack>
+    </TableCell>
+  );
+
+// ── Payroll — department ──────────────────────────────────────────────────
+case "payroll_department":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">
+        {row.department || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — working days ────────────────────────────────────────────────
+case "payroll_working":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.working ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — present days ────────────────────────────────────────────────
+case "payroll_present":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.present ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — leave days ──────────────────────────────────────────────────
+case "payroll_leave":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.leave ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — base salary ─────────────────────────────────────────────────
+case "payroll_salary":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.baseSalary ? `$${row.baseSalary.toLocaleString()}` : "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — bonus (green) ───────────────────────────────────────────────
+case "payroll_bonus_col":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#04C373">
+        {row.bonus ? `$${row.bonus.toLocaleString()}` : "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — deductions (red) ────────────────────────────────────────────
+case "payroll_deductions_col":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#FF0000">
+        {row.deductions ? `$${row.deductions.toLocaleString()}` : "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — net pay ─────────────────────────────────────────────────────
+case "payroll_net":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={700} color="text.primary">
+        {row.netPay ? `$${row.netPay.toLocaleString()}` : "-"}
+      </Typography>
+    </TableCell>
+  );
+  
+  // ── Default: plain text ───────────────────────────────────────────────
+      default:
+        return (
+          <TableCell key={val}>
+            <Typography fontSize="13px" fontWeight={500} color="text.black">
+              {row[val] ?? "-"}
+            </Typography>
+          </TableCell>
+        );
+    }
+  };
+
+  const paginatedData = serverSidePagination
+    ? tableData
+    : tableData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  return (
+    <TableContainer>
+      <Table sx={{ width: tableWidth || "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+        <TableHead>
+          <TableRow>
+            {tableHeader.map((h, index) => (
+          <TableCell
+            key={h.id}
+            align={h.align || "left"}
+            sx={{
+              backgroundColor: headerBgColor,
+              borderBottom: "none",
+              padding: "12px 16px",
+              minWidth: h.minWidth || "auto",
+              ...(index === 0 && { borderTopLeftRadius: "12px", borderBottomLeftRadius: "12px" }),
+              ...(index === tableHeader.length - 1 && { borderTopRightRadius: "12px", borderBottomRightRadius: "12px" }),
+            }}
+          >
+            {h.id === "checkbox" ? (
+              <Checkbox
+                checked={
+                  tableData?.length > 0 &&
+                  selectedRows?.length === tableData?.length
+                }
+                indeterminate={
+                  selectedRows?.length > 0 &&
+                  selectedRows?.length < tableData?.length
+                }
+                onChange={onSelectAll}
+                sx={{
+                  color: "#D1D5DB",
+                  "&.Mui-checked": { color: "#AA2493" },
+                  "&.MuiCheckbox-indeterminate": { color: "#AA2493" },
+                }}
+              />
+            ) : (
+              <Typography fontSize="13px" fontWeight={600} color="text.secondary">
+                {h.label}
+              </Typography>
+            )}
+          </TableCell>
+        ))}
+          </TableRow>
+        </TableHead>
+
+        {isLoading ? (
+          <TableSkeleton columns={columnKeys.length} rows={5} />
+        ) : (
+          <TableBody>
+            {paginatedData?.length > 0 ? (
+              paginatedData.map((row, index) => (
+                <TableRow
+                  key={getRowId(row)}
+                  sx={{ "& > td": { verticalAlign: "middle" }, "&:hover": { backgroundColor: "#FAFAFB" } }}
+                >
+                  {columnKeys.map((val) => renderCell(row, val, index))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columnKeys.length}>
+                  <Typography fontSize="13px" color="text.secondary" textAlign="center" py={4}>
+                    No data found
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        )}
+      </Table>
+
+      {showPagination && !hidepagination && (
+        <TablePagination
+          component="div"
+          count={totalCount || tableData?.length || 0}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5, 10, 25]}
+        />
+      )}
+
+      <Menu
+        anchorEl={anchorEl}
+        open={openMenu}
+        onClose={handleMenuClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        PaperProps={{ sx: { mt: 1, boxShadow: "0px 4px 20px rgba(0,0,0,0.1)", borderRadius: "12px", minWidth: "160px" } }}
+      >
+        {(typeof menuOptions === "function" && selectedRow
+          ? menuOptions(selectedRow)
+          : Array.isArray(menuOptions)
+          ? menuOptions
+          : []
+        ).map((option) => (
+          <MenuItem
+            key={option.value}
+            onClick={() => handleMenuItemClick(option.value)}
+            sx={{
+              fontSize: "13px",
+              padding: "10px 16px",
+              color: option.color || "#030229",
+              "&:hover": { backgroundColor: option.color ? `${option.color}1A` : "#F5F5F5" },
+            }}
+          >
+            {option.icon && <ListItemIcon sx={{ minWidth: "32px" }}>{option.icon}</ListItemIcon>}
+            <ListItemText primary={option.label} primaryTypographyProps={{ fontSize: "13px", fontWeight: 500 }} />
+          </MenuItem>
+        ))}
+      </Menu>
+    </TableContainer>
+  );
+}
