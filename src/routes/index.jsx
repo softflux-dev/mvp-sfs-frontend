@@ -23,6 +23,8 @@ import HRDashboard from "../app/hrPortal/dashboard";
 import AttendanceMonitoring from "../app/hrPortal/attendance";
 import LeaveManagement from "../app/hrPortal/leaves";
 import PayrollManagement from "../app/hrPortal/payroll";
+import HRDocuments         from "../app/hrPortal/documents";
+
 
 // routes/icons
 import DashboardActiveIcon from "../assets/icons/dashboard-active.svg";
@@ -346,6 +348,20 @@ const HR_ROUTES = [
     ),
     inActiveIcon: (
       <img src={MessagesInactiveIcon} alt="Messages" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+    id: 6,
+    nameKey: "Documents",
+    component: <HRDocuments />,
+    exact: "exact",
+    path: "/hr-documents",
+    activeIcon: (
+      <img src={DocumentsActiveIcon} alt="HR Documents" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={DocumentsInactiveIcon} alt="HR Documents" style={{ width: 20, height: 20 }} />
     ),
     isHideMenu: false,
   }
