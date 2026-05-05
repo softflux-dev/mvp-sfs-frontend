@@ -540,6 +540,28 @@ payroll_management: [
     grid: { xs: 12, md: 2 },
   },
 ],
+hr_documents: [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search document name...",
+    grid: { xs: 12, md: 9 },
+  },
+  {
+    type: "select",
+    key: "type",
+    placeholder: "All",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "",                      l: "All"                    },
+      { v: "employment_contract",   l: "Employment Contract"    },
+      { v: "nda",                   l: "NDA"                    },
+      { v: "project_documentation", l: "Project Documentation"  },
+      { v: "client_agreement",      l: "Client Agreement"       },
+      { v: "other",                 l: "Other"                  },
+    ],
+  },
+],
 
     // ── Full (default fallback) ───────────────────────────────────────────────
     full: [
