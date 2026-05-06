@@ -24,6 +24,9 @@ import AttendanceMonitoring from "../app/hrPortal/attendance";
 import LeaveManagement from "../app/hrPortal/leaves";
 import PayrollManagement from "../app/hrPortal/payroll";
 import HRDocuments         from "../app/hrPortal/documents";
+import PMDashboard from "../app/projectManagerPortal/dashboard";
+import MyProjects from "../app/projectManagerPortal/myProjects";
+import TaskManagement from "../app/projectManagerPortal/taskManagement";
 
 
 // routes/icons
@@ -53,6 +56,8 @@ import LeavesActiveIcon from "../assets/icons/leaves-active.svg";
 import LeavesInactiveIcon from "../assets/icons/leaves-inactive.svg";
 import PayrollActiveIcon from "../assets/icons/payroll-active.svg";
 import PayrollInactiveIcon from "../assets/icons/payroll-inactive.svg";
+import TasksActiveIcon from "../assets/icons/tasks-active.svg";
+import TasksInactiveIcon from "../assets/icons/tasks-inactive.svg";
 import { id } from "date-fns/locale";
 //import AuthPage from "../app/auth/AuthPage";
 //import SelectAccount from "../app/auth/login/SelectAccount";
@@ -367,8 +372,54 @@ const HR_ROUTES = [
   }
 ];
 
+const PM_ROUTES = [
+  {
+    id: 1,
+    nameKey: "Dashboard",
+    component: <PMDashboard />,
+    exact: "exact",
+    path: "/dashboard",
+    activeIcon: (
+      <img src={DashboardActiveIcon} alt="PM Dashboard" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={DashboardInactiveIcon} alt="PM Dashboard" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+    id: 2,
+    nameKey: "My Projects",
+    component: <MyProjects />,
+    exact: "exact",
+    path: "/my-projects",
+    activeIcon: (
+      <img src={ProjectsActiveIcon} alt="My Projects" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={ProjectsInactiveIcon} alt="My Projects" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+    id: 3,
+    nameKey: "Task Management",
+    component: <TaskManagement />,
+    exact: "exact",
+    path: "/task-management",
+    activeIcon: (
+      <img src={TasksActiveIcon} alt="Task Management" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={TasksInactiveIcon} alt="Task Management" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+
+  }
+];
 
 
 
 
-export { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES };
+
+export { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES, PM_ROUTES };

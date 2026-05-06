@@ -1785,6 +1785,92 @@ case "payroll_net":
       </Typography>
     </TableCell>
   );
+
+  // ── Task list — title ─────────────────────────────────────────────────────
+case "task_list_title":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.title || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Task list — project ───────────────────────────────────────────────────
+case "task_list_project":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">
+        {row.project || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Task list — module ────────────────────────────────────────────────────
+case "task_list_module":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.secondary">
+        {row.module || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Task list — priority chip ─────────────────────────────────────────────
+case "task_list_priority": {
+  const TL_PRIORITY = {
+    High:   { bg: "#04C3731A", color: "#04C373" },
+    Medium: { bg: "#AA24931A", color: "#AA2493" },
+    Low:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
+  };
+  const cfg = TL_PRIORITY[row.priority] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.priority}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "8px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Task list — status chip ───────────────────────────────────────────────
+case "task_list_status": {
+  const TL_STATUS = {
+    "New":         { bg: "#2B6EFF1A", color: "#2B6EFF" },
+    "Assigned":    { bg: "#AA24931A", color: "#AA2493" },
+    "In Progress": { bg: "#FF972F1A", color: "#FF972F" },
+    "Review":      { bg: "#9E9E9E1A", color: "#9E9E9E" },
+    "Completed":   { bg: "#04C3731A", color: "#04C373" },
+  };
+  const cfg = TL_STATUS[row.status] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "8px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+// ── Task list — deadline ──────────────────────────────────────────────────
+case "task_list_deadline":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">
+        {row.deadline || "-"}
+      </Typography>
+    </TableCell>
+  );
   
   // ── Default: plain text ───────────────────────────────────────────────
       default:

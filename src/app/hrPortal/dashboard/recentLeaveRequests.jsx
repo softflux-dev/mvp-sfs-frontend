@@ -45,19 +45,7 @@ const RecentLeaveRequests = ({ onViewAll }) => {
         <Typography fontSize="16px" fontWeight={600} color="text.primary">
           Recent Leave Requests
         </Typography>
-        <Typography
-          fontSize="13px"
-          fontWeight={500}
-          onClick={onViewAll}
-          sx={{
-            background:           "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor:  "transparent",
-            cursor:               "pointer",
-          }}
-        >
-          View All
-        </Typography>
+        
       </Box>
 
       <PaginatedTable

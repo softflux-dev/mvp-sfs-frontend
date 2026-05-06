@@ -562,6 +562,87 @@ hr_documents: [
     ],
   },
 ],
+pm_projects: [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search projects...",
+    grid: { xs: 12, md: 9 },
+  },
+  {
+    type: "select",
+    key: "status",
+   
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "",           l: "All Status"         },
+      { v: "planning",   l: "Planning"    },
+      { v: "in_progress",l: "In Progress" },
+      { v: "on_hold",    l: "On Hold"     },
+      { v: "completed",  l: "Completed"   },
+    ],
+  },
+],
+
+task_management: [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search projects...",
+    grid: { xs: 12, md: 3 },
+  },
+  {
+    type: "select",
+    key: "project",
+    placeholder: "All Projects",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "",           l: "All Projects"          },
+      { v: "ecommerce",  l: "E-Commerce Platform"   },
+      { v: "healthcare", l: "Healthcare Portal"      },
+      { v: "crm",        l: "CRM Dashboard"         },
+      { v: "mobile",     l: "Mobile Banking App"    },
+    ],
+  },
+  {
+    type: "select",
+    key: "assignee",
+    placeholder: "All Assignees",
+    grid: { xs: 12, md: 2 },
+    options: [
+      { v: "",        l: "All Assignees" },
+      { v: "sarah",   l: "Sarah Chen"    },
+      { v: "marcus",  l: "Marcus Webb"   },
+      { v: "priya",   l: "Priya Patel"   },
+      { v: "jake",    l: "Jake Morrison" },
+    ],
+  },
+  {
+    type: "select",
+    key: "priority",
+    placeholder: "All Priority",
+    grid: { xs: 12, md: 2 },
+    options: [
+      { v: "",       l: "All priority" },
+      { v: "low",    l: "Low"          },
+      { v: "medium", l: "Medium"       },
+      { v: "high",   l: "High"         },
+    ],
+  },
+  {
+    type: "select",
+    key: "status",
+    placeholder: "All Status",
+    grid: { xs: 12, md: 2 },
+    options: [
+      { v: "",            l: "All"         },
+      { v: "planning",    l: "Planning"    },
+      { v: "in_progress", l: "In Progress" },
+      { v: "on_hold",     l: "On Hold"     },
+      { v: "completed",   l: "Completed"   },
+    ],
+  },
+],
 
     // ── Full (default fallback) ───────────────────────────────────────────────
     full: [

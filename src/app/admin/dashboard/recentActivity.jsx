@@ -4,7 +4,7 @@ import { Box, Typography, Stack, styled } from "@mui/material";
 import RecentActivityCard from "../../../components/cards/recentActivityCard";
 
 const ScrollContainer = styled(Box)({
-  flex: 1,
+  maxHeight: "800px",
   overflowY: "auto",
   paddingRight: "4px",
   "&::-webkit-scrollbar": { display: "none" },
@@ -22,7 +22,10 @@ const activityData = [
   { id: 7, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
   { id: 8, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
   { id: 9, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  
+  { id: 10, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
+  { id: 11, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
+  { id: 12, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
+
 ];
 
 const RecentActivity = () => {
@@ -40,18 +43,7 @@ const RecentActivity = () => {
         <Typography fontSize="18px" fontWeight={700} color="text.primary">
           Recent Activity
         </Typography>
-        <Typography
-          fontSize={13}
-          fontWeight={600}
-          sx={{
-            background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            cursor: "pointer",
-          }}
-        >
-          View All
-        </Typography>
+       
       </Box>
 
       {/* Scrollable list grows to fill remaining height */}

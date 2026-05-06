@@ -9,7 +9,7 @@ import EmployeeProductivityChart from "./employeeProductivityChart";
 import AttendanceOverviewChart from "./attendanceOverviewChart";
 import TaskStatusChart from "./taskStatusChart";
 import RecentActivity from "./recentActivity";
-import UpcomingDeadlines from "./upcomingDeadlines";
+import UpcomingDeadlines from "../../../components/cards/upcomingDeadlinesCard";
 
 import enrollIcon from "../../../assets/icons/employees.svg";
 import completeIcon from "../../../assets/icons/task-completion.svg";
@@ -95,6 +95,15 @@ const statsData = [
     icon: overdueIcon,
   },
 ];
+const deadlinesData = [
+  { id: 1, title: "Mobile Responsive Design", assignee: "Omar Farooq", project: "CMS Website Redesign", priority: "High",   date: "Mar 9" },
+  { id: 2, title: "Mobile Responsive Design", assignee: "Omar Farooq", project: "CMS Website Redesign", priority: "Medium", date: "Mar 9" },
+  { id: 3, title: "Mobile Responsive Design", assignee: "Omar Farooq", project: "CMS Website Redesign", priority: "High",   date: "Mar 9" },
+  { id: 4, title: "Mobile Responsive Design", assignee: "Omar Farooq", project: "CMS Website Redesign", priority: "High",   date: "Mar 9" },
+  { id: 5, title: "Mobile Responsive Design", assignee: "Omar Farooq", project: "CMS Website Redesign", priority: "High",   date: "Mar 9" },
+  { id: 6, title: "Mobile Responsive Design", assignee: "Omar Farooq", project: "CMS Website Redesign", priority: "Medium", date: "Mar 9" },
+  { id: 7, title: "Mobile Responsive Design", assignee: "Omar Farooq", project: "CMS Website Redesign", priority: "High",   date: "Mar 9" },
+];
 
   return (
     <>
@@ -161,7 +170,10 @@ const statsData = [
       {/* Upcoming Deadlines — full width */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid item size={{ xs: 12 }}>
-          <UpcomingDeadlines />
+          <UpcomingDeadlines
+            deadlines={deadlinesData}
+           
+          />
         </Grid>
       </Grid>
     </>

@@ -1,8 +1,8 @@
 import { Box, Typography, Chip, Avatar } from "@mui/material";
-import calendarIcon from "../../assets/icons/date-icon.svg";
-import commentIcon  from "../../assets/icons/message-icon.svg";
+import calendarIcon    from "../../assets/icons/date-icon.svg";
+import commentIcon     from "../../assets/icons/message-icon.svg";
+import attachmentIcon  from "../../assets/icons/attach-icon.svg"; 
 
-// ── Priority color map ────────────────────────────────────────────────────
 const PRIORITY_CONFIG = {
   High:   { bg: "#04C3731A", color: "#04C373" },
   Medium: { bg: "#AA24931A", color: "#AA2493" },
@@ -10,12 +10,14 @@ const PRIORITY_CONFIG = {
 };
 
 const PipelineCard = ({
-  title       = "Create UI Dashboard",
-  priority    = "Low",
-  deadline    = "march 16",
-  comments    = 5,
-  assignee    = "",         // avatar src
+  title        = "Create UI Dashboard",
+  priority     = "Low",
+  deadline     = "march 16",
+  comments     = 5,
+  attachments,           // optional — only shown when passed
+  assignee     = "",
   assigneeName = "",
+  project      = "",
 }) => {
   const pcfg = PRIORITY_CONFIG[priority] || { bg: "#F5F5F5", color: "#757575" };
 
@@ -28,9 +30,7 @@ const PipelineCard = ({
         p: 1.5,
         cursor: "grab",
         transition: "box-shadow 0.2s ease",
-        "&:hover": {
-          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-        },
+        "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.08)" },
       }}
     >
       {/* ── Priority chip + Assignee avatar ──────────────────────────────── */}
@@ -38,24 +38,18 @@ const PipelineCard = ({
         <Chip
           label={priority}
           sx={{
-            height: "20px",
-            fontSize: "11px",
-            fontWeight: 600,
-            px: 0.5,
-            borderRadius: "10px",
-            backgroundColor: pcfg.bg,
-            color: pcfg.color,
+            height: "20px", fontSize: "11px", fontWeight: 600,
+            px: 0.5, borderRadius: "10px",
+            backgroundColor: pcfg.bg, color: pcfg.color,
           }}
         />
         <Avatar
           src={assignee}
           alt={assigneeName}
           sx={{
-            width: 28,
-            height: 28,
+            width: 28, height: 28,
             background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-            fontSize: "11px",
-            fontWeight: 600,
+            fontSize: "11px", fontWeight: 600,
           }}
         >
           {assigneeName?.charAt(0) || "A"}
@@ -64,30 +58,46 @@ const PipelineCard = ({
 
       {/* ── Title ────────────────────────────────────────────────────────── */}
       <Typography
-        fontSize="13px"
-        fontWeight={600}
-        color="text.primary"
-        mb={1.5}
-        sx={{ lineHeight: 1.4 }}
+        fontSize="13px" fontWeight={600} color="text.primary"
+        mb={0.5} sx={{ lineHeight: 1.4 }}
       >
         {title}
       </Typography>
 
-      {/* ── Deadline + Comments ──────────────────────────────────────────── */}
-      <Box display="flex" alignItems="center" gap={2}>
-       {/* ── Deadline ── */}
+      {/* ── Project subtitle ─────────────────────────────────────────────── */}
+      {project && (
+        <Typography fontSize="11px" color="text.secondary" mb={1.5}>
+          {project}
+        </Typography>
+      )}
+
+      {/* ── Deadline + Comments + Attachments ────────────────────────────── */}
+      <Box display="flex" alignItems="center" justifyContent="space-between">
+        {/* Deadline */}
         <Box display="flex" alignItems="center" gap={0.5}>
-        <img src={calendarIcon} alt="date" style={{ width: 12, height: 12 }} />
-        <Typography fontSize="11px" color="text.secondary">
+          <img src={calendarIcon} alt="date" style={{ width: 12, height: 12 }} />
+          <Typography fontSize="11px" color="text.secondary">
             {deadline}
-        </Typography>
+          </Typography>
         </Box>
-       {/* ── Comments ── */}
-        <Box display="flex" alignItems="center" gap={0.5}>
-        <img src={commentIcon} alt="comments" style={{ width: 12, height: 12 }} />
-        <Typography fontSize="11px" color="text.secondary">
-            {comments}
-        </Typography>
+
+        {/* Comments + Attachments on right */}
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <Box display="flex" alignItems="center" gap={0.5}>
+            <img src={commentIcon} alt="comments" style={{ width: 12, height: 12 }} />
+            <Typography fontSize="11px" color="text.secondary">
+              {comments}
+            </Typography>
+          </Box>
+
+          {attachments !== undefined && (
+            <Box display="flex" alignItems="center" gap={0.5}>
+              <img src={attachmentIcon} alt="attachments" style={{ width: 12, height: 12 }} />
+              <Typography fontSize="11px" color="text.secondary">
+                {attachments}
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Box>
     </Box>

@@ -8,7 +8,7 @@ import RecentLeaveRequests from "./recentLeaveRequests";
 import UpcomingPayroll   from "./upcomingPayroll";
 
 import employeesIcon  from "../../../assets/icons/employees.svg";
-import presentIcon    from "../../../assets/icons/complete-icon-white.svg";
+import presentIcon    from "../../../assets/icons/complete-icon.svg";
 import leaveIcon      from "../../../assets/icons/attendance-icon.svg";
 import pendingIcon    from "../../../assets/icons/time-icon.svg";
 
@@ -24,7 +24,7 @@ const statsData = [
     title: "Present Today",
     value: "6 (50%)",
     icon: presentIcon,
-    isHighlighted: true,
+   
   },
   {
     id: 3,
