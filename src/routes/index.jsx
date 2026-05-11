@@ -552,7 +552,21 @@ const EMP_ROUTES = [
     ),
     isHideMenu: false,
 
-   }
+   },
+   {
+    id: 5,
+    nameKey: "Messages",
+    component: <Messages />,
+    exact: "exact",
+    path: "/messages",
+    activeIcon: (
+      <img src={MessagesActiveIcon} alt="Messages" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={MessagesInactiveIcon} alt="Messages" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
 ];
 
 
