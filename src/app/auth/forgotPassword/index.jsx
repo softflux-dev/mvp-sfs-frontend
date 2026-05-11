@@ -1,39 +1,37 @@
 // app/auth/forgotPassword/index.jsx
 import { useState } from "react";
 import { Box, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
 
 import CustomInputLabel from "../../../components/customInputLabel";
 import TextInput        from "../../../components/textInput";
 import CustomButton     from "../../../components/customButton";
 import AuthLayout       from "../../../components/authLayout";
 import OtpDialog        from "../login/otpDialog";
+import { useAuth }      from "../../../hooks/auth";          // ← hook
 
 const ForgotPasswordPage = () => {
-  const navigate = useNavigate();
+  const {
+    loading, apiError, clearError,
+    handleForgotPassword, handleVerifyOtp,
+  } = useAuth();
 
   const [email,   setEmail]   = useState("");
   const [error,   setError]   = useState("");
-  const [loading, setLoading] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
 
-  const handleSend = () => {
+  const onSend = async () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError("You have entered an invalid email");
       return;
     }
     setError("");
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setShowOtp(true);       // ← open OTP dialog
-    }, 1000);
+    const result = await handleForgotPassword(email);
+    if (result.success) setShowOtp(true);
   };
 
-  const handleOtpVerify = (code) => {
-    console.log("OTP verified:", code);
-    setShowOtp(false);
-    navigate("/reset-password");  // ← proceed to reset password
+  const onVerify = async (code) => {
+    await handleVerifyOtp(code);
+    // navigation to /reset-password is handled inside the hook
   };
 
   return (
@@ -45,6 +43,14 @@ const ForgotPasswordPage = () => {
         Please Complete Your Verification
       </Typography>
 
+      {apiError && (
+        <Box mb={2} px={2} py={1.5}
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
+        >
+          <Typography fontSize={13} color="error">{apiError}</Typography>
+        </Box>
+      )}
+
       <Box mb={3}>
         <CustomInputLabel label="Email Address" />
         <TextInput
@@ -52,28 +58,28 @@ const ForgotPasswordPage = () => {
           value={email}
           onChange={(e) => {
             setEmail(e.target.value);
-            if (error) setError("");
+            if (error)    setError("");
+            if (apiError) clearError();
           }}
-          inputBgColor="#F5F5F5"
-          fullWidth
-          type="email"
-          error={!!error}
-          helperText={error}
+          inputBgColor="#F5F5F5" fullWidth type="email"
+          error={!!error} helperText={error}
         />
       </Box>
 
       <CustomButton
         btnLabel={loading ? "Sending..." : "Send Code"}
         variant="authbutton"
-        handlePressBtn={handleSend}
-        fullWidth
-        sx={{ width: "100%" }}
+        handlePressBtn={onSend}
+        fullWidth sx={{ width: "100%" }}
       />
 
       <OtpDialog
         open={showOtp}
         onClose={() => setShowOtp(false)}
-        onVerify={handleOtpVerify}
+        onVerify={onVerify}
+        apiError={apiError}
+        loading={loading}
+        onResend={onSend}
       />
     </AuthLayout>
   );
