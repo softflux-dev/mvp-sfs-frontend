@@ -7,7 +7,8 @@ import {
   Typography,
   Stack,
 } from "@mui/material";
-import logoutIcon from "../../assets/icons/logout-red.svg";
+import logoutIcon  from "../../assets/icons/logout-red.svg";
+import personIcon  from "../../assets/icons/profile-active.svg";
 import { useNavigate } from "react-router-dom";
 import useUserStore from "../../zustand/useUserStore";
 
@@ -17,8 +18,13 @@ export default function Profile({ user }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    //clearUserData();
-    //navigate("/login");
+    clearUserData();
+    navigate("/login");
+  };
+
+  const handleProfileClick = () => {
+    setAnchorEl(null);
+    navigate("/profile");
   };
 
   return (
@@ -61,7 +67,7 @@ export default function Profile({ user }) {
               width: 100,
               height: 100,
               mb: 2,
-              border: "3px solid #AA2493"
+              border: "3px solid #AA2493",
             }}
             src={
               user?.profilePicture ||
@@ -69,15 +75,38 @@ export default function Profile({ user }) {
             }
           />
 
-          <Typography fontSize="20px" fontWeight="600" mb="0.5">
+          <Typography fontSize="20px" fontWeight="600" mb={0.5}>
             {user?.fullName || "User Name"}
           </Typography>
 
-          <Typography fontSize="14px" color="#666" mb="3">
+          <Typography fontSize="14px" color="#666" mb={3}>
             {user?.email || "user@email.com"}
           </Typography>
 
           <Stack direction="column" gap={1} width="100%" mt={3}>
+            {/* PROFILE BUTTON */}
+            <Box
+              onClick={handleProfileClick}
+              width="100%"
+              display="flex"
+              alignItems="center"
+              gap={1}
+              borderRadius="16px"
+              p="12px 18px"
+              sx={{
+                cursor: "pointer",
+                background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+                "&:hover": {
+                  background: "linear-gradient(90deg, #022179 0%, #AA2493 100%)",
+                },
+              }}
+            >
+              <img src={personIcon} alt="profile" width={20} height={20} />
+              <Typography fontSize="16px" fontWeight="400" color="#fff">
+                Profile
+              </Typography>
+            </Box>
+
             {/* LOGOUT */}
             <Box
               onClick={handleLogout}
@@ -87,12 +116,9 @@ export default function Profile({ user }) {
               gap={1}
               borderRadius="16px"
               p="12px 18px"
-              sx={{
-                cursor: "pointer",
-              }}
+              sx={{ cursor: "pointer" }}
             >
-              <img src={logoutIcon} alt="icon" width={20} height={20} />
-
+              <img src={logoutIcon} alt="logout" width={20} height={20} />
               <Typography fontSize="16px" fontWeight="400" color="error.main">
                 Log out
               </Typography>

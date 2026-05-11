@@ -74,6 +74,8 @@ import TimeActiveIcon from "../assets/icons/time-active.svg";
 import TimeInactiveIcon from "../assets/icons/time-inactive.svg";
 import ProfileActiveIcon from "../assets/icons/profile-active.svg";
 import ProfileInactiveIcon from "../assets/icons/profile-inactive.svg";
+import SalaryActiveIcon from "../assets/icons/salary-active.svg";
+import SalaryInactiveIcon from "../assets/icons/salary-inactive.svg";
 
 import { id } from "date-fns/locale";
 //import AuthPage from "../app/auth/AuthPage";
@@ -579,10 +581,10 @@ const EMP_ROUTES = [
     exact: "exact",
     path: "/salary",
     activeIcon: (
-      <img src={ProfileActiveIcon} alt="Profile" style={{ width: 20, height: 20 }} />
+      <img src={SalaryActiveIcon} alt="Salary" style={{ width: 20, height: 20 }} />
     ),
     inActiveIcon: (
-      <img src={ProfileInactiveIcon} alt="Profile" style={{ width: 20, height: 20 }} />
+      <img src={SalaryInactiveIcon} alt="Salary" style={{ width: 20, height: 20 }} />
     ),
     isHideMenu: false,
   },
