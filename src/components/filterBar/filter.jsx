@@ -726,6 +726,15 @@ emp_my_tasks:
   },
   
 ],
+salary_history: [
+  {
+    type: "date",
+    key: "from",
+    placeholder: "From",
+    grid: { xs: 4 },
+  },
+ 
+],
 
     // ── Full (default fallback) ───────────────────────────────────────────────
     full: [

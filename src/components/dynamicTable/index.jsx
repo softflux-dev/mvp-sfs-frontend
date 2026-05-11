@@ -2266,6 +2266,70 @@ case "bbt_hours_logged":
       </Typography>
     </TableCell>
   );
+
+  // ── Payslip History — month (plain text) ─────────────────────────────────────
+case "ps_month":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.month || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Payslip History — base salary ────────────────────────────────────────────
+case "ps_base_salary":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        Rs{row.baseSalary?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Payslip History — bonus (green) ──────────────────────────────────────────
+case "ps_bonus":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#04C373">
+        Rs{row.bonus?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Payslip History — deductions (red) ───────────────────────────────────────
+case "ps_deductions":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#FF0000">
+        Rs{row.deductions?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Payslip History — net pay (bold) ─────────────────────────────────────────
+case "ps_net_pay":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        Rs{row.netPay?.toLocaleString() || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Payslip History — download icon button ────────────────────────────────────
+case "ps_download":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={() => onDownloadClick?.(row)}
+        sx={{ color: "#67768B", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        <img src={download} alt="download" style={{ width: 20, height: 20 }} />
+      </IconButton>
+    </TableCell>
+  );
  
 // ── Breakdown by Task — % of week with gradient progress bar ──────────────
 case "bbt_percent":

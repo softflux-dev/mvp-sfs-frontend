@@ -37,6 +37,8 @@ import MyTasks from "../app/empPortal/myTasks";
 import EmpTaskDetail from "../app/empPortal/myTasks/empTaskDetail";
 //import TimeTracking from "../app/empPortal/timeTracking";
 import EmpAttendance from "../app/empPortal/myAttendance";
+import Profile from "../app/empPortal/profile";
+import Salary from "../app/empPortal/salary";
 
 
 // routes/icons
@@ -70,6 +72,9 @@ import TasksActiveIcon from "../assets/icons/tasks-active.svg";
 import TasksInactiveIcon from "../assets/icons/tasks-inactive.svg";
 import TimeActiveIcon from "../assets/icons/time-active.svg";
 import TimeInactiveIcon from "../assets/icons/time-inactive.svg";
+import ProfileActiveIcon from "../assets/icons/profile-active.svg";
+import ProfileInactiveIcon from "../assets/icons/profile-inactive.svg";
+
 import { id } from "date-fns/locale";
 //import AuthPage from "../app/auth/AuthPage";
 //import SelectAccount from "../app/auth/login/SelectAccount";
@@ -567,6 +572,34 @@ const EMP_ROUTES = [
     ),
     isHideMenu: false,
   },
+  {
+    id: 6,
+    nameKey: "Salary",
+    component: <Salary />,
+    exact: "exact",
+    path: "/salary",
+    activeIcon: (
+      <img src={ProfileActiveIcon} alt="Profile" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={ProfileInactiveIcon} alt="Profile" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+   {
+    id: 7,
+    nameKey: "Profile",
+    component: <Profile />,
+    exact: "exact",
+    path: "/profile",
+    activeIcon: (
+      <img src={ProfileActiveIcon} alt="Profile" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={ProfileInactiveIcon} alt="Profile" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  }
 ];
 
 
