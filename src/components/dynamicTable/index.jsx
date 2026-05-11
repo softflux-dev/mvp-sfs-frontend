@@ -19,7 +19,7 @@ import {
   Checkbox,
 } from "@mui/material";
 import React, { useMemo, useState } from "react";
-
+import {Button} from "@mui/material";
 import TableSkeleton from "../skeleton/TableSkeleton";
 import { MoreVerticalIcon } from "lucide-react";
 import { Link } from "lucide-react";
@@ -94,6 +94,9 @@ export default function PaginatedTable({
   selectedRows = [],
   onSelectRow,
   onSelectAll,
+  projectTypes = [],
+  onApproveClick,
+  onRejectClick
 }) {
   const [internalPage, setInternalPage] = useState(0);
   const [internalRowsPerPage, setInternalRowsPerPage] = useState(10);
@@ -210,6 +213,23 @@ export default function PaginatedTable({
           </TableCell>
         );
       }
+
+      case "task_start_date":
+        return (
+          <TableCell key={val}>
+            <Typography fontSize="13px" fontWeight={400} color="text.black">
+              {row.startDate || "-"}
+            </Typography>
+          </TableCell>
+        );
+         case "task_end_date":
+        return (
+          <TableCell key={val}>
+            <Typography fontSize="13px" fontWeight={400} color="text.black">
+              {row.endDate || "-"}
+            </Typography>
+          </TableCell>
+        );
 
       // ── Status chip (generic + project) ──────────────────────────────────
       case "status_chip":
@@ -458,6 +478,106 @@ case "doc_type":
       <Typography fontSize="13px" fontWeight={400} color="text.black">
         {row.type || "-"}
       </Typography>
+    </TableCell>
+  );
+
+  case "imp_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.date || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "imp_timestamp":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.timestamp || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "imp_file_name":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="13px" fontWeight={500} color="text.primary"
+        sx={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+      >
+        {row.fileName || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "imp_file_size":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.fileSize || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "imp_imported_by":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.importedBy || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "imp_records":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.records ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+
+case "imp_status": {
+  const IMP_STATUS = {
+    Success: { bg: "#04C3731A", color: "#04C373" },
+    Failed:  { bg: "#FF00001A", color: "#FF0000" },
+    Partial: { bg: "#FF972F1A", color: "#FF972F" },
+  };
+  const cfg = IMP_STATUS[row.status] || { bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+
+case "imp_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={0.5}>
+        <IconButton
+          size="small"
+          onClick={() => onDownloadClick?.(row)}
+          sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+        >
+          <img src={download} alt="download" style={{ width: 20, height: 20 }} />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={() => onDeleteClick?.(row)}
+          sx={{ color: "#9CA3AF", "&:hover": { color: "#FF0000", backgroundColor: "#FF00001A" } }}
+        >
+          <img src={Delete} alt="delete" style={{ width: 20, height: 20 }} />
+        </IconButton>
+      </Box>
     </TableCell>
   );
 
@@ -1339,45 +1459,40 @@ case "hr_leave_actions":
   return (
     <TableCell key={val}>
       <Box display="flex" gap={0.75}>
-        {/* Approve */}
-        <Box
-          onClick={() => onApproveClick?.(row)}
-          sx={{
-            px:              "12px",
-            py:              "4px",
-            borderRadius:    "6px",
-            backgroundColor: "#04C3731A",
-            color:           "#04C373",
-            fontSize:        "12px",
-            fontWeight:      500,
-            fontFamily:      '"Poppins", sans-serif',
-            cursor:          "pointer",
-            userSelect:      "none",
-            "&:hover":       { backgroundColor: "#04C37330" },
-          }}
-        >
-          Approve
-        </Box>
-
-        {/* Reject */}
-        <Box
-          onClick={() => onRejectClick?.(row)}
-          sx={{
-            px:              "12px",
-            py:              "4px",
-            borderRadius:    "6px",
-            backgroundColor: "#FF00001A",
-            color:           "#FF0000",
-            fontSize:        "12px",
-            fontWeight:      500,
-            fontFamily:      '"Poppins", sans-serif',
-            cursor:          "pointer",
-            userSelect:      "none",
-            "&:hover":       { backgroundColor: "#FF000030" },
-          }}
-        >
-          Reject
-        </Box>
+        {row.status === "Pending" && (
+          <>
+            <Box
+              onClick={() => onApproveClick?.(row)}
+              sx={{
+                px: "12px", py: "4px",
+                borderRadius: "6px",
+                backgroundColor: "#04C3731A",
+                color: "#04C373",
+                fontSize: "12px", fontWeight: 500,
+                fontFamily: '"Poppins", sans-serif',
+                cursor: "pointer", userSelect: "none",
+                "&:hover": { backgroundColor: "#04C37330" },
+              }}
+            >
+              Approve
+            </Box>
+            <Box
+              onClick={() => onRejectClick?.(row)}
+              sx={{
+                px: "12px", py: "4px",
+                borderRadius: "6px",
+                backgroundColor: "#FF00001A",
+                color: "#FF0000",
+                fontSize: "12px", fontWeight: 500,
+                fontFamily: '"Poppins", sans-serif',
+                cursor: "pointer", userSelect: "none",
+                "&:hover": { backgroundColor: "#FF000030" },
+              }}
+            >
+              Reject
+            </Box>
+          </>
+        )}
       </Box>
     </TableCell>
   );
@@ -1478,20 +1593,34 @@ case "att_mon_notes":
     </TableCell>
   );
 
-// ── Attendance monitoring — view action ───────────────────────────────────
-case "att_mon_view":
+// ── Attendance Records — view + edit actions ──────────────────────────────
+case "att_rec_actions":
   return (
     <TableCell key={val}>
-      <IconButton
-        size="small"
-        onClick={() => onViewClick?.(row)}
-        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
-      >
-        <img src={viewIcon} alt="view" style={{ width: 20, height: 20 }} />
-      </IconButton>
+      <Box display="flex" alignItems="center" gap={0.5}>
+        <IconButton
+          size="small"
+          onClick={() => onViewClick?.(row)}
+          sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+        >
+          <img src={viewIcon} alt="view" style={{ width: 20, height: 20 }} />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={() => onEditClick?.(row)}
+          sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+        >
+          {React.isValidElement(EditIcon)
+            ? EditIcon
+            : typeof EditIcon === "string"
+              ? <img src={EditIcon} alt="edit" style={{ width: 20, height: 20 }} />
+              : EditIcon
+                ? React.createElement(EditIcon, { style: { width: 20, height: 20 } })
+                : null}
+        </IconButton>
+      </Box>
     </TableCell>
   );
-
   // ── Leave management — employee ───────────────────────────────────────────
 case "lm_employee":
   return (
@@ -1602,54 +1731,13 @@ case "lm_status": {
 case "lm_actions":
   return (
     <TableCell key={val}>
-      <Box display="flex" alignItems="center" gap={1}>
-        {row.status === "Pending" ? (
-          <>
-            <Box
-              onClick={() => onApproveClick?.(row)}
-              sx={{
-                px: "12px", py: "5px",
-                borderRadius: "12px",
-                backgroundColor: "#04C3731A",
-                color: "#04C373",
-                fontSize: "12px", fontWeight: 500,
-                fontFamily: '"Poppins", sans-serif',
-                cursor: "pointer",
-                userSelect: "none",
-                "&:hover": { backgroundColor: "#04C37330" },
-              }}
-            >
-              Approve
-            </Box>
-            <Box
-              onClick={() => onRejectClick?.(row)}
-              sx={{
-                px: "12px", py: "5px",
-                borderRadius: "12px",
-                backgroundColor: "#FF00001A",
-                color: "#FF0000",
-                fontSize: "12px", fontWeight: 500,
-                fontFamily: '"Poppins", sans-serif',
-                cursor: "pointer",
-                userSelect: "none",
-                "&:hover": { backgroundColor: "#FF000030" },
-              }}
-            >
-              Reject
-            </Box>
-          </>
-        ) : (
-          // placeholder same width as Approve + Reject + gap
-          <Box sx={{ width: "141px" }} />
-        )}
-        <IconButton
-          size="small"
-          onClick={() => onViewClick?.(row)}
-          sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
-        >
-          <img src={viewIcon} alt="view" style={{ width: 18, height: 18 }} />
-        </IconButton>
-      </Box>
+      <IconButton
+        size="small"
+        onClick={() => onViewClick?.(row)}
+        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        <img src={viewIcon} alt="view" style={{ width: 18, height: 18 }} />
+      </IconButton>
     </TableCell>
   );
   // ── Payroll — checkbox ────────────────────────────────────────────────────
@@ -1871,6 +1959,463 @@ case "task_list_deadline":
       </Typography>
     </TableCell>
   );
+
+  case "tp_member":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1.5}>
+        <Avatar
+          src={row.avatar}
+          alt={row.name}
+          sx={{
+            width: 36,
+            height: 36,
+            background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+            fontSize: "13px",
+            fontWeight: 600,
+          }}
+        >
+          {row.name?.charAt(0) || "A"}
+        </Avatar>
+        <Typography fontSize="13px" fontWeight={500} color="text.primary">
+          {row.name}
+        </Typography>
+      </Stack>
+    </TableCell>
+  );
+ 
+// ── Team Performance — role (plain text) ─────────────────────────────────
+case "tp_role":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.role || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Team Performance — total tasks count ─────────────────────────────────
+case "tp_total_tasks":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.totalTasks ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Team Performance — completed count (green when > 0) ──────────────────
+case "tp_completed":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="13px"
+        fontWeight={500}
+        color={row.completed > 0 ? "#04C373" : "text.secondary"}
+      >
+        {row.completed ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Team Performance — active count ──────────────────────────────────────
+case "tp_active":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.active ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Team Performance — overdue count (red when > 0) ──────────────────────
+case "tp_overdue":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="13px"
+        fontWeight={500}
+        color={row.overdue > 0 ? "#FF0000" : "text.secondary"}
+      >
+        {row.overdue ?? "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Team Performance — completion rate with progress bar ─────────────────
+case "tp_completion_rate":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1.5}>
+        <Box
+          sx={{
+            width: "80px",
+            height: "6px",
+            borderRadius: "3px",
+            backgroundColor: "#F0F0F0",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          <Box
+            sx={{
+              width: `${row.completionRate ?? 0}%`,
+              height: "100%",
+              borderRadius: "3px",
+              background:
+                row.completionRate > 0
+                  ? "linear-gradient(90deg, #022179 0%, #AA2493 100%)"
+                  : "#E0E0E0",
+            }}
+          />
+        </Box>
+        <Typography fontSize="13px" fontWeight={600} color="text.black">
+          {row.completionRate ?? 0}%
+        </Typography>
+      </Box>
+    </TableCell>
+  );
+
+  case "tl_task":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.taskName || "-"}
+      </Typography>
+      {row.project && (
+        <Chip
+          label={row.project}
+          size="small"
+          sx={{
+            mt: 0.5,
+            height: "20px",
+            fontSize: "11px",
+            fontWeight: 500,
+            borderRadius: "6px",
+            backgroundColor: "#2B6EFF1A",
+            color: "#2B6EFF",
+          }}
+        />
+      )}
+    </TableCell>
+  );
+ case "att_status": {
+  const cfg = {
+    Present: { bg: "#04C3731A", color: "#04C373" },
+    Absent:  { bg: "#FF00001A", color: "#FF0000" },
+    Late:    { bg: "#AA24931A", color: "#AA2493" },
+    Leave:   { bg: "#0051FF1A", color: "#2B6EFF" },
+    Weekend: { bg: "#F5F5F5",   color: "#888888" },
+  }[row.status] || {};
+  return (
+    <Chip
+      label={row.status}
+      size="small"
+      sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 500, fontSize: 11 }}
+    />
+  );
+}
+case "att_status": {
+  const ATT_CFG = {
+    Present: { bg: "#04C3731A", color: "#04C373" },
+    Absent:  { bg: "#FF00001A", color: "#FF0000" },
+    Late:    { bg: "#AA24931A", color: "#AA2493" },
+    Leave:   { bg: "#0051FF1A", color: "#2B6EFF" },
+    Weekend: { bg: "#F5F5F5",   color: "#888888" },
+  };
+  const cfg = ATT_CFG[row.status] || { bg: "#F5F5F5", color: "#888888" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        size="small"
+        sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 500, fontSize: 11 }}
+      />
+    </TableCell>
+  );
+}
+
+case "leave_status": {
+  const LEAVE_CFG = {
+    Approved: { bg: "#04C3731A", color: "#04C373" },
+    Pending:  { bg: "#AA24931A", color: "#AA2493" },
+    Reject:   { bg: "#FF00001A", color: "#FF0000" },
+  };
+  const cfg = LEAVE_CFG[row.status] || { bg: "#F5F5F5", color: "#888888" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.status}
+        size="small"
+        sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 500, fontSize: 11 }}
+      />
+    </TableCell>
+  );
+}
+
+case "leave_action":
+  return (
+    <TableCell key={val}>
+      {row.status === "Pending" ? (
+        <Button
+          variant="gradient"
+          size="small"
+          sx={{ fontSize: 11, px: 2, py: 0.5, borderRadius: "8px" }}
+          onClick={() => console.log("Cancel", row.id)}
+        >
+          Cancel
+        </Button>
+      ) : null}
+    </TableCell>
+  );
+// ── Time Log — date ───────────────────────────────────────────────────────
+case "tl_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {row.date || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Time Log — duration ───────────────────────────────────────────────────
+case "tl_duration":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.duration || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Time Log — type chip (Timer = green, Manual = purple) ─────────────────
+case "tl_type": {
+  const isTimer = row.type === "Timer";
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.type}
+        size="small"
+        sx={{
+          height: "24px",
+          fontSize: "12px",
+          fontWeight: 500,
+          px: 1,
+          borderRadius: "8px",
+          backgroundColor: isTimer ? "#04C3731A" : "#AA24931A",
+          color:           isTimer ? "#04C373"   : "#AA2493",
+        }}
+      />
+    </TableCell>
+  );
+}
+ 
+// ── Time Log — note (plain text, secondary color) ─────────────────────────
+case "tl_note":
+  return (
+    <TableCell key={val}>
+      <Typography
+        fontSize="13px"
+        fontWeight={400}
+        color={row.note ? "text.black" : "text.secondary"}
+      >
+        {row.note || "—"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Time Log — delete icon button ────────────────────────────────────────
+case "tl_delete":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={() => onDeleteClick?.(row)}
+        sx={{ color: "#9CA3AF", "&:hover": { color: "#FF0000", backgroundColor: "#FF00001A" } }}
+      >
+        <img src={Delete} alt="delete" style={{ width: 20, height: 20 }} />
+      </IconButton>
+    </TableCell>
+  );
+
+  case "bbt_task_name":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.taskName || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Breakdown by Task — project ───────────────────────────────────────────
+case "bbt_project":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.project || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Breakdown by Task — hours logged ──────────────────────────────────────
+case "bbt_hours_logged":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.hoursLogged || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Breakdown by Task — % of week with gradient progress bar ──────────────
+case "bbt_percent":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1.5}>
+        <Box
+          sx={{
+            width: "80px",
+            height: "6px",
+            borderRadius: "3px",
+            backgroundColor: "#F0F0F0",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+        >
+          <Box
+            sx={{
+              width: `${row.percent ?? 0}%`,
+              height: "100%",
+              borderRadius: "3px",
+              background: row.percent > 0
+                ? "linear-gradient(90deg, #022179 0%, #AA2493 100%)"
+                : "#E0E0E0",
+            }}
+          />
+        </Box>
+        <Typography fontSize="13px" fontWeight={600} color="text.black">
+          {row.percent ?? 0}%
+        </Typography>
+      </Box>
+    </TableCell>
+  );
+case "task_assignees": {
+  const ALL_ASSIGNEES = [
+    { value: "sara_ahmed", label: "Sara Ahmed"    },
+    { value: "jon",        label: "Jon"           },
+    { value: "peter",      label: "Peter"         },
+    { value: "sarah",      label: "Sarah"         },
+    { value: "sarah_chen", label: "Sarah Chen"    },
+    { value: "marcus",     label: "Marcus Webb"   },
+    { value: "priya",      label: "Priya Patel"   },
+    { value: "jake",       label: "Jake Morrison" },
+    { value: "emily",      label: "Emily Ross"    },
+    { value: "david",      label: "David Kim"     },
+  ];
+
+  const ids     = Array.isArray(row.assigneeIds) ? row.assigneeIds : [];
+  const matched = ALL_ASSIGNEES.filter((a) => ids.includes(a.value));
+  const visible  = matched.slice(0, 2);
+  const overflow = matched.slice(2);
+
+  const [showAll, setShowAll] = React.useState(false);
+
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
+
+        {/* First 2 names as chips */}
+        {visible.map((a) => (
+          <Box
+            key={a.value}
+            sx={{
+              px: "8px", py: "3px",
+              borderRadius: "6px",
+              backgroundColor: "#F0F0F0",
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "#374151",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {a.label}
+          </Box>
+        ))}
+
+        {/* +N more chip — click to expand */}
+        {!showAll && overflow.length > 0 && (
+          <Box
+            onClick={(e) => { e.stopPropagation(); setShowAll(true); }}
+            sx={{
+              px: "8px", py: "3px",
+              borderRadius: "6px",
+              backgroundColor: "#AA24931A",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "#AA2493",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              "&:hover": { backgroundColor: "#AA249330" },
+            }}
+          >
+            +{overflow.length} more
+          </Box>
+        )}
+
+        {/* Expanded names */}
+        {showAll && overflow.map((a) => (
+          <Box
+            key={a.value}
+            sx={{
+              px: "8px", py: "3px",
+              borderRadius: "6px",
+              backgroundColor: "#F0F0F0",
+              fontSize: "12px",
+              fontWeight: 500,
+              color: "#374151",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {a.label}
+          </Box>
+        ))}
+
+        {/* Collapse button */}
+        {showAll && overflow.length > 0 && (
+          <Box
+            onClick={(e) => { e.stopPropagation(); setShowAll(false); }}
+            sx={{
+              px: "8px", py: "3px",
+              borderRadius: "6px",
+              backgroundColor: "#F5F5F5",
+              fontSize: "12px",
+              fontWeight: 600,
+              color: "#9CA3AF",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              "&:hover": { backgroundColor: "#E5E5E5" },
+            }}
+          >
+            less
+          </Box>
+        )}
+
+      </Box>
+    </TableCell>
+  );
+}
+case "proj_type_label": {
+  const typeList = projectTypes.length ? projectTypes : [];
+  const matched  = typeList.find((t) => t.value === row.projectType);
+  const label    = matched?.label || row.projectType || "-";
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.black">
+        {label}
+      </Typography>
+    </TableCell>
+  );
+}
   
   // ── Default: plain text ───────────────────────────────────────────────
       default:

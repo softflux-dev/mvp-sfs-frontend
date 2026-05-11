@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
 
 const ProjectCard = ({
   projectName   = "E-Commerce Platform",
-  client        = "RetailMax Inc.",
+  //client        = "RetailMax Inc.",
   status        = "In Progress",
   progress      = 87,
   dueDate       = "2026-04-15",
@@ -48,9 +48,9 @@ const ProjectCard = ({
           <Typography fontSize="15px" fontWeight={700} color="text.primary">
             {projectName}
           </Typography>
-          <Typography fontSize="12px" color="text.secondary" mt={0.25}>
+       {/*    <Typography fontSize="12px" color="text.secondary" mt={0.25}>
             {client}
-          </Typography>
+          </Typography> */}
         </Box>
         <Chip
           label={status}

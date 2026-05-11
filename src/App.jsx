@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 //import { ProtectedLayout } from "./routes/RoutesLayout";
-import { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES, PM_ROUTES } from "./routes";
+import { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES, PM_ROUTES, EMP_ROUTES } from "./routes";
+
 import MainLayout from "./components/layout";
 
 
@@ -82,6 +83,21 @@ function App() {
             />
           ))}
         </Route>
+         {/* Employee routes */}
+        <Route>
+          {EMP_ROUTES?.map((route) => (
+            <Route
+              key={route.id}
+              path={route.path}
+              element={
+                route.component ? (
+                  <MainLayout>{route.component}</MainLayout>
+                ) : null
+              }
+            />
+          ))}
+        </Route>
+      
       </Routes>
 
     </BrowserRouter>

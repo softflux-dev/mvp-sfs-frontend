@@ -36,13 +36,13 @@ const Filter = ({
         type: "search",
         key: "search",
         placeholder: "Search by project name or client name...",
-        grid: { xs: 12, md: 4 },
+        grid: { xs: 12, md: 3.5 },
       },
       {
         type: "select",
         key: "status",
         placeholder: "All Status",
-        grid: { xs: 12, md: 3 },
+        grid: { xs: 12, md: 2 },
         options: [
           { v: "", l: "All Status" },
           { v: "development", l: "Development" },
@@ -52,11 +52,24 @@ const Filter = ({
           { v: "planning", l: "Planning" },
         ],
       },
+          {
+        type: "select",
+        key: "status",
+        placeholder: "All Project Types",
+        grid: { xs: 12, md: 2 },
+        options: [
+          { v: "", l: "All Project Types" },
+          { v: "development", l: "Development" },
+          { v: "seo", l: "SEO" },
+          { v: "marketing", l: "Marketing" },
+
+        ],
+      },
       {
         type: "select",
         key: "manager",
         placeholder: "All Manager",
-        grid: { xs: 12, md: 3 },
+        grid: { xs: 12, md: 2.5 },
        options: [
       { v: "", l: "All Manager" },
       { v: "jon", l: "Jon" },
@@ -643,6 +656,76 @@ task_management: [
     ],
   },
 ],
+team_performance: [
+  {
+    type: "select",
+    key: "project",
+    placeholder: "All Projects",
+    grid: { xs: "auto" },
+    options: [
+      { v: "",           l: "All Projects"         },
+      { v: "ecommerce",  l: "E-Commerce Platform"  },
+      { v: "hr",         l: "HR Management System" },
+      { v: "mobile",     l: "Mobile Banking App"   },
+      { v: "cms",        l: "CMS Website Redesign" },
+    ],
+  },
+  {
+    type: "date",
+    key: "from",
+    placeholder: "From",
+    grid: { xs: "auto" },
+  },
+],
+emp_my_tasks:
+[
+    {
+    type: "search",
+    key: "search",
+    placeholder: "Search tasks...",
+    grid: { xs: 12, md: 3 },
+  },
+  {
+    type: "select",
+    key: "status",
+    placeholder: "All Status",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "",           l: "All Status"          },
+      { v: "new",  l: "New"   },
+      { v: "in_progress", l: "In Progress"      },
+      { v: "review",        l: "Under Review"         },
+      { v: "assigned",     l: "Assigned"    },
+      { v: "completed",     l: "Completed"   },
+    ],
+  },
+  {
+    type: "select",
+    key: "priority",
+    placeholder: "All Priority",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "",       l: "All Priority" },
+      { v: "low",    l: "Low"          },
+      { v: "medium", l: "Medium"       },
+      { v: "high",   l: "High"         },
+    ],
+  },
+  {
+    type: "select",
+    key: "project",
+    placeholder: "All Projects",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "",           l: "All Projects"          },
+      { v: "ecommerce",  l: "E-Commerce Platform"   },
+      { v: "healthcare", l: "Healthcare Portal"      },
+      { v: "crm",        l: "CRM Dashboard"         },
+      { v: "mobile",     l: "Mobile Banking App"    },
+    ],
+  },
+  
+],
 
     // ── Full (default fallback) ───────────────────────────────────────────────
     full: [
@@ -704,16 +787,32 @@ task_management: [
                   ))}
                 </CustomSelect>
               )}
-              {f.type === "date" && (
-                <DatePicker
-                  value={values[f.key] || null}
-                  onChange={(v) => setVal(f.key, v)}
-                  sx={GlobalStyle.datePickerStyle}
-                  slotProps={{
-                    textField: { placeholder: f.placeholder, fullWidth: true },
-                  }}
-                />
-              )}
+             {f.type === "date" && (
+              <DatePicker
+                value={values[f.key] || null}
+                onChange={(v) => setVal(f.key, v)}
+                sx={{
+                  ...GlobalStyle.datePickerStyle,
+                  "& input": {
+                    color: values[f.key] ? "inherit" : "transparent",
+                  },
+                  "& input::placeholder": {
+                    color: "#9CA3AF",
+                    opacity: 1,
+                    visibility: "visible",
+                  },
+                }}
+                slotProps={{
+                  textField: {
+                    label: "",
+                    fullWidth: true,
+                    inputProps: {
+                      placeholder: f.placeholder,
+                    },
+                  },
+                }}
+              />
+            )}
             </Grid>
           ))}
         </Grid>

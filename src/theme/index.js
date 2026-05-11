@@ -496,6 +496,46 @@ const getTheme = (direction = "ltr") =>
               color: "#AA2493",
             },
           },
+          {
+        props: { variant: "checkIn" },
+        style: {
+          backgroundColor: "#48B504",
+          color: "#ffffff",
+          fontSize: "15px",
+          fontWeight: 600,
+          height: "46px",
+          borderRadius: "15px",
+          fontFamily: '"Poppins", sans-serif',
+          textTransform: "none",
+          "&:hover": {
+            backgroundColor: "#3a9003",
+          },
+          "&.Mui-disabled": {
+            backgroundColor: "#48B50480",
+            color: "#ffffff99",
+          },
+        },
+      },
+      {
+        props: { variant: "checkOut" },
+        style: {
+          backgroundColor: "#FE0000",
+          color: "#ffffff",
+          fontSize: "15px",
+          fontWeight: 600,
+          height: "46px",
+          borderRadius: "15px",
+          fontFamily: '"Poppins", sans-serif',
+          textTransform: "none",
+          "&:hover": {
+            backgroundColor: "#cc0000",
+          },
+          "&.Mui-disabled": {
+            backgroundColor: "#FE000080",
+            color: "#ffffff99",
+          },
+        },
+      },
         ],
       },
 

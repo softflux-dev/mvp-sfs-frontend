@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Box, Grid } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 import HeaderText         from "../../../components/headerText";
 import CustomButton       from "../../../components/customButton";
@@ -14,28 +15,74 @@ import { mockTasks }      from "./mockTasks";
 import KanbanIcon from "../../../assets/icons/kanban-active.svg";
 import ListIcon   from "../../../assets/icons/tasks-inactive.svg";
 
+const fmt = (d) =>
+  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-";
+
+const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+
 const TaskManagement = () => {
-  const [view,         setView]         = useState("kanban");
-  const [filters,      setFilters]      = useState({});
-  const [tasks,        setTasks]        = useState(mockTasks);
-  const [taskOpen,     setTaskOpen]     = useState(false);
-  const [editingTask,  setEditingTask]  = useState(null);
-  const [deleteSuccess,setDeleteSuccess]= useState(false);
-  const [saveSuccess,  setSaveSuccess]  = useState(false);
+  const navigate = useNavigate();
+  const [view,          setView]          = useState("kanban");
+  const [filters,       setFilters]       = useState({});
+  const [tasks,         setTasks]         = useState(mockTasks);
+  const [taskOpen,      setTaskOpen]      = useState(false);
+  const [editingTask,   setEditingTask]   = useState(null);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [saveSuccess,   setSaveSuccess]   = useState(false);
 
   const confirmRef = useRef();
 
   const filteredTasks = tasks.filter((t) => {
-    const search   = filters.search?.toLowerCase()   || "";
-    const project  = filters.project                 || "";
-    const priority = filters.priority                || "";
-    const status   = filters.status                  || "";
+    const search   = filters.search?.toLowerCase() || "";
+    const project  = filters.project               || "";
+    const priority = filters.priority              || "";
+    const status   = filters.status                || "";
     const matchSearch   = !search   || t.title.toLowerCase().includes(search);
     const matchProject  = !project  || t.project.toLowerCase().replace(/ /g, "_").includes(project);
     const matchPriority = !priority || t.priority.toLowerCase() === priority;
     const matchStatus   = !status   || t.status.toLowerCase().replace(/ /g, "_") === status;
     return matchSearch && matchProject && matchPriority && matchStatus;
   });
+
+  const handleSave = (data) => {
+    if (editingTask) {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === editingTask.id
+            ? {
+                ...t,
+                title:       data.title,
+                description: data.description,
+                project:     data.project,
+                module:      data.module,
+                assigneeIds: data.assigneeIds,
+                priority:    capitalize(data.priority),
+                startDate:   fmt(data.startDate),
+                endDate:     fmt(data.endDate),
+              }
+            : t
+        )
+      );
+    } else {
+      setTasks((prev) => [
+        ...prev,
+        {
+          id:             Date.now(),
+          title:          data.title,
+          description:    data.description,
+          project:        data.project,
+          module:         data.module,
+          assigneeIds:    data.assigneeIds,
+          assigneeAvatar: "",
+          priority:       capitalize(data.priority),
+          status:         "New",
+          startDate:      fmt(data.startDate),
+          endDate:        fmt(data.endDate),
+        },
+      ]);
+    }
+    setSaveSuccess(true);
+  };
 
   const handleMenuAction = (action, row) => {
     if (action === "edit") {
@@ -54,7 +101,7 @@ const TaskManagement = () => {
         },
       });
     }
-    if (action === "view") console.log("View:", row);
+    if (action === "view") navigate(`/pm-tasks/${row.id}`, { state: { task: row } });
   };
 
   return (
@@ -73,7 +120,7 @@ const TaskManagement = () => {
               startIcon={
                 <img src={KanbanIcon} alt="kanban" style={{
                   width: 16, height: 16,
-                  filter: view === "kanban" ? "brightness(0) invert(1)" : "none"
+                  filter: view === "kanban" ? "brightness(0) invert(1)" : "none",
                 }} />
               }
               sx={{ minWidth: "100px", height: "40px", fontSize: "14px" }}
@@ -85,7 +132,7 @@ const TaskManagement = () => {
               startIcon={
                 <img src={ListIcon} alt="list" style={{
                   width: 16, height: 16,
-                  filter: view === "list" ? "brightness(0) invert(1)" : "none"
+                  filter: view === "list" ? "brightness(0) invert(1)" : "none",
                 }} />
               }
               sx={{ minWidth: "100px", height: "40px", fontSize: "14px" }}
@@ -112,10 +159,7 @@ const TaskManagement = () => {
       <AddTaskDialog
         open={taskOpen}
         onClose={() => { setTaskOpen(false); setEditingTask(null); }}
-        onSave={(data) => {
-          console.log("Save task:", data);
-          setSaveSuccess(true);
-        }}
+        onSave={handleSave}
         editingTask={editingTask}
       />
 

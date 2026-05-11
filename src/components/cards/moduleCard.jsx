@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Box, Typography, Chip, Avatar, AvatarGroup, IconButton } from "@mui/material";
 import { Edit2, Trash2 } from "lucide-react";
 import ProgressBar from "../progressBar";
@@ -18,15 +19,18 @@ const ModuleCard = ({
   status       = "Planning",
   tasksLabel   = "8/12 tasks",
   progress     = 87,
-  members      = [],           // array of avatar src strings
+  members      = [],
   onEdit,
   onDelete,
-  showActions  = false,        // show edit/delete icons
+  showActions,   // kept for backward-compat but no longer needed
 }) => {
+  const [hovered, setHovered] = useState(false);
   const statusCfg = STATUS_CONFIG[status] || { bg: "#F5F5F5", color: "#757575" };
 
   return (
     <Box
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       sx={{
         backgroundColor: "#fff",
         borderRadius: "16px",
@@ -88,8 +92,7 @@ const ModuleCard = ({
             ? members.map((src, i) => (
                 <Avatar key={i} src={src} sx={{ width: 28, height: 28 }} />
               ))
-            : // fallback placeholder avatars
-              [1, 2, 3].map((i) => (
+            : [1, 2, 3].map((i) => (
                 <Avatar
                   key={i}
                   sx={{
@@ -105,25 +108,30 @@ const ModuleCard = ({
               ))}
         </AvatarGroup>
 
-        {/* Edit / Delete icons — only shown when showActions=true */}
-        {showActions && (
-          <Box display="flex" gap={0.5}>
-            <IconButton
-              size="small"
-              onClick={onEdit}
-              sx={{ color: "#888", "&:hover": { color: "#AA2493", backgroundColor: "#AA24930F" } }}
-            >
-              <Edit2 size={15} />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={onDelete}
-              sx={{ color: "#888", "&:hover": { color: "#FF0000", backgroundColor: "#FF00001A" } }}
-            >
-              <Trash2 size={15} />
-            </IconButton>
-          </Box>
-        )}
+        {/* Edit / Delete — visible on card hover */}
+        <Box
+          display="flex"
+          gap={0.5}
+          sx={{
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 0.2s ease",
+          }}
+        >
+          <IconButton
+            size="small"
+            onClick={onEdit}
+            sx={{ color: "#888", "&:hover": { color: "#AA2493", backgroundColor: "#AA24930F" } }}
+          >
+            <Edit2 size={15} />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={onDelete}
+            sx={{ color: "#888", "&:hover": { color: "#FF0000", backgroundColor: "#FF00001A" } }}
+          >
+            <Trash2 size={15} />
+          </IconButton>
+        </Box>
       </Box>
     </Box>
   );

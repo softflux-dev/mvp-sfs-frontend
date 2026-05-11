@@ -2,12 +2,12 @@ import { useState, useRef } from "react";
 import { Box, Grid } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import HeaderText         from "../../../components/headerText";
+import CustomButton       from "../../../components/customButton";
 import Filter             from "../../../components/filterBar/filter";
 import PaginatedTable     from "../../../components/dynamicTable";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";
-import EditIntegration    from "./editIntegration";
-
+import AddEditIntegration from "./addEditIntegration";
 import { MoreVerticalIcon } from "lucide-react";
 
 const mockIntegrations = [
@@ -41,40 +41,81 @@ const displayRows = [
 ];
 
 const menuOptions = (row) => [
-  { value: "view",    label: "View"                   },
-  { value: "edit",    label: "Edit"                   },
-  { value: "connect", label: "Connect with Repository"},
+  { value: "view",    label: "View"                    },
+  { value: "edit",    label: "Edit"                    },
+  { value: "connect", label: "Connect with Repository" },
 ];
 
 const Integrations = () => {
   const navigate = useNavigate();
-  const [integrations,  setIntegrations]  = useState(mockIntegrations);
-  const [editOpen,      setEditOpen]      = useState(false);
-  const [editingRow,    setEditingRow]    = useState(null);
-  const [saveSuccess,   setSaveSuccess]   = useState(false);
+  const [integrations, setIntegrations] = useState(mockIntegrations);
+  const [dialogOpen,   setDialogOpen]   = useState(false);
+  const [editingRow,   setEditingRow]   = useState(null); // null = Add mode, row = Edit mode
+  const [saveSuccess,  setSaveSuccess]  = useState(false);
 
   const confirmDialogRef = useRef();
 
+  const openAdd     = ()    => { setEditingRow(null); setDialogOpen(true); };
+  const openEdit    = (row) => { setEditingRow(row);  setDialogOpen(true); };
+  const closeDialog = ()    => { setDialogOpen(false); setEditingRow(null); };
+
   const handleMenuAction = (action, row) => {
-    if (action === "edit") {
-      setEditingRow(row);
-      setEditOpen(true);
+    if (action === "edit")    openEdit(row);
+    if (action === "view")    navigate(`/integrations/${row.id}`, { state: { integration: row } });
+    if (action === "connect") console.log("Connect:", row);
+  };
+
+  const handleSave = (data) => {
+    if (editingRow) {
+      // Edit mode — update existing row
+      setIntegrations((prev) =>
+        prev.map((item) =>
+          item.id === editingRow.id
+            ? { ...item, repositoryUrl: data.repositoryUrl, gitUrl: data.repositoryUrl.replace("https://", "").slice(0, 30) }
+            : item
+        )
+      );
+    } else {
+      // Add mode — append new row
+      setIntegrations((prev) => {
+        const newId = prev.length + 1;
+        return [
+          ...prev,
+          {
+            id:            newId,
+            no:            newId,
+            projectId:     data.projectId,
+            projectName:   data.projectName,
+            gitUrl:        data.repositoryUrl.replace("https://", "").slice(0, 30),
+            commits:       0,
+            status:        "Not Connected",
+            provider:      data.provider,
+            repositoryUrl: data.repositoryUrl,
+          },
+        ];
+      });
     }
-    if (action === "view") navigate(`/integrations/${row.id}`, { state: { integration: row } });
-    if (action === "connect") {
-      console.log("Connect:", row);
-    }
+    setSaveSuccess(true);
   };
 
   return (
     <>
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <Grid container spacing={2} mb={3} alignItems="center">
-        <Grid size={{ xs: 12 }}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <HeaderText
             title="Code Repository Integration"
             subtitle="Connect GitHub or GitLab to track commits and link them to tasks"
           />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Box display="flex" justifyContent="flex-end">
+            <CustomButton
+              btnLabel="+ Add Integration"
+              handlePressBtn={openAdd}
+              variant="gradient"
+            />
+          </Box>
         </Grid>
       </Grid>
 
@@ -94,19 +135,19 @@ const Integrations = () => {
         />
       </Box>
 
-      {/* ── Edit Integration dialog ─────────────────────────────────────── */}
-      <EditIntegration
-        open={editOpen}
-        onClose={() => { setEditOpen(false); setEditingRow(null); }}
-        onSave={(data) => { console.log("Saved:", data); setSaveSuccess(true); }}
+      {/* ── Add / Edit Integration dialog ───────────────────────────────── */}
+      <AddEditIntegration
+        open={dialogOpen}
+        onClose={closeDialog}
+        onSave={handleSave}
         editingRow={editingRow}
       />
 
-      {/* ── Save success ────────────────────────────────────────────────── */}
+      {/* ── Success toast ────────────────────────────────────────────────── */}
       <SuccessPopup
         open={saveSuccess}
         onClose={() => setSaveSuccess(false)}
-        message="Successfully Save"
+        message={editingRow ? "Integration updated successfully" : "Integration added successfully"}
         autoClose
         autoCloseDelay={2000}
       />

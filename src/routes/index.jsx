@@ -26,7 +26,17 @@ import PayrollManagement from "../app/hrPortal/payroll";
 import HRDocuments         from "../app/hrPortal/documents";
 import PMDashboard from "../app/projectManagerPortal/dashboard";
 import MyProjects from "../app/projectManagerPortal/myProjects";
+import PMprojectDetail from "../app/projectManagerPortal/myProjects/projectDetail";
 import TaskManagement from "../app/projectManagerPortal/taskManagement";
+import TaskDetail from "../app/projectManagerPortal/taskManagement/taskDetail";
+import TeamPerformance from "../app/projectManagerPortal/teamPerformance";
+
+// Employee components
+import EmpDashboard from "../app/empPortal/dashboard";
+import MyTasks from "../app/empPortal/myTasks";
+import EmpTaskDetail from "../app/empPortal/myTasks/empTaskDetail";
+//import TimeTracking from "../app/empPortal/timeTracking";
+import EmpAttendance from "../app/empPortal/myAttendance";
 
 
 // routes/icons
@@ -58,6 +68,8 @@ import PayrollActiveIcon from "../assets/icons/payroll-active.svg";
 import PayrollInactiveIcon from "../assets/icons/payroll-inactive.svg";
 import TasksActiveIcon from "../assets/icons/tasks-active.svg";
 import TasksInactiveIcon from "../assets/icons/tasks-inactive.svg";
+import TimeActiveIcon from "../assets/icons/time-active.svg";
+import TimeInactiveIcon from "../assets/icons/time-inactive.svg";
 import { id } from "date-fns/locale";
 //import AuthPage from "../app/auth/AuthPage";
 //import SelectAccount from "../app/auth/login/SelectAccount";
@@ -347,7 +359,7 @@ const HR_ROUTES = [
     nameKey: "Messages",
     component: <Messages />,
     exact: "exact",
-    path: "/messages",
+    path: "/hr-messages",
     activeIcon: (
       <img src={MessagesActiveIcon} alt="Messages" style={{ width: 20, height: 20 }} />
     ),
@@ -414,12 +426,138 @@ const PM_ROUTES = [
       <img src={TasksInactiveIcon} alt="Task Management" style={{ width: 20, height: 20 }} />
     ),
     isHideMenu: false,
+  },
+  {
+    id: 4,
+    nameKey: "Task Detail",
+    component: <TaskDetail />,
+    exact: "exact",
+    path: "/pm-tasks/:id",
+    isHideMenu: true,
+  },
+  {
+    id: 5,
+    nameKey: "Team Performance",
+    component: <TeamPerformance />,
+    exact: "exact",
+    path: "/team-performance",
+    activeIcon: (
+      <img src={PerformanceActiveIcon} alt="Team Performance" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={PerformanceInactiveIcon} alt="Team Performance" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+    id: 6,
+    nameKey: "Messages",
+    component: <Messages />,
+    exact: "exact",
+    path: "/pm-messages",
+    activeIcon: (
+      <img src={MessagesActiveIcon} alt="Messages" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={MessagesInactiveIcon} alt="Messages" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+    id: 7,
+    nameKey: "Documents",
+    component: <Documents />,
+    exact: "exact",
+    path: "/pm-documents",
+    activeIcon: (
+      <img src={DocumentsActiveIcon} alt="Documents" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={DocumentsInactiveIcon} alt="Documents" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+  id: 8,
+  nameKey: "Project Detail",
+  component: <PMprojectDetail />,   
+  exact: "exact",
+  path: "/pm-projects/:id",
+  isHideMenu: true,
+}
+];
 
-  }
+const EMP_ROUTES = [  
+  {
+      id: 1,
+      nameKey: "Dashboard",
+      component: <EmpDashboard />,
+      exact: "exact",
+      path: "/employee-dashboard",
+      activeIcon: (
+        <img src={DashboardActiveIcon} alt="Employee Dashboard" style={{ width: 20, height: 20 }} />
+      ),
+      inActiveIcon: (
+        <img src={DashboardInactiveIcon} alt="Employee Dashboard" style={{ width: 20, height: 20 }} />
+      ),
+      isHideMenu: false,
+    },
+    {
+      id: 2,
+      nameKey: "My Tasks",
+      component: <MyTasks />,
+      exact: "exact",
+      path: "/my-tasks",
+      activeIcon: (
+        <img src={TasksActiveIcon} alt="My Tasks" style={{ width: 20, height: 20 }} />
+      ),
+      inActiveIcon: (
+        <img src={TasksInactiveIcon} alt="My Tasks" style={{ width: 20, height: 20 }} />
+      ),
+      isHideMenu: false,
+    },
+    {
+      id: 3,
+      nameKey: "Task Detail",
+      component: <EmpTaskDetail />,
+      exact: "exact",
+      path: "/emp/tasks/:id",
+      isHideMenu: true,
+    },
+/*     {
+      id: 4,
+      nameKey: "Time Tracking",
+      component: <TimeTracking />,
+      exact: "exact",
+      path: "/time-tracking",
+      activeIcon: (
+        <img src={TimeActiveIcon} alt="Time Tracking" style={{ width: 20, height: 20 }} />
+      ),
+      inActiveIcon: (
+        <img src={TimeInactiveIcon} alt="Time Tracking" style={{ width: 20, height: 20 }} />
+      ),
+      isHideMenu: false,
+    } */
+   {
+    id: 4,
+    nameKey: "Attendance",
+    component: <EmpAttendance/>,
+    exact: "exact",
+    path: "/emp-attendance",
+    activeIcon: (
+      <img src={AttendanceActiveIcon} alt="Attendance Monitoring" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={AttendanceInactiveIcon} alt="Attendance Monitoring" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+
+   }
 ];
 
 
 
 
 
-export { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES, PM_ROUTES };
+
+export { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES, PM_ROUTES, EMP_ROUTES };

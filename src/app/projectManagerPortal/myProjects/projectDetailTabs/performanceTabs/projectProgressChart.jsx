@@ -1,0 +1,148 @@
+// performanceTabs/projectProgressChart.jsx
+import React, { useState } from "react";
+import { Box, Typography, Menu, MenuItem } from "@mui/material";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Cell,
+} from "recharts";
+import { ChevronDown } from "lucide-react";
+
+const allData = {
+  "All Employees": [
+    { name: "Priya",  progress: 15 },
+    { name: "David",  progress: 70 },
+    { name: "Sarah",  progress: 48 },
+    { name: "Lisa",   progress: 92 },
+    { name: "Emily",  progress: 28 },
+  ],
+  "Priya":  [{ name: "Priya",  progress: 15 }],
+  "David":  [{ name: "David",  progress: 70 }],
+  "Sarah":  [{ name: "Sarah",  progress: 48 }],
+  "Lisa":   [{ name: "Lisa",   progress: 92 }],
+  "Emily":  [{ name: "Emily",  progress: 28 }],
+};
+
+const employees = ["All Employees", "Priya", "David", "Sarah", "Lisa", "Emily"];
+
+const GradientBar = (props) => {
+  const { x, y, width, height } = props;
+  return (
+    <g>
+      <defs>
+        <linearGradient id="perfBarGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#AA2493" />
+          <stop offset="100%" stopColor="#022179" />
+        </linearGradient>
+      </defs>
+      <rect x={x} y={y} width={width} height={height}
+        fill="url(#perfBarGrad)" rx={8} ry={8} />
+    </g>
+  );
+};
+
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload?.length) {
+    return (
+      <Box sx={{
+        bgcolor: "#fff", border: "1px solid #E5E7EB",
+        borderRadius: "10px", p: "8px 14px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+      }}>
+        <Typography fontSize={13} fontWeight={600} color="text.primary">
+          {payload[0].payload.name}
+        </Typography>
+        <Typography fontSize={12} color="#AA2493">
+          Progress: {payload[0].value}%
+        </Typography>
+      </Box>
+    );
+  }
+  return null;
+};
+
+const PerformanceProjectProgressChart = () => {
+  const [selected, setSelected] = useState("All Employees");
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  return (
+    <Box sx={{
+      bgcolor: "#fff", borderRadius: "25px",
+      p: { xs: "16px", md: "24px" }, height: "100%",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+    }}>
+      {/* Header */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
+        <Typography fontSize="18px" fontWeight={600} color="text.primary">
+          Project Progress
+        </Typography>
+
+        <Box
+          onClick={(e) => setAnchorEl(e.currentTarget)}
+          sx={{
+            display: "flex", alignItems: "center", gap: 1,
+            bgcolor: "#F5F5F5", borderRadius: "12px",
+            px: 2, py: 1, cursor: "pointer",
+            "&:hover": { bgcolor: "#EDEDED" },
+          }}
+        >
+          <Typography fontSize={13} fontWeight={500} color="text.primary">
+            {selected}
+          </Typography>
+          <ChevronDown size={15} />
+        </Box>
+
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={() => setAnchorEl(null)}
+          PaperProps={{
+            sx: { borderRadius: "18px", minWidth: 180, p: "8px", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", mt: 1 },
+          }}
+          transformOrigin={{ horizontal: "right", vertical: "top" }}
+          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+        >
+          {employees.map((emp) => (
+            <MenuItem
+              key={emp}
+              onClick={() => { setSelected(emp); setAnchorEl(null); }}
+              sx={{
+                borderRadius: "10px", fontSize: "13px", fontWeight: 500, mb: 0.5,
+                color: selected === emp ? "#fff" : "text.primary",
+                background: selected === emp
+                  ? "linear-gradient(90deg, #AA2493 0%, #022179 100%)"
+                  : "transparent",
+                "&:hover": {
+                  background: selected === emp
+                    ? "linear-gradient(90deg, #AA2493 0%, #022179 100%)"
+                    : "#F5F5F5",
+                },
+              }}
+            >
+              {emp}
+            </MenuItem>
+          ))}
+        </Menu>
+      </Box>
+
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={allData[selected]} barSize={48}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: 11, fill: "#6B7280" }}
+            axisLine={{ stroke: "#E5E7EB" }} tickLine={false}
+          />
+          <YAxis
+            domain={[0, 100]} ticks={[0, 25, 50, 75, 100]}
+            tick={{ fontSize: 11, fill: "#6B7280" }}
+            axisLine={{ stroke: "#E5E7EB" }} tickLine={false}
+          />
+          <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
+          <Bar dataKey="progress" shape={<GradientBar />} radius={[8, 8, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </Box>
+  );
+};
+
+export default PerformanceProjectProgressChart;

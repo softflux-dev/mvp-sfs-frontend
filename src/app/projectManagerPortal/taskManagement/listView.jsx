@@ -4,24 +4,26 @@ import { MoreVerticalIcon } from "lucide-react";
 import { mockTasks } from "./mockTasks";
 
 const tableHeader = [
-  { id: "title",    label: "Task Title" },
-  { id: "project",  label: "Project"   },
-  { id: "module",   label: "Module"    },
-  { id: "assignee", label: "Assignee"  },
-  { id: "priority", label: "Priority"  },
-  { id: "status",   label: "Status"    },
-  { id: "deadline", label: "Deadline"  },
-  { id: "actions",  label: "Actions"   },
+  { id: "task",      label: "Task"      },
+   { id: "projectName",    label: "Project Name"    },
+  { id: "module",    label: "Module"    },
+  { id: "assignees", label: "Assignees" },
+  { id: "priority",  label: "Priority"  },
+  { id: "startDate", label: "Start Date" },
+  { id: "endDate",  label: "End Date"  },
+  { id: "status",    label: "Status"    },
+  { id: "actions",   label: "Actions"   },
 ];
 
 const displayRows = [
-  "task_list_title",
-  "task_list_project",
-  "task_list_module",
-  "task_assignee",
-  "task_list_priority",
-  "task_list_status",
-  "task_list_deadline",
+  "task",
+  "projectName",
+  "module",
+  "task_assignees",   
+  "task_priority",
+  "task_start_date",
+  "task_end_date",
+  "project_status",
   "actions_menu",
 ];
 

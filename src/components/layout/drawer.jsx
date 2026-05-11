@@ -20,7 +20,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { useLocation } from "react-router-dom";
 import useUserStore from "../../zustand/useUserStore";
 import { getUserRoutes } from "../../utils/routeMapper";
-import { ADMIN_ROUTES, HR_ROUTES, PM_ROUTES } from "../../routes";
+import { ADMIN_ROUTES, HR_ROUTES, PM_ROUTES, EMP_ROUTES } from "../../routes";
 import logo from "../../assets/images/softwareflux-logo.png";
 
 const ADMIN_DESIGNATION_ID = '69aa5fb7f19750bbdf3de0d8';
@@ -323,6 +323,27 @@ const displayName = route.title || route.nameKey;
                     </Typography>
                   )}
                   {PM_ROUTES.filter((r) => !r.isHideMenu).map(renderRouteItem)}
+                </>
+              )}
+              {/* ── Employee Portal ── */}
+              {EMP_ROUTES.length > 0 && (
+                <>
+                  {drawerOpen && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        px: 2, py: 1, mt: 1,
+                        color: "text.secondary",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        fontSize: "0.7rem",
+                        display: "block",
+                      }}
+                    >
+                      Employee Portal
+                    </Typography>
+                  )}
+                  {EMP_ROUTES.filter((r) => !r.isHideMenu).map(renderRouteItem)}
                 </>
               )}
             </>

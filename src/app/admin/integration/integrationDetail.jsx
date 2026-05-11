@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import PaginatedTable      from "../../../components/dynamicTable";
 import CommentsActivityFeed from "./commentsActivityFeed";
-import EditIntegration     from "./editIntegration";
+
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
 
 import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
@@ -142,13 +142,7 @@ const IntegrationDetail = () => {
         />
       </Box>
 
-      {/* ── Edit Integration ─────────────────────────────────────────────── */}
-      <EditIntegration
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        onSave={(data) => { console.log("Saved:", data); setSaveSuccess(true); }}
-        editingRow={row}
-      />
+  
 
       <SuccessPopup
         open={saveSuccess}

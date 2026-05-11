@@ -18,17 +18,19 @@ const PipelineCard = ({
   assignee     = "",
   assigneeName = "",
   project      = "",
+  onClick, 
 }) => {
   const pcfg = PRIORITY_CONFIG[priority] || { bg: "#F5F5F5", color: "#757575" };
 
   return (
     <Box
+      onClick={onClick}
       sx={{
         backgroundColor: "#fff",
         borderRadius: "12px",
         border: "1px solid #F0F0F0",
         p: 1.5,
-        cursor: "grab",
+        cursor: "pointer", 
         transition: "box-shadow 0.2s ease",
         "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.08)" },
       }}

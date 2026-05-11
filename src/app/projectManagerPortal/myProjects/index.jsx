@@ -6,7 +6,7 @@ import HeaderText   from "../../../components/headerText";
 import CustomButton from "../../../components/customButton";
 import Filter       from "../../../components/filterBar/filter";
 import ProjectCard  from "../../../components/cards/projectCard";
-import CreateProjectDialog from "./createProjectDialog";
+
 
 const mockProjects = [
   { id: 1, projectName: "E-Commerce Platform", client: "RetailMax Inc.",    status: "In Progress", progress: 87, dueDate: "2026-04-15", taskCount: 34, members: [] },
@@ -41,15 +41,7 @@ const MyProjects = () => {
             subtitle="Manage and track your assigned projects"
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Box display="flex" justifyContent="flex-end">
-           <CustomButton
-            btnLabel="+ Create New Project"
-            variant="gradient"
-            handlePressBtn={() => setCreateOpen(true)}
-            />
-          </Box>
-        </Grid>
+       
       </Grid>
 
       {/* ── Filter ─────────────────────────────────────────────────────── */}
@@ -70,11 +62,7 @@ const MyProjects = () => {
           </Grid>
         ))}
       </Grid>
-      <CreateProjectDialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onSave={(data) => console.log("New project:", data)}
-      />
+     
     </>
   );
 };
