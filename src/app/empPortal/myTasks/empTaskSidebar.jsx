@@ -1,19 +1,15 @@
-import { useState, useEffect, useRef } from "react";
-import { Box, Typography, MenuItem, IconButton } from "@mui/material";
-import { Play, Square, Trash2 } from "lucide-react";
-import { DatePicker }           from "@mui/x-date-pickers/DatePicker";
-import { TimePicker }           from "@mui/x-date-pickers/TimePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs }         from "@mui/x-date-pickers/AdapterDayjs";
-import dayjs                    from "dayjs";
+// empTaskSidebar.jsx
+import { useState } from "react";
+import { Box, Typography, MenuItem } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
-import CustomButton     from "../../../components/customButton";
-import CustomSelect     from "../../../components/customSelect";
-import TextInput        from "../../../components/textInput";
-import CustomInputLabel from "../../../components/customInputLabel";
-import SuccessPopup     from "../../../components/popups/confirmationDialog";
-import GlobalStyle      from "../../../style/style";
-import deleteIcon      from "../../../assets/icons/delete-icon-inactive.svg";
+import CustomButton  from "../../../components/customButton";
+import CustomSelect  from "../../../components/customSelect";
+import SuccessPopup  from "../../../components/popups/confirmationDialog";
+import BugCard       from "../../../components/cards/bugCard";
+import AddBugReport  from "./addBugReport";
+import ViewBugReport from "./viewBugReport";
+import bug1          from "../../../assets/images/bugImg.png";
 
 // ── Status options ────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
@@ -23,133 +19,83 @@ const STATUS_OPTIONS = [
   { value: "completed",    label: "Completed"    },
 ];
 
-// ── Mock time logs ────────────────────────────────────────────────────────
-const mockTimeLogs = [
-  { id: 1, type: "Timer",  duration: "0h 0m",  note: "Initial project setup and depende...", date: "2026-03-24" },
-  { id: 2, type: "manual", duration: "4h 0m",  note: "Initial project setup and depende...", date: "2026-03-24" },
-  { id: 3, type: "Timer",  duration: "7h 20m", note: "Initial project setup and depende...", date: "2026-03-24" },
+// ── Mock bug data — full fields so ViewBugReport renders completely ────────
+const MOCK_BUGS = [
+  {
+    id:               "TC-A-SO01",
+    tcId:             "TC-A-SO01",
+    title:            "Login button unresponsive on mobile Safari",
+    severity:         "high",
+    status:           "open",
+    description:      "When tapping the login button on iOS Safari, nothing happens. No network request is fired.",
+    stepsToReproduce: "1. Open iOS Safari\n2. Navigate to login page\n3. Enter credentials\n4. Tap Login",
+    expectedBehavior: "User should be logged in and redirected to dashboard.",
+    actualBehavior:   "Button visually depresses but no action occurs.",
+    environment:      "iOS 17.2, Safari",
+    screenshots:      [bug1, bug1, bug1, bug1],
+  },
+  {
+    id:               "TC-A-SO02",
+    tcId:             "TC-A-SO02",
+    title:            "Dashboard charts not loading on Firefox",
+    severity:         "medium",
+    status:           "in_progress",
+    description:      "The analytics charts on the main dashboard fail to render on Firefox v121.",
+    stepsToReproduce: "1. Open Firefox v121\n2. Log in\n3. Navigate to Dashboard",
+    expectedBehavior: "Charts render with live data.",
+    actualBehavior:   "Blank white boxes appear where charts should be.",
+    environment:      "Firefox v121, Windows 10",
+    screenshots:      [bug1, bug1],
+  },
+  {
+    id:               "TC-A-SO03",
+    tcId:             "TC-A-SO03",
+    title:            "Profile image upload fails > 2MB",
+    severity:         "low",
+    status:           "resolved",
+    description:      "Uploading a profile image larger than 2MB causes a silent failure with no error message shown.",
+    stepsToReproduce: "1. Go to Profile Settings\n2. Click Upload Photo\n3. Select an image > 2MB",
+    expectedBehavior: "Show a validation message: 'File too large. Max size is 2MB.'",
+    actualBehavior:   "Upload spinner appears then disappears. No image is saved, no error shown.",
+    environment:      "Chrome v120, macOS 14",
+    screenshots:      [bug1],
+  },
 ];
 
-// ── Helper: pad number ────────────────────────────────────────────────────
-const pad = (n) => String(n).padStart(2, "0");
+// ── Gradient "View All Bugs" link ─────────────────────────────────────────
+const GradientLink = ({ children, onClick }) => (
+  <Typography
+    component="span"
+    fontSize="13px"
+    fontWeight={600}
+    onClick={onClick}
+    sx={{
+      background:            "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+      WebkitBackgroundClip:  "text",
+      WebkitTextFillColor:   "transparent",
+      backgroundClip:        "text",
+      cursor:                "pointer",
+      userSelect:            "none",
+      textDecoration:        "underline",
+      textDecorationColor:   "#AA2493",
+    }}
+  >
+    {children}
+  </Typography>
+);
 
-const formatSeconds = (secs) => {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  return `${pad(h)}:${pad(m)}:${pad(s)}`;
-};
-
-const totalLogged = (logs) => {
-  let totalMins = 0;
-  logs.forEach((l) => {
-    const match = l.duration.match(/(\d+)h\s*(\d+)m/);
-    if (match) totalMins += parseInt(match[1]) * 60 + parseInt(match[2]);
-  });
-  const h = Math.floor(totalMins / 60);
-  const m = totalMins % 60;
-  return `${h}h ${m}m`;
-};
-
-// ── Log type chip ─────────────────────────────────────────────────────────
-const LogTypeBadge = ({ type }) => {
-  const isTimer = type === "Timer";
-  return (
-    <Box
-      component="span"
-      sx={{
-        fontSize: "10px", fontWeight: 600,
-        borderRadius: "4px", px: 0.8, py: 0.2,
-        backgroundColor: isTimer ? "#2B6EFF1A" : "#04C3731A",
-        color:           isTimer ? "#2B6EFF"   : "#04C373",
-      }}
-    >
-      {type}
-    </Box>
-  );
-};
-
-const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
-  // ── Update Status ──────────────────────────────────────────────────────
+// ── Sidebar ───────────────────────────────────────────────────────────────
+const EmpTaskSidebar = ({ task = {}, onStatusUpdate, onViewAllBugs }) => {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [statusSuccess,  setStatusSuccess]  = useState(false);
+  const [bugs,           setBugs]           = useState(MOCK_BUGS);
 
-  // ── Timer ──────────────────────────────────────────────────────────────
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [elapsed,      setElapsed]      = useState(0);
-  const intervalRef = useRef(null);
+  const [bugDialogOpen,  setBugDialogOpen]  = useState(false);
+  const [editingBug,     setEditingBug]     = useState(null);
+  const [viewingBug,     setViewingBug]     = useState(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (timerRunning) {
-      intervalRef.current = setInterval(() => setElapsed((p) => p + 1), 1000);
-    } else {
-      clearInterval(intervalRef.current);
-    }
-    return () => clearInterval(intervalRef.current);
-  }, [timerRunning]);
-
-  const handleTimerToggle = () => {
-    if (timerRunning) {
-      // stop — save to logs
-      setTimeLogs((prev) => [
-        ...prev,
-        {
-          id:       Date.now(),
-          type:     "Timer",
-          duration: `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m`,
-          note:     "Timer session",
-          date:     new Date().toISOString().slice(0, 10),
-        },
-      ]);
-      setElapsed(0);
-    }
-    setTimerRunning((p) => !p);
-  };
-
-  // ── Manual Entry ───────────────────────────────────────────────────────
-  const [manual,      setManual]      = useState({ duration: null, date: null, note: "" });
-  const [manualErrors,setManualErrors]= useState({});
-  const [entrySuccess,setEntrySuccess]= useState(false);
-
-  // ── Time Logs ──────────────────────────────────────────────────────────
-  const [timeLogs, setTimeLogs] = useState(mockTimeLogs);
-
-  const handleManualChange = (field) => (e) => {
-    const val = e?.target ? e.target.value : e;
-    setManual((prev) => ({ ...prev, [field]: val }));
-    if (manualErrors[field]) setManualErrors((prev) => ({ ...prev, [field]: "" }));
-  };
-
-  const validateManual = () => {
-    const e = {};
-    if (!manual.duration || !manual.duration.isValid()) e.duration = "Duration is required";
-    if (!manual.date)                                    e.date     = "Date is required";
-    return e;
-  };
-
-  const handleAddEntry = () => {
-    const errs = validateManual();
-    if (Object.keys(errs).length) { setManualErrors(errs); return; }
-    setTimeLogs((prev) => [
-      ...prev,
-      {
-        id:       Date.now(),
-        type:     "manual",
-        duration: manual.duration
-          ? `${manual.duration.hour()}h ${manual.duration.minute()}m`
-          : "0h 0m",
-        note:     manual.note || "Manual entry",
-        date:     manual.date
-          ? dayjs(manual.date).format("YYYY-MM-DD")
-          : "",
-      },
-    ]);
-    setManual({ duration: null, date: null, note: "" });
-    setEntrySuccess(true);
-  };
-
-  const handleDeleteLog = (id) =>
-    setTimeLogs((prev) => prev.filter((l) => l.id !== id));
 
   const handleStatusUpdate = () => {
     if (!selectedStatus) return;
@@ -157,8 +103,21 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
     setStatusSuccess(true);
   };
 
+  const handleAddBug  = ()    => { setEditingBug(null); setBugDialogOpen(true); };
+  const handleEditBug = (bug) => { setEditingBug(bug);  setBugDialogOpen(true); };
+  const handleViewBug = (bug) => { setViewingBug(bug);  setViewDialogOpen(true); };
+
+  const handleDeleteBug = (bug) => {
+    setBugs((prev) => prev.filter((b) => b.id !== bug.id));
+  };
+
+  const handleSaveBug = (data) => {
+    console.log("Bug saved:", data);
+    // TODO: call your API
+  };
+
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
+    <>
       <Box display="flex" flexDirection="column" gap={3}>
 
         {/* ── Update Status ──────────────────────────────────────────────── */}
@@ -169,13 +128,8 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
           <CustomSelect
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            fullWidth
-            height="45px"
-            inputBgColor="#F5F5F5"
-            displayEmpty
-            sx={{mb:2}}
+            fullWidth height="45px" inputBgColor="#F5F5F5" displayEmpty sx={{ mb: 2 }}
           >
-           
             {STATUS_OPTIONS.map((s) => (
               <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
             ))}
@@ -188,224 +142,68 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
           />
         </Box>
 
-        {/* ── Time Tracker ───────────────────────────────────────────────── */}
+        {/* ── All Bugs ───────────────────────────────────────────────────── */}
         <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3 }}>
-          <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
-            Time Tracker
-          </Typography>
-
-          {/* Clock display */}
-          <Box
-            sx={{
-              backgroundColor: "#F5F5F5",
-              borderRadius: "12px",
-              py: 3,
-              textAlign: "center",
-              mb: 2,
-            }}
-          >
-            <Typography
-              sx={{
-                fontSize: "32px", fontWeight: 700,
-                color: "#030229", letterSpacing: "3px",
-                fontFamily: '"Poppins", sans-serif',
-              }}
-            >
-              {formatSeconds(elapsed)}
-            </Typography>
-          </Box>
-
-          {/* Start / Stop button */}
-           <CustomButton
-            btnLabel={timerRunning ? "Stop Timer" : "Start Timer"}
-            variant="checkIn"
-            handlePressBtn={handleTimerToggle}
-            fullWidth
-            startIcon={timerRunning ? <Square size={14} /> : <Play size={14} />}
-            sx={{
-              height: "46px", fontSize: "14px", fontWeight: 600, width: "100%",
-              background: timerRunning
-                ? "#48B504"
-                : undefined, 
-            }}
+          <CustomButton
+            btnLabel="+ Add Bug Report"
+            variant="gradient"
+            handlePressBtn={handleAddBug}
+            sx={{ height: "46px", fontSize: "14px", fontWeight: 600, width: "100%", mb: 2.5 }}
           />
-        </Box>
 
-        {/* ── Manual Entry ───────────────────────────────────────────────── */}
-        <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3 }}>
-          <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
-            Manual Entry
-          </Typography>
-          <Box display="flex" flexDirection="column" gap={2}>
-
-            {/* Duration — TimePicker (HH:MM) */}
-            <Box>
-              <CustomInputLabel label="Duration (HH:MM)" />
-              <TimePicker
-                value={manual.duration}
-                onChange={(val) => {
-                  setManual((prev) => ({ ...prev, duration: val }));
-                  if (manualErrors.duration)
-                    setManualErrors((prev) => ({ ...prev, duration: "" }));
-                }}
-                ampm={false}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    fullWidth: true,
-                    placeholder: "02:30",
-                    error: !!manualErrors.duration,
-                    helperText: manualErrors.duration || "",
-                  },
-                }}
-                sx={{ ...GlobalStyle.datePickerStyle, width: "100%" }}
-              />
-            </Box>
-
-            {/* Date */}
-            <Box>
-              <CustomInputLabel label="Date" />
-              <DatePicker
-                value={manual.date}
-                onChange={(val) => {
-                  setManual((prev) => ({ ...prev, date: val }));
-                  if (manualErrors.date)
-                    setManualErrors((prev) => ({ ...prev, date: "" }));
-                }}
-                slotProps={{
-                  textField: {
-                    size: "small",
-                    fullWidth: true,
-                    placeholder: "Select Date",
-                    error: !!manualErrors.date,
-                    helperText: manualErrors.date || "",
-                  },
-                }}
-                sx={{ ...GlobalStyle.datePickerStyle, width: "100%" }}
-              />
-            </Box>
-
-            {/* Note */}
-            <Box>
-              <CustomInputLabel label="Note" />
-              <TextInput
-                placeholder="Add Notes"
-                value={manual.note}
-                onChange={handleManualChange("note")}
-                inputBgColor="#F5F5F5"
-                fullWidth
-                multiline
-                rows={3}
-              />
-            </Box>
-
-            <CustomButton
-              btnLabel="Add Entry"
-              variant="gradient"
-              handlePressBtn={handleAddEntry}
-              fullWidth
-              sx={{ height: "46px", fontSize: "14px", fontWeight: 600 }}
-            />
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} mt={3}>
+            <Typography fontSize="16px" fontWeight={700} color="text.primary">
+              All Bugs
+            </Typography>
+            <GradientLink onClick={() => navigate("/employee/bugs", {
+              state: {
+                taskTitle:    task?.title    || "My Task",
+                taskStatus:   task?.status   || "In Progress",
+                projectName:  task?.project  || "Project Alpha",
+                moduleName:   task?.module   || "",
+                taskPriority: task?.priority || "Medium",
+              }
+            })}>
+              View All Bugs
+            </GradientLink>
           </Box>
-        </Box>
 
-        {/* ── Time Logs ──────────────────────────────────────────────────── */}
-        <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3 }}>
-          <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
-            Time Logs
-          </Typography>
-
-          <Box display="flex" flexDirection="column" gap={1}>
-            {timeLogs.map((log) => (
-              <Box
-                key={log.id}
-                sx={{
-                  backgroundColor: "#F5F5F5",
-                  borderRadius: "12px",
-                  px: 2, py: 1.5,
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  gap: 1,
-                }}
-              >
-                <Box flex={1} minWidth={0}>
-                  <Box display="flex" alignItems="center" gap={1} mb={0.4}>
-                    <Typography fontSize="13px" fontWeight={700} color="text.primary">
-                      {log.duration}
-                    </Typography>
-                    <LogTypeBadge type={log.type} />
-                  </Box>
-                  <Typography fontSize="12px" color="text.secondary" noWrap>
-                    {log.note}
-                  </Typography>
-                  <Box display="flex" alignItems="center" gap={0.5} mt={0.4}>
-                    <Box
-                      sx={{
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: "linear-gradient(135deg, #AA2493, #022179)",
-                        flexShrink: 0,
-                      }}
-                    />
-                    <Typography fontSize="11px" color="text.secondary">
-                      {log.date}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box
-                                             sx={{
-                                               width: 36, height: 36,
-                                               backgroundColor: "#fff",
-                                               borderRadius: "8px",
-                                               display: "flex",
-                                               alignItems: "center",
-                                               justifyContent: "center",
-                                               flexShrink: 0,
-                                             }}
-                                           >
-                                             <img src={deleteIcon} alt="file" style={{ width: 18, height: 18 }} />
-                                           </Box>
-              </Box>
+          <Box display="flex" flexDirection="column" gap={1.5}>
+            {bugs.map((bug) => (
+              <BugCard
+                key={bug.id}
+                bug={bug}
+                onView={handleViewBug}
+                onEdit={handleEditBug}
+                onDelete={handleDeleteBug}
+              />
             ))}
-          </Box>
-
-          {/* Total logged */}
-          <Box
-            display="flex"
-            justifyContent="space-between"
-            alignItems="center"
-            mt={2}
-            pt={2}
-            sx={{ borderTop: "1px solid #F0F0F0" }}
-          >
-            <Typography fontSize="13px" fontWeight={600} color="text.secondary">
-              Total Logged Time
-            </Typography>
-            <Typography fontSize="14px" fontWeight={700} color="text.primary">
-              {totalLogged(timeLogs)}
-            </Typography>
           </Box>
         </Box>
 
       </Box>
 
-      {/* ── Success popups ──────────────────────────────────────────────── */}
+      {/* ── Popups & dialogs ─────────────────────────────────────────────── */}
       <SuccessPopup
         open={statusSuccess}
         onClose={() => setStatusSuccess(false)}
         message="Status updated successfully"
-        autoClose
-        autoCloseDelay={2000}
+        autoClose autoCloseDelay={2000}
       />
-      <SuccessPopup
-        open={entrySuccess}
-        onClose={() => setEntrySuccess(false)}
-        message="Time entry added"
-        autoClose
-        autoCloseDelay={1500}
+
+      <AddBugReport
+        open={bugDialogOpen}
+        onClose={() => setBugDialogOpen(false)}
+        onSave={handleSaveBug}
+        editingBug={editingBug}
       />
-    </LocalizationProvider>
+
+      <ViewBugReport
+        open={viewDialogOpen}
+        onClose={() => { setViewDialogOpen(false); setViewingBug(null); }}
+        bug={viewingBug || {}}
+      />
+    </>
   );
 };
 

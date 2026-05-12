@@ -39,6 +39,7 @@ import EmpTaskDetail from "../app/empPortal/myTasks/empTaskDetail";
 import EmpAttendance from "../app/empPortal/myAttendance";
 import Profile from "../app/empPortal/profile";
 import Salary from "../app/empPortal/salary";
+import AllBugsPage from "../app/empPortal/myTasks/allBugsPage";
 
 
 // routes/icons
@@ -601,6 +602,14 @@ const EMP_ROUTES = [
       <img src={ProfileInactiveIcon} alt="Profile" style={{ width: 20, height: 20 }} />
     ),
     isHideMenu: false,
+  },
+  {
+    id: 8,
+    nameKey: "All Bugs",
+    component: <AllBugsPage />,
+    exact: "exact",
+    path: "/employee/bugs",
+    isHideMenu: true,
   }
 ];
 

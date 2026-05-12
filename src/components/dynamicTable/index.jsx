@@ -2363,6 +2363,36 @@ case "bbt_percent":
       </Box>
     </TableCell>
   );
+
+  // ── Department name ───────────────────────────────────────────────────────
+case "dept_name":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        {row.name || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Department description ────────────────────────────────────────────────
+case "dept_description":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={400} color="text.secondary">
+        {row.description || "-"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Department employee count ─────────────────────────────────────────────
+case "dept_employees":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">
+        {row.employees ?? "-"}
+      </Typography>
+    </TableCell>
+  );
 case "task_assignees": {
   const ALL_ASSIGNEES = [
     { value: "sara_ahmed", label: "Sara Ahmed"    },

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { useNavigate } from "react-router-dom"; // ← add this
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PipelineCard from "../../../components/cards/pipelineCard";
-import CardDetailDialog from "../../../components/cards/cardDetailDialog";
 import { empMockTasks, KANBAN_COLUMNS } from "./empMockTasks";
 
 const EmpKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
-  // ── Build columns inline (mirrors PipelineTab pattern exactly) ────────
+  const navigate = useNavigate(); // ← add this
+
   const [columns, setColumns] = useState(() =>
     KANBAN_COLUMNS.map((col) => ({
       ...col,
@@ -15,12 +16,9 @@ const EmpKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
     }))
   );
 
-  const [selectedCard, setSelectedCard] = useState(null);
-  const [selectedCol,  setSelectedCol]  = useState("");
   const [editingColId, setEditingColId] = useState(null);
   const [editingLabel, setEditingLabel] = useState("");
 
-  // ── Drag & drop (mirrors PipelineTab exactly) ─────────────────────────
   const onDragEnd = (result) => {
     const { source, destination } = result;
     if (!destination) return;
@@ -55,130 +53,125 @@ const EmpKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
     }
   };
 
+  // ← same navigation pattern as EmpListView's onViewClick
+  const handleCardClick = (task) => {
+  navigate(`/emp/tasks/${task.id}`, { state: { task } }); 
+};
+
   return (
-    <>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Box
-          sx={{
-            mt: 2,
-            display: "flex",
-            alignItems: "stretch",
-            gap: 2,
-            overflowX: "auto",
-            pb: 2,
-            "&::-webkit-scrollbar": { height: "6px" },
-            "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
-            "&::-webkit-scrollbar-thumb": { backgroundColor: "#E0E0E0", borderRadius: "3px" },
-          }}
-        >
-          {columns.map((col) => (
-            <Droppable droppableId={col.id} key={col.id}>
-              {(provided, snapshot) => (
-                <Box
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  sx={{
-                    minWidth: "220px",
-                    flex: "1 0 220px",
-                    backgroundColor: snapshot.isDraggingOver ? "#EDE9F6" : "#F5F5F5",
-                    borderRadius: "16px",
-                    p: 2,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1.5,
-                    transition: "background-color 0.2s ease",
-                    alignSelf: "stretch",
-                  }}
-                >
-                  {/* ── Column header ──────────────────────────────────── */}
-                  {editingColId === col.id ? (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                      <input
-                        autoFocus
-                        value={editingLabel}
-                        onChange={(e) => setEditingLabel(e.target.value)}
-                        onBlur={() => {
-                          setColumns((prev) =>
-                            prev.map((c) =>
-                              c.id === col.id ? { ...c, label: editingLabel || c.label } : c
-                            )
-                          );
-                          setEditingColId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter")  e.target.blur();
-                          if (e.key === "Escape") setEditingColId(null);
-                        }}
-                        style={{
-                          fontSize: "13px", fontWeight: 600, border: "none",
-                          borderBottom: "1.5px solid #7C3AED", outline: "none",
-                          background: "transparent", width: "100%", padding: "1px 2px",
-                          color: "#000",
-                        }}
-                      />
-                    </Box>
-                  ) : (
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                      <Typography fontSize="13px" fontWeight={600} color="text.primary">
-                        {col.label}{" "}
-                        <Typography component="span" fontSize="12px" fontWeight={500} color="text.secondary">
-                          ({col.tasks.length})
-                        </Typography>
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Box
+        sx={{
+          mt: 2,
+          display: "flex",
+          alignItems: "stretch",
+          gap: 2,
+          overflowX: "auto",
+          pb: 2,
+          "&::-webkit-scrollbar": { height: "6px" },
+          "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
+          "&::-webkit-scrollbar-thumb": { backgroundColor: "#E0E0E0", borderRadius: "3px" },
+        }}
+      >
+        {columns.map((col) => (
+          <Droppable droppableId={col.id} key={col.id}>
+            {(provided, snapshot) => (
+              <Box
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                sx={{
+                  minWidth: "220px",
+                  flex: "1 0 220px",
+                  backgroundColor: snapshot.isDraggingOver ? "#EDE9F6" : "#F5F5F5",
+                  borderRadius: "16px",
+                  p: 2,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 1.5,
+                  transition: "background-color 0.2s ease",
+                  alignSelf: "stretch",
+                }}
+              >
+                {/* Column header */}
+                {editingColId === col.id ? (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                    <input
+                      autoFocus
+                      value={editingLabel}
+                      onChange={(e) => setEditingLabel(e.target.value)}
+                      onBlur={() => {
+                        setColumns((prev) =>
+                          prev.map((c) =>
+                            c.id === col.id ? { ...c, label: editingLabel || c.label } : c
+                          )
+                        );
+                        setEditingColId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter")  e.target.blur();
+                        if (e.key === "Escape") setEditingColId(null);
+                      }}
+                      style={{
+                        fontSize: "13px", fontWeight: 600, border: "none",
+                        borderBottom: "1.5px solid #7C3AED", outline: "none",
+                        background: "transparent", width: "100%", padding: "1px 2px",
+                        color: "#000",
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                    <Typography fontSize="13px" fontWeight={600} color="text.primary">
+                      {col.label}{" "}
+                      <Typography component="span" fontSize="12px" fontWeight={500} color="text.secondary">
+                        ({col.tasks.length})
                       </Typography>
-                      <Box
-                        onClick={() => { setEditingColId(col.id); setEditingLabel(col.label); }}
-                        sx={{ ml: 0.5, cursor: "pointer", display: "flex", alignItems: "center" }}
-                      >
-                        <EditOutlinedIcon sx={{ fontSize: "14px" }} />
-                      </Box>
+                    </Typography>
+                    <Box
+                      onClick={() => { setEditingColId(col.id); setEditingLabel(col.label); }}
+                      sx={{ ml: 0.5, cursor: "pointer", display: "flex", alignItems: "center" }}
+                    >
+                      <EditOutlinedIcon sx={{ fontSize: "14px" }} />
                     </Box>
-                  )}
+                  </Box>
+                )}
 
-                  {/* ── Cards ─────────────────────────────────────────── */}
-                  {col.tasks.map((task, index) => (
-                    <Draggable draggableId={String(task.id)} index={index} key={String(task.id)}>
-                      {(dragProvided, dragSnapshot) => (
-                        <Box
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          {...dragProvided.dragHandleProps}
-                          sx={{
-                            opacity:    dragSnapshot.isDragging ? 0.85 : 1,
-                            transform:  dragSnapshot.isDragging ? "rotate(2deg)" : "none",
-                            transition: "transform 0.1s ease",
-                          }}
-                        >
-                          <PipelineCard
-                            title={task.title}
-                            priority={task.priority}
-                            deadline={task.deadline}
-                            comments={task.comments}
-                            attachments={task.attachments}
-                            assigneeName={task.assigneeName}
-                            assignee={task.assigneeAvatar || ""}
-                            project={task.project || ""}
-                            onClick={() => { setSelectedCard(task); setSelectedCol(col.label); }}
-                          />
-                        </Box>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </Box>
-              )}
-            </Droppable>
-          ))}
-        </Box>
-      </DragDropContext>
-
-      {/* ── Card Detail Dialog ────────────────────────────────────────── */}
-      <CardDetailDialog
-        open={!!selectedCard}
-        onClose={() => { setSelectedCard(null); setSelectedCol(""); }}
-        card={selectedCard || {}}
-        columnLabel={selectedCol}
-      />
-    </>
+                {/* Cards */}
+                {col.tasks.map((task, index) => (
+                  <Draggable draggableId={String(task.id)} index={index} key={String(task.id)}>
+                    {(dragProvided, dragSnapshot) => (
+                      <Box
+                        ref={dragProvided.innerRef}
+                        {...dragProvided.draggableProps}
+                        {...dragProvided.dragHandleProps}
+                        sx={{
+                          opacity:    dragSnapshot.isDragging ? 0.85 : 1,
+                          transform:  dragSnapshot.isDragging ? "rotate(2deg)" : "none",
+                          transition: "transform 0.1s ease",
+                        }}
+                      >
+                        <PipelineCard
+                          title={task.title}
+                          priority={task.priority}
+                          deadline={task.deadline}
+                          comments={task.comments}
+                          attachments={task.attachments}
+                          assigneeName={task.assigneeName}
+                          assignee={task.assigneeAvatar || ""}
+                          project={task.project || ""}
+                          onClick={() => handleCardClick(task)} // ← updated
+                        />
+                      </Box>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </Box>
+            )}
+          </Droppable>
+        ))}
+      </Box>
+    </DragDropContext>
   );
 };
 

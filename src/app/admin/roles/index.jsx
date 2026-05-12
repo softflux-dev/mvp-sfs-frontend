@@ -8,16 +8,15 @@ import PaginatedTable     from "../../../components/dynamicTable";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";
 import AddRoleDialog      from "./addRoleDialog";
-import addIcon           from "../../../assets/icons/add-icon.svg";
+import PermissionSummary  from "./permissionSummary";
+import addIcon            from "../../../assets/icons/add-icon.svg";
 
 // ── Mock data — replace with real API data ────────────────────────────────────
 const mockRoles = [
-  { id: 1, roleName: "Super Admin",     description: "Full access to all system features and settings",  employees: 1 },
-  { id: 2, roleName: "HR Manager",      description: "Manage employee records, attendance, and payroll", employees: 2 },
-  { id: 3, roleName: "Project Manager", description: "Manage projects, tasks, and team assignments",     employees: 1 },
-  { id: 4, roleName: "Developer",       description: "View assigned projects and manage own tasks",      employees: 2 },
-  { id: 5, roleName: "Designer",        description: "View assigned projects and manage design tasks",   employees: 3 },
-  { id: 6, roleName: "QA Tester",       description: "View projects and manage testing tasks",           employees: 2 },
+  { id: 1, roleName: "Super Admin",     description: "Full access to all system features and settings",  employees: 1, pages: [] },
+  { id: 2, roleName: "HR Manager",      description: "Manage employee records, attendance, and payroll", employees: 2, pages: [] },
+  { id: 3, roleName: "Project Manager", description: "Manage projects, tasks, and team assignments",     employees: 1, pages: [] },
+  { id: 4, roleName: "Employee",        description: "View assigned projects and manage own tasks",      employees: 2, pages: [] },
 ];
 
 const tableHeader = [
@@ -38,16 +37,23 @@ const Roles = () => {
   const [roles,         setRoles]         = useState(mockRoles);
   const [openModal,     setOpenModal]     = useState(false);
   const [editingRole,   setEditingRole]   = useState(null);
+  const [viewingRole,   setViewingRole]   = useState(null);
+  const [summaryOpen,   setSummaryOpen]   = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   const confirmDialogRef = useRef();
 
   const menuOptions = [
-    { value: "edit",   label: "Edit Role"                    },
-    { value: "delete", label: "Delete",   color: "#FF0000"   },
+    { value: "view",   label: "View"                       },
+    { value: "edit",   label: "Edit Role"                  },
+    { value: "delete", label: "Delete", color: "#FF0000"   },
   ];
 
   const handleMenuAction = (action, row) => {
+    if (action === "view") {
+      setViewingRole(row);
+      setSummaryOpen(true);
+    }
     if (action === "edit") {
       setEditingRole(row);
       setOpenModal(true);
@@ -120,6 +126,13 @@ const Roles = () => {
         onClose={() => { setOpenModal(false); setEditingRole(null); }}
         onSave={handleSave}
         editingRole={editingRole}
+      />
+
+      {/* ── Permission Summary (View) dialog ──────────────────────────────── */}
+      <PermissionSummary
+        open={summaryOpen}
+        onClose={() => { setSummaryOpen(false); setViewingRole(null); }}
+        selectedRole={viewingRole}
       />
 
       {/* ── Delete confirmation ───────────────────────────────────────────── */}

@@ -33,7 +33,7 @@ const CustomCheckbox = ({
                                 width: 20,
                                 height: 20,
                                 borderRadius: '8px',
-                                backgroundColor: 'orange',
+                                backgroundColor: 'purple',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',

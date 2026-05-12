@@ -10,6 +10,7 @@ import LeavePolicyTab             from "./tabs/leavePolicyTab";
 import NotificationPreferencesTab from "./tabs/notificationPreferencesTab";
 import EmailConfigurationTab      from "./tabs/emailConfigurationTab";
 import SecurityTab                from "./tabs/securityTab";
+import DepartmentTab               from "./tabs/departmentTab";
 
 const tabs = [
   { id: 1, label: "Company Profile"           },
@@ -18,6 +19,7 @@ const tabs = [
   { id: 4, label: "Notification Preferences"  },
   { id: 5, label: "Email Configuration"       },
   { id: 6, label: "Security"                  },
+  { id: 7, label: "Departments"               },
 ];
 
 const Settings = () => {
@@ -43,6 +45,7 @@ const Settings = () => {
         {activeTab === 4 && <NotificationPreferencesTab />}
         {activeTab === 5 && <EmailConfigurationTab />}
         {activeTab === 6 && <SecurityTab />}
+        {activeTab === 7 && <DepartmentTab />}
        
       </Box>
     </Box>
