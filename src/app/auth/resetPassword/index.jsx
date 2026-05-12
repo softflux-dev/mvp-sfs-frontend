@@ -8,7 +8,7 @@ import TextInput        from "../../../components/textInput";
 import CustomButton     from "../../../components/customButton";
 import AuthLayout       from "../../../components/authLayout";
 import SuccessPopup     from "../../../components/popups/confirmationDialog";
-import { useAuth }      from "../../../hooks/auth";          // ← hook
+import { useAuth }      from "../../../hooks/auth";         
 
 const ResetPasswordPage = () => {
   const navigate  = useNavigate();

@@ -54,7 +54,6 @@ const EmployeeDetailHeader = ({ employee = {}, onEditClick }) => {
           </Box>
         </Box>
 
-        {/* Right — Edit button ── */}
         <CustomButton
           btnLabel="Edit Employee"
           variant="gradientText"
