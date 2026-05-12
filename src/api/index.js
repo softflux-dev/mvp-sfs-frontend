@@ -1,8 +1,8 @@
 // src/api/index.js
 import axios from "axios";
 
-export const baseUrl = "http://localhost:5000/api/";
-// export const baseUrl = "https://your-production-url.com/api/";
+export const baseUrl = "https://gknmkz56-5000.inc1.devtunnels.ms/api/";
+
 
 const api = async (path, params, method, isMultipart = false) => {
   const userToken = localStorage.getItem("token");
