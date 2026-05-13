@@ -5,8 +5,8 @@ import { useNavigate } from "react-router-dom";
 import HeaderText    from "../../../components/headerText";
 import CustomButton  from "../../../components/customButton";
 import Filter        from "../../../components/filterBar/filter";
-import EmpKanbanView from "./empKanbanView";
-import EmpListView   from "./empListView";
+import TaskKanbanView from "./taskKanbanView";
+import TaskListView   from "./taskListView";
 import { empMockTasks } from "./empMockTasks";
 
 import KanbanIcon from "../../../assets/icons/kanban-active.svg";
@@ -73,8 +73,8 @@ const MyTasks = () => {
 
       {/* ── View ───────────────────────────────────────────────────────── */}
       {view === "kanban"
-        ? <EmpKanbanView tasks={filteredTasks} />
-        : <EmpListView
+        ? <TaskKanbanView tasks={filteredTasks} />
+        : <TaskListView
             tasks={filteredTasks}
             onViewClick={(row) => navigate(`/emp/tasks/${row.id}`, { state: { task: row } })}
           />

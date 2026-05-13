@@ -224,93 +224,84 @@ const AddBugReport = ({ open, onClose, onSave, editingBug = null, loading = fals
               <TextInput placeholder="e.g. Chrome v120, Windows 11" value={formData.environment} onChange={handleChange("environment")} inputBgColor="#fff" fullWidth />
             </Box>
 
-            {/* ── Attachments — unified thumbnail grid ─────────────────────── */}
-            <Box>
-              <CustomInputLabel label="Attachments" />
-              <Box
-                sx={{
-                  backgroundColor: "#fff",
-                  borderRadius: "14px",
-                  p: 1.5,
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 1.5,
-                  alignItems: "flex-start",
-                }}
-              >
-                {/* Uploaded thumbnails */}
+            {/* ── Attachments ─────────────────────────────────────────────── */}
+          <Box>
+            <CustomInputLabel label="Attachments" />
+
+           {/* ── First-pick UI (Choose File button) — hidden once files are selected ── */}
+            {formData.screenshots.length === 0 && (
+              <Box sx={{
+                backgroundColor: "#fff",
+                borderRadius: "14px",
+                px: 2, py: 1.5,
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+              }}>
+                <Box
+                  component="label"
+                  sx={{
+                    px: "14px", py: "6px",
+                    borderRadius: "8px",
+                    backgroundColor: "#F5F5F5",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    color: "#374151",
+                    cursor: "pointer",
+                    border: "1px solid #E0E0E0",
+                    whiteSpace: "nowrap",
+                    fontFamily: '"Poppins", sans-serif',
+                    "&:hover": { backgroundColor: "#EBEBEB" },
+                  }}
+                >
+                  Choose File
+                  <input type="file" hidden accept="image/*" multiple onChange={handleAddScreenshots} />
+                </Box>
+                <Typography fontSize="13px" color="text.secondary">
+                  No file chosen
+                </Typography>
+              </Box>
+            )}
+
+            {/* ── Thumbnail grid — only shown after files are selected ── */}
+            {formData.screenshots.length > 0 && (
+              <Box sx={{
+                backgroundColor: "#fff",
+                borderRadius: "14px",
+                p: 1.5,
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 1.5,
+                alignItems: "flex-start",
+              }}>
+                {/* existing thumbnails */}
                 {formData.screenshots.map((item, idx) => (
-                  <Box
-                    key={idx}
-                    sx={{ width: 110, height: 90, borderRadius: "10px", position: "relative", flexShrink: 0 }}
-                  >
-                    {/* Click thumbnail to replace */}
-                    <Box
-                      component="label"
-                      sx={{ display: "block", width: "100%", height: "100%", cursor: "pointer" }}
-                      title="Click to replace"
-                    >
-                      <Box
-                        component="img"
-                        src={item.url}
-                        alt={`screenshot-${idx}`}
-                        sx={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                          objectPosition: "top",
-                          borderRadius: "10px",
-                          border: "1px solid #E0E0E0",
-                          display: "block",
-                        }}
+                  <Box key={idx} sx={{ width: 110, height: 90, borderRadius: "10px", position: "relative", flexShrink: 0 }}>
+                    <Box component="label" sx={{ display: "block", width: "100%", height: "100%", cursor: "pointer" }} title="Click to replace">
+                      <Box component="img" src={item.url} alt={`screenshot-${idx}`}
+                        sx={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", borderRadius: "10px", border: "1px solid #E0E0E0", display: "block" }}
                       />
                       <input type="file" hidden accept="image/*" onChange={(e) => handleReplace(e, idx)} />
                     </Box>
-
-                    {/* X — remove */}
-                    <Box
-                      onClick={() => handleRemove(idx)}
-                      sx={{
-                        position: "absolute", top: -8, right: -8,
-                        width: 20, height: 20,
-                        borderRadius: "50%",
-                        backgroundColor: "#FF0000",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: "pointer", zIndex: 2,
-                        boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-                        "&:hover": { backgroundColor: "#cc0000" },
-                      }}
+                    <Box onClick={() => handleRemove(idx)}
+                      sx={{ position: "absolute", top: -8, right: -8, width: 20, height: 20, borderRadius: "50%", backgroundColor: "#FF0000", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", zIndex: 2, boxShadow: "0 1px 4px rgba(0,0,0,0.2)", "&:hover": { backgroundColor: "#cc0000" } }}
                     >
                       <X size={11} color="#fff" strokeWidth={3} />
                     </Box>
                   </Box>
                 ))}
 
-                {/* Add more slot — always visible */}
-                <Box
-                  component="label"
-                  sx={{
-                    width: 110, height: 90,
-                    borderRadius: "10px",
-                    border: "1.5px dashed #D1D5DB",
-                    backgroundColor: "#F9FAFB",
-                    display: "flex", flexDirection: "column",
-                    alignItems: "center", justifyContent: "center",
-                    gap: 0.5,
-                    cursor: "pointer", flexShrink: 0,
-                    transition: "all 0.2s",
-                    "&:hover": { backgroundColor: "#F3F4F6", borderColor: "#AA2493" },
-                  }}
+                {/* Add more slot */}
+                <Box component="label"
+                  sx={{ width: 110, height: 90, borderRadius: "10px", border: "1.5px dashed #D1D5DB", backgroundColor: "#F9FAFB", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0.5, cursor: "pointer", flexShrink: 0, transition: "all 0.2s", "&:hover": { backgroundColor: "#F3F4F6", borderColor: "#AA2493" } }}
                 >
                   <ImagePlus size={24} color="#9CA3AF" />
-                  <Typography fontSize="10px" color="text.secondary" textAlign="center" lineHeight={1.3}>
-                    Add image
-                  </Typography>
+                  <Typography fontSize="10px" color="text.secondary" textAlign="center" lineHeight={1.3}>Add image</Typography>
                   <input type="file" hidden accept="image/*" multiple onChange={handleAddScreenshots} />
                 </Box>
-
               </Box>
-            </Box>
+            )}
+          </Box>
 
           </Box>
         </DialogBody>

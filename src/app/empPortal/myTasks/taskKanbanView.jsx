@@ -6,7 +6,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PipelineCard from "../../../components/cards/pipelineCard";
 import { empMockTasks, KANBAN_COLUMNS } from "./empMockTasks";
 
-const EmpKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
+const TaskKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
   const navigate = useNavigate(); // ← add this
 
   const [columns, setColumns] = useState(() =>
@@ -175,4 +175,4 @@ const EmpKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
   );
 };
 
-export default EmpKanbanView;
+export default TaskKanbanView;

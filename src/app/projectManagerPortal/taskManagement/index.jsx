@@ -101,7 +101,7 @@ const TaskManagement = () => {
         },
       });
     }
-    if (action === "view") navigate(`/pm-tasks/${row.id}`, { state: { task: row } });
+    if (action === "view") navigate(`/pm-tasks/${row.id}`,{ state: { task: row, canEdit: true } });
   };
 
   return (

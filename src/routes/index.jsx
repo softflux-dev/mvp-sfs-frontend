@@ -11,6 +11,7 @@ import Documents from "../app/admin/documents";
 import Reports from "../app/admin/reports";
 import Integrations from "../app/admin/integration";
 import IntegrationDetail from "../app/admin/integration/integrationDetail";
+
 import Settings from "../app/admin/settings";
 
 // Auth components
@@ -300,7 +301,15 @@ const ADMIN_ROUTES = [
       <img src={SettingsInactiveIcon} alt="Settings" style={{ width: 20, height: 20 }} />
     ),
     isHideMenu: false,
-}
+},
+{
+  id: 14,
+  nameKey: "Task Detail",
+  component: <TaskDetail />,
+  exact: "exact",
+  path: "/projects/tasks/:id",
+  isHideMenu: true,
+},
   
 ]; 
 

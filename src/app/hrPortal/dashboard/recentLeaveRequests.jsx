@@ -41,6 +41,12 @@ const RecentLeaveRequests = ({ onViewAll }) => {
 
   const confirmRef = useRef();
 
+  // ── Opens the detail dialog (view, approve, or reject all go here first) ──
+  const openDetail = (row) => {
+    setSelectedLeave(row);
+    setViewOpen(true);
+  };
+
   const handleApprove = (row) => {
     confirmRef.current?.open({
       title:       "Approve Leave?",
@@ -51,7 +57,6 @@ const RecentLeaveRequests = ({ onViewAll }) => {
         setRows((prev) =>
           prev.map((r) => r.id === row.id ? { ...r, status: "Approved" } : r)
         );
-        // keep dialog in sync if it's open for this row
         setSelectedLeave((prev) =>
           prev?.id === row.id ? { ...prev, status: "Approved" } : prev
         );
@@ -93,18 +98,18 @@ const RecentLeaveRequests = ({ onViewAll }) => {
         displayRows={displayRows}
         isLoading={false}
         viewIcon={viewIcon}
-        onViewClick={(row) => { setSelectedLeave(row); setViewOpen(true); }}
-        onApproveClick={handleApprove}
-        onRejectClick={handleReject}
+        onViewClick={openDetail}
+        onApproveClick={openDetail}  
+        onRejectClick={openDetail}   
       />
 
-      {/* ── Leave detail dialog — same as LeaveManagement page ────────── */}
+      {/* ── Leave detail dialog — HR adds notes then approves/rejects ── */}
       <LeaveRequestDetailDialog
         open={viewOpen}
         onClose={() => { setViewOpen(false); setSelectedLeave(null); }}
         leave={selectedLeave || {}}
-        onApprove={(row) => { handleApprove(row); setViewOpen(false); }}
-        onReject={(row)  => { handleReject(row);  setViewOpen(false); }}
+        onApprove={(row) => { setViewOpen(false); handleApprove(row); }}
+        onReject={(row)  => { setViewOpen(false); handleReject(row);  }}
       />
 
       <ConfirmationDialog ref={confirmRef} />

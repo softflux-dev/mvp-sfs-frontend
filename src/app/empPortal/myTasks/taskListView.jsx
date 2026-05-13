@@ -27,7 +27,7 @@ const displayRows = [
   "perf_view",   // eye icon only — employee can only view, not edit/delete
 ];
 
-const EmpListView = ({ tasks = empMockTasks, onViewClick }) => {
+const TaskListView = ({ tasks = empMockTasks, onViewClick }) => {
   return (
     <Box mt={2} bgcolor="#fff" borderRadius="25px" p={1}>
       <PaginatedTable
@@ -42,4 +42,4 @@ const EmpListView = ({ tasks = empMockTasks, onViewClick }) => {
   );
 };
 
-export default EmpListView;
+export default TaskListView;

@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import { Box } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+
 import CustomButton       from "../../../../components/customButton";
 import Filter             from "../../../../components/filterBar/filter";
 import PaginatedTable     from "../../../../components/dynamicTable";
 import { MoreVerticalIcon } from "lucide-react";
 import AddTask         from "./addTask";
-import ViewTaskDialog  from "./viewTaskDialog";
 import ConfirmationDialog from "../../../../components/popups/confirmation";
 import SuccessPopup       from "../../../../components/popups/confirmationDialog";
 
@@ -40,7 +41,7 @@ const tableHeader = [
 const displayRows = [
   "task",
   "module",
-  "task_assignees",   // ← new multi-assignee cell
+  "task_assignees",  
   "task_priority",
   "task_start_date",
   "task_end_date",
@@ -49,6 +50,7 @@ const displayRows = [
 ];
 
 const TasksTab = ({ project = {} }) => {
+  const navigate = useNavigate();
   const [tasks,         setTasks]         = useState(mockTasks);
   const [filters,       setFilters]       = useState({});
   const [modalOpen,     setModalOpen]     = useState(false);
@@ -61,8 +63,7 @@ const TasksTab = ({ project = {} }) => {
 
   const handleMenuAction = (action, row) => {
     if (action === "view") {
-      setViewTask(row);
-      setViewOpen(true);
+      navigate(`/projects/tasks/${row.id}`, { state: { task: row, canEdit: true } });
     }
     if (action === "edit") {
       setEditingTask(row);
@@ -166,11 +167,7 @@ const TasksTab = ({ project = {} }) => {
         editingTask={editingTask}
       />
 
-      <ViewTaskDialog
-        open={viewOpen}
-        onClose={() => setViewOpen(false)}
-        task={viewTask}
-      />
+  
 
       <ConfirmationDialog ref={confirmDialogRef} />
 

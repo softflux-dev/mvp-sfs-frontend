@@ -9,7 +9,7 @@ import SuccessPopup         from "../../../components/popups/confirmationDialog"
 import EmpTaskDetailHeader  from "./empTaskDetailHeader";
 import EmpSubmitWork        from "./empSubmitWork";
 import EmpTaskSidebar       from "./empTaskSidebar";
-
+import AttachmentCard from "../../../components/cards/attachmentCard";
 import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
 
 // ── Mock activity log ─────────────────────────────────────────────────────
@@ -76,7 +76,7 @@ const EmpTaskDetail = () => {
         {/* ── LEFT column ──────────────────────────────────────────────── */}
         <Grid size={{ xs: 12, md: 8 }}>
 
-          {/* Description */}
+          {/* 1. Description */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
             <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
               Description
@@ -89,65 +89,33 @@ const EmpTaskDetail = () => {
             </Box>
           </Box>
 
-          {/* Submit Work + Attachments from PM */}
-          <EmpSubmitWork onSubmit={(data) => { console.log("Submitted:", data); setSubmitSuccess(true); }} />
-
-          {/* Activity Log */}
+          {/* 2. Attachments from PM */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
-            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
-              Activity Log
+            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>
+              Attachments from PM
             </Typography>
-            <Box display="flex" flexDirection="column" gap={1}>
-              {mockActivity.map((item) => (
-                <Box
-                  key={item.id}
-                  sx={{
-                    backgroundColor: "#F5F5F5",
-                    borderRadius: "12px",
-                    px: 2, py: 1.5,
-                    display: "flex",
-                    alignItems: "flex-start",
-                    justifyContent: "space-between",
-                    gap: 2,
-                  }}
-                >
-                  <Box display="flex" alignItems="flex-start" gap={1.5}>
-                    <Box
-                      sx={{
-                        width: 10, height: 10, borderRadius: "50%",
-                        background: "linear-gradient(135deg, #AA2493, #022179)",
-                        flexShrink: 0, mt: 0.5,
-                      }}
-                    />
-                    <Box>
-                      <Typography fontSize="13px" fontWeight={500} color="text.primary">
-                        {item.text}
-                      </Typography>
-                      <Typography fontSize="11px" color="text.secondary">
-                        {item.by}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Typography fontSize="11px" color="text.secondary" whiteSpace="nowrap">
-                    {item.date}
-                  </Typography>
-                </Box>
-              ))}
+            <Box display="flex" flexDirection="column" gap={1.5}>
+              <AttachmentCard
+                fileName="wireframe-v2.fig"
+                fileSize="installation-guide.pdf"
+                onDownload={() => console.log("Download wireframe")}
+              />
+              <AttachmentCard
+                fileName="requirements.pdf"
+                fileSize="installation-guide.pdf"
+                onDownload={() => console.log("Download requirements")}
+              />
             </Box>
           </Box>
 
-          {/* Comments & Discussion */}
-          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3 }}>
+          {/* 3. Comments & Discussion */}
+          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
             <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
               Comments & Discussion
             </Typography>
-
             <Box display="flex" flexDirection="column" gap={1.5} mb={2}>
               {comments.map((c) => (
-                <Box
-                  key={c.id}
-                  sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}
-                >
+                <Box key={c.id} sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <Avatar
@@ -164,42 +132,63 @@ const EmpTaskDetail = () => {
                         {c.author}
                       </Typography>
                     </Box>
-                    <Typography fontSize="11px" color="text.secondary">
-                      {c.date}
-                    </Typography>
+                    <Typography fontSize="11px" color="text.secondary">{c.date}</Typography>
                   </Box>
-                  <Typography fontSize="12px" color="text.secondary" ml={5}>
-                    {c.text}
-                  </Typography>
+                  <Typography fontSize="12px" color="text.secondary" ml={5}>{c.text}</Typography>
                 </Box>
               ))}
             </Box>
-
-            {/* Comment input */}
-            <Box>
-              <TextInput
-                placeholder="Write a comment..."
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                inputBgColor="#F5F5F5"
-                fullWidth
-                multiline
-                rows={3}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendComment();
-                  }
-                }}
+            <TextInput
+              placeholder="Write a comment..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              inputBgColor="#F5F5F5"
+              fullWidth
+              multiline
+              rows={3}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendComment(); }
+              }}
+            />
+            <Box display="flex" justifyContent="flex-end" mt={1}>
+              <CustomButton
+                btnLabel="Send"
+                variant="gradient"
+                handlePressBtn={handleSendComment}
+                startIcon={<Send size={14} />}
               />
-              <Box display="flex" justifyContent="flex-end" mt={1}>
-                <CustomButton
-                  btnLabel="Send"
-                  variant="gradient"
-                  handlePressBtn={handleSendComment}
-                  startIcon={<Send size={14} />}
-                />
-              </Box>
+            </Box>
+          </Box>
+
+          {/* 4. Activity Log */}
+          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
+            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
+              Activity Log
+            </Typography>
+            <Box display="flex" flexDirection="column" gap={1}>
+              {mockActivity.map((item) => (
+                <Box
+                  key={item.id}
+                  sx={{
+                    backgroundColor: "#F5F5F5", borderRadius: "12px",
+                    px: 2, py: 1.5, display: "flex",
+                    alignItems: "flex-start", justifyContent: "space-between", gap: 2,
+                  }}
+                >
+                  <Box display="flex" alignItems="flex-start" gap={1.5}>
+                    <Box sx={{
+                      width: 10, height: 10, borderRadius: "50%",
+                      background: "linear-gradient(135deg, #AA2493, #022179)",
+                      flexShrink: 0, mt: 0.5,
+                    }} />
+                    <Box>
+                      <Typography fontSize="13px" fontWeight={500} color="text.primary">{item.text}</Typography>
+                      <Typography fontSize="11px" color="text.secondary">{item.by}</Typography>
+                    </Box>
+                  </Box>
+                  <Typography fontSize="11px" color="text.secondary" whiteSpace="nowrap">{item.date}</Typography>
+                </Box>
+              ))}
             </Box>
           </Box>
 

@@ -3,14 +3,14 @@ import { Download } from "lucide-react";
 import fileIcon from "../../assets/icons/file-icon.svg"; 
 import downloadIcon from "../../assets/icons/download-icon-gray.svg";
 
-const AttachmentCard = ({ fileName = "wireframe-v2.fig", fileSize = "installation-guide.pdf", onDownload }) => {
+const AttachmentCard = ({ fileName = "wireframe-v2.fig", fileSize = "installation-guide.pdf", onDownload,  bgColor = "#F5F5F5" }) => {
   return (
     <Box
       sx={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        backgroundColor: "#F5F5F5",
+        backgroundColor: bgColor, 
         borderRadius: "12px",
         px: 2, py: 1.5,
       }}

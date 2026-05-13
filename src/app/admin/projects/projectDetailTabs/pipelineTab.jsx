@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Box, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import PipelineCard    from "../../../../components/cards/pipelineCard";
-import CardDetailDialog from "../../../../components/cards/cardDetailDialog";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
 const INITIAL_COLUMNS = [
@@ -46,6 +47,7 @@ const INITIAL_COLUMNS = [
 ];
 
 const PipelineTab = ({ project = {} }) => {
+  const navigate = useNavigate();
   const [columns,     setColumns]     = useState(INITIAL_COLUMNS);
   const [selectedCard,setSelectedCard]= useState(null);
   const [selectedCol, setSelectedCol] = useState("");
@@ -182,7 +184,8 @@ const PipelineTab = ({ project = {} }) => {
                             assigneeName={task.assigneeName}
                             assignee={task.assigneeAvatar || ""}
                             project={task.project || ""}
-                            onClick={() => { setSelectedCard(task); setSelectedCol(col.label); }}
+                            onClick={() => navigate(`/projects/tasks/${task.id}`, { state: { task, canEdit: true } })}
+
                           />
                         </Box>
                       )}
@@ -196,13 +199,7 @@ const PipelineTab = ({ project = {} }) => {
         </Box>
       </DragDropContext>
 
-      {/* ── Card Detail Dialog ──────────────────────────────────────────── */}
-      <CardDetailDialog
-        open={!!selectedCard}
-        onClose={() => { setSelectedCard(null); setSelectedCol(""); }}
-        card={selectedCard || {}}
-        columnLabel={selectedCol}
-      />
+      
     </>
   );
 };
