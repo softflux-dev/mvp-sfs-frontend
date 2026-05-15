@@ -1,97 +1,82 @@
-// employees/addEmployee.jsx
 import React, { useState, useEffect, useRef } from "react";
-import { Box, MenuItem, Typography, Grid } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { Box, MenuItem, Typography, CircularProgress } from "@mui/material";
+import { DatePicker }            from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider }  from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns }        from "@mui/x-date-pickers/AdapterDateFns";
 import {
-  DialogContainer,
-  DialogHeader,
-  DialogBody,
-  CustomSelect,
-  TextInput,
+  DialogContainer, DialogHeader, DialogBody,
+  CustomSelect, TextInput,
 } from "../../../components";
 import CustomInputLabel    from "../../../components/customInputLabel";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
-import ConfirmationDialog  from "../../../components/popups/confirmationDialog";
+import { useDepartment }   from "../../../hooks/department";   // ← real depts
+import { useRole }         from "../../../hooks/role";         // ← real roles
 
-// ── replace with your actual asset paths ─────────────────────────────────────
 import avatarPlaceholder from "../../../assets/icons/avatar-placeholder.svg";
 import cameraIcon        from "../../../assets/icons/camera-icon.svg";
 
-const DEPARTMENT_OPTIONS = [
-  { value: "engineering", label: "Engineering" },
-  { value: "design",      label: "Design"      },
-  { value: "qa",          label: "QA"          },
-  { value: "hr",          label: "HR"          },
-];
-
-const ROLE_OPTIONS = [
-  { value: "super_admin",     label: "Super Admin"     },
-  { value: "hr_manager",      label: "HR Manager"      },
-  { value: "project_manager", label: "Project Manager" },
-  { value: "developer",       label: "Developer"       },
-  { value: "designer",        label: "Designer"        },
-  { value: "qa_tester",       label: "QA Tester"       },
-];
-
 const EMPLOYMENT_TYPE_OPTIONS = [
-  { value: "full_time",  label: "Full-time"  },
-  { value: "part_time",  label: "Part Time"  },
-  { value: "contract",   label: "Contract"   },
+  { value: "full_time", label: "Full-time" },
+  { value: "part_time", label: "Part Time" },
+  { value: "contract",  label: "Contract"  },
 ];
 
 const INITIAL_FORM = {
-  fullName:      "",
-  email:         "",
-  phone:         "",
-  designation:   "",
-  department:    "",
-  role:          "",
-  employmentType:"",
-  workingHours:  0,
-  joiningDate:   null,
-  monthlySalary: "",
-  avatarFile:    null,
-  avatarPreview: "",
+  fullName:       "",
+  email:          "",
+  phone:          "",
+  department:     "",
+  role:           "",
+  employmentType: "",
+  workingHours:   "",
+  joiningDate:    null,
+  monthlySalary:  "",
+  avatarFile:     null,
+  avatarPreview:  "",
 };
 
-// ── Normalize label → value slug for selects ─────────────────────────────────
-const matchOption = (options, raw) =>
-  options.find((o) => o.value === raw) ||
-  options.find((o) => o.label.toLowerCase() === raw?.toLowerCase());
+const AddEmployee = ({
+  open,
+  onClose,
+  onSave,
+  editingEmployee = null,
+  loading  = false,
+  apiError = "",
+}) => {
+  const { departments, fetchDepartments } = useDepartment();
+  const { roles,       fetchRoles }       = useRole();
 
-const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = false }) => {
-  const [formData,     setFormData]     = useState(INITIAL_FORM);
-  const [errors,       setErrors]       = useState({});
-  const [confirmOpen,  setConfirmOpen]  = useState(false);
+  const [formData, setFormData] = useState(INITIAL_FORM);
+  const [errors,   setErrors]   = useState({});
   const fileInputRef = useRef();
 
-  // ── Populate form when editing ────────────────────────────────────────────
+  // ── Fetch dropdowns when dialog opens ─────────────────────────────────────
   useEffect(() => {
-    if (editingEmployee) {
-      const deptMatch = matchOption(DEPARTMENT_OPTIONS,    editingEmployee.department);
-      const roleMatch = matchOption(ROLE_OPTIONS,          editingEmployee.role);
-      const typeMatch = matchOption(EMPLOYMENT_TYPE_OPTIONS, editingEmployee.type);
+    if (open) {
+      fetchDepartments({ limit: 100 });
+      fetchRoles({ limit: 100 });
+    }
+  }, [open]);
 
+  // ── Populate form when editing ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!open) return;
+    if (editingEmployee) {
       setFormData({
-        fullName:       editingEmployee.name          || "",
+        fullName:       editingEmployee.name          || editingEmployee.fullName || "",
         email:          editingEmployee.email         || "",
         phone:          editingEmployee.phone         || "",
-        designation:    editingEmployee.designation   || "",
-        department:     deptMatch?.value              || "",
-        role:           roleMatch?.value              || "",
-        employmentType: typeMatch?.value              || "",
-        workingHours:   editingEmployee.workingHours  ?? 0,
+        department:     editingEmployee.departmentId  || "",
+        role:           editingEmployee.roleId        || "",
+        employmentType: editingEmployee.type          || editingEmployee.employmentType || "",
+        workingHours:   editingEmployee.workingHours  ?? "",
         joiningDate:    editingEmployee.joiningDate
-                          ? new Date(editingEmployee.joiningDate)
-                          : null,
+                          ? new Date(editingEmployee.joiningDate) : null,
         monthlySalary:  editingEmployee.monthlySalary != null
-                          ? String(editingEmployee.monthlySalary)
-                          : "",
-        avatarFile:    null,
-        avatarPreview: editingEmployee.avatar || "",
+                          ? String(editingEmployee.monthlySalary) : "",
+        avatarFile:     null,
+        avatarPreview:  editingEmployee.avatar || "",
       });
     } else {
       setFormData(INITIAL_FORM);
@@ -110,23 +95,56 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
     if (errors.joiningDate) setErrors((prev) => ({ ...prev, joiningDate: "" }));
   };
 
-  // ── Avatar upload ─────────────────────────────────────────────────────────
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const preview = URL.createObjectURL(file);
-    setFormData((prev) => ({ ...prev, avatarFile: file, avatarPreview: preview }));
+    setFormData((prev) => ({
+      ...prev,
+      avatarFile:    file,
+      avatarPreview: URL.createObjectURL(file),
+    }));
   };
 
-  // ── Validation ────────────────────────────────────────────────────────────
+  const blockInvalidNumericKeys = (e) => {
+    if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+  };
+
+  
+  const blockNonNumericKeys = (e) => {
+    if (!/[\d]/.test(e.key) &&
+        !["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Enter"].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
+
   const validate = () => {
     const e = {};
-    if (!formData.fullName.trim())    e.fullName      = "Full name is required";
-    if (!formData.email.trim())       e.email         = "Email is required";
-    if (!formData.department)         e.department    = "Department is required";
-    if (!formData.role)               e.role          = "Role is required";
-    if (!formData.employmentType)     e.employmentType= "Employment type is required";
-    if (!formData.joiningDate)        e.joiningDate   = "Joining date is required";
+    if (!formData.fullName.trim())  e.fullName       = "Full name is required";
+    if (!formData.email.trim())     e.email          = "Email is required";
+     if (formData.phone.trim()) {
+    if (!/^\d+$/.test(formData.phone.trim())) {
+      e.phone = "Phone number must contain digits only";
+    } else if (formData.phone.trim().length < 7) {
+      e.phone = "Phone number must be at least 7 digits";
+    } else if (formData.phone.trim().length > 15) {
+      e.phone = "Phone number cannot exceed 15 digits";
+    }
+  }
+    if (!formData.department)       e.department     = "Department is required";
+    if (!formData.role)             e.role           = "Role is required";
+    if (!formData.employmentType)   e.employmentType = "Employment type is required";
+    if (!formData.joiningDate)      e.joiningDate    = "Joining date is required";
+
+    const wh = Number(formData.workingHours);
+    if (formData.workingHours === "" || isNaN(wh)) e.workingHours = "Working hours is required";
+    else if (wh <= 0)  e.workingHours = "Must be greater than 0";
+    else if (wh > 24)  e.workingHours = "Cannot exceed 24";
+    else if (!Number.isInteger(wh)) e.workingHours = "Must be a whole number";
+
+    const sal = Number(formData.monthlySalary);
+    if (formData.monthlySalary === "" || isNaN(sal)) e.monthlySalary = "Salary is required";
+    else if (sal <= 0) e.monthlySalary = "Must be greater than 0";
+
     return e;
   };
 
@@ -137,8 +155,6 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
       return;
     }
     onSave?.(formData);
-    handleClose();
-    setConfirmOpen(true);
   };
 
   const handleClose = () => {
@@ -149,7 +165,6 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-
       <DialogContainer open={open} onClose={handleClose} maxWidth="500px" fullWidth>
         <DialogHeader
           title={editingEmployee ? "Edit Employee" : "Add New Employee"}
@@ -157,63 +172,50 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
         />
 
         <DialogBody>
-          <Box
-            sx={{
-              backgroundColor: "#F5F5F5",
-              borderRadius: "16px",
-              p: 3,
-              display: "flex",
-              flexDirection: "column",
-              gap: 2.5,
-            }}
-          >
-            {/* ── Avatar upload ──────────────────────────────────────────── */}
+          <Box sx={{
+            backgroundColor: "#F5F5F5",
+            borderRadius: "16px", p: 3,
+            display: "flex", flexDirection: "column", gap: 2.5,
+          }}>
+
+            {/* API error inside dialog */}
+            {apiError && (
+              <Box px={1.5} py={1}
+                sx={{ backgroundColor: "#FFF0F0", borderRadius: "8px", border: "1px solid #FFCCCC" }}
+              >
+                <Typography fontSize={13} color="error">{apiError}</Typography>
+              </Box>
+            )}
+
+            {/* Avatar */}
             <Box display="flex" alignItems="center" gap={2}>
-              {/* Avatar circle */}
               <Box sx={{ position: "relative", flexShrink: 0 }}>
-                <Box
-                  sx={{
-                    width: 72, height: 72, borderRadius: "50%",
-                    bgcolor: "#E5E7EB",
-                    overflow: "hidden",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}
-                >
+                <Box sx={{
+                  width: 72, height: 72, borderRadius: "50%",
+                  bgcolor: "#E5E7EB", overflow: "hidden",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
                   {formData.avatarPreview ? (
-                    <img
-                      src={formData.avatarPreview}
-                      alt="avatar"
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
+                    <img src={formData.avatarPreview} alt="avatar"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    <img src={avatarPlaceholder} alt="placeholder" style={{ width: 40, height: 40, opacity: 0.4 }} />
+                    <img src={avatarPlaceholder} alt="placeholder"
+                      style={{ width: 40, height: 40, opacity: 0.4 }} />
                   )}
                 </Box>
-                {/* Camera badge */}
-                <Box
-                  onClick={() => fileInputRef.current?.click()}
-                  sx={{
-                    position: "absolute", bottom: 0, right: 0,
-                    width: 22, height: 22, borderRadius: "50%",
-                    bgcolor: "#fff",
-                    border: "1px solid #E5E7EB",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    cursor: "pointer",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
-                  }}
-                >
+                <Box onClick={() => fileInputRef.current?.click()} sx={{
+                  position: "absolute", bottom: 0, right: 0,
+                  width: 22, height: 22, borderRadius: "50%",
+                  bgcolor: "#fff", border: "1px solid #E5E7EB",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+                }}>
                   <img src={cameraIcon} alt="upload" style={{ width: 12, height: 12 }} />
                 </Box>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  hidden
+                <input ref={fileInputRef} type="file" hidden
                   accept="image/jpeg,image/png,image/gif"
-                  onChange={handleAvatarChange}
-                />
+                  onChange={handleAvatarChange} />
               </Box>
-
-              {/* Upload label */}
               <Box>
                 <Typography fontSize="13px" fontWeight={600} color="text.primary">
                   Upload Profile Photo
@@ -224,127 +226,93 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
               </Box>
             </Box>
 
-            {/* ── Full Name ─────────────────────────────────────────────── */}
+            {/* Full Name */}
             <Box>
               <CustomInputLabel label="Full Name *" />
-              <TextInput
-                placeholder="Enter Full Name"
-                value={formData.fullName}
-                onChange={handleChange("fullName")}
-                inputBgColor="#fff"
-                fullWidth
-                error={!!errors.fullName}
-                helperText={errors.fullName}
-              />
+              <TextInput placeholder="Enter Full Name" value={formData.fullName}
+                onChange={handleChange("fullName")} inputBgColor="#fff" fullWidth
+                error={!!errors.fullName} helperText={errors.fullName} />
             </Box>
 
-            {/* ── Email ─────────────────────────────────────────────────── */}
+            {/* Email — disabled on edit */}
             <Box>
               <CustomInputLabel label="Email *" />
-              <TextInput
-                placeholder="Enter Email"
-                value={formData.email}
-                onChange={handleChange("email")}
-                inputBgColor="#fff"
-                fullWidth
-                type="email"
-                error={!!errors.email}
-                helperText={errors.email}
-              />
+              <TextInput placeholder="Enter Email" value={formData.email}
+                onChange={handleChange("email")} inputBgColor="#fff" fullWidth
+                type="email" disabled={!!editingEmployee}
+                error={!!errors.email} helperText={errors.email} />
             </Box>
 
-            {/* ── Phone ─────────────────────────────────────────────────── */}
+            {/* Phone */}
             <Box>
               <CustomInputLabel label="Phone" />
               <TextInput
                 placeholder="Enter Phone"
                 value={formData.phone}
                 onChange={handleChange("phone")}
+                onKeyDown={blockNonNumericKeys}
                 inputBgColor="#fff"
                 fullWidth
+                type="tel"
+                inputProps={{ maxLength: 15 }}
+                error={!!errors.phone}
+                helperText={errors.phone}
               />
             </Box>
 
-            {/* ── Designation ───────────────────────────────────────────── */}
-            <Box>
-              <CustomInputLabel label="Designation" />
-              <TextInput
-                placeholder="Enter Designation"
-                value={formData.designation}
-                onChange={handleChange("designation")}
-                inputBgColor="#fff"
-                fullWidth
-              />
-            </Box>
 
-            {/* ── Department + Role ─────────────────────────────────────── */}
+            {/* Department + Role */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box>
-                <CustomInputLabel label="Department" />
-                <CustomSelect
-                  value={formData.department}
+                <CustomInputLabel label="Department *" />
+                <CustomSelect value={formData.department}
                   onChange={handleChange("department")}
-                  fullWidth
-                  height="45px"
-                  inputBgColor="#fff"
-                  displayEmpty
+                  fullWidth height="45px" inputBgColor="#fff" displayEmpty
                   renderValue={(v) =>
-                    DEPARTMENT_OPTIONS.find((o) => o.value === v)?.label || (
+                    departments.find((d) => d._id === v)?.name || (
                       <Typography fontSize={13} color="text.secondary">Select Department</Typography>
                     )
                   }
                 >
-                  {DEPARTMENT_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                  {departments.map((d) => (
+                    <MenuItem key={d._id} value={d._id}>{d.name}</MenuItem>
                   ))}
                 </CustomSelect>
                 {errors.department && (
-                  <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>
-                    {errors.department}
-                  </Typography>
+                  <Typography fontSize="12px" color="error" mt={0.5}>{errors.department}</Typography>
                 )}
               </Box>
 
               <Box>
-                <CustomInputLabel label="Role" />
-                <CustomSelect
-                  value={formData.role}
+                <CustomInputLabel label="Role *" />
+                <CustomSelect value={formData.role}
                   onChange={handleChange("role")}
-                  fullWidth
-                  height="45px"
-                  inputBgColor="#fff"
-                  displayEmpty
+                  fullWidth height="45px" inputBgColor="#fff" displayEmpty
                   renderValue={(v) =>
-                    ROLE_OPTIONS.find((o) => o.value === v)?.label || (
+                    roles.find((r) => r._id === v)?.roleName || (
                       <Typography fontSize={13} color="text.secondary">Select Role</Typography>
                     )
                   }
                 >
-                  {ROLE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                  {roles.map((r) => (
+                    <MenuItem key={r._id} value={r._id}>{r.roleName}</MenuItem>
                   ))}
                 </CustomSelect>
                 {errors.role && (
-                  <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>
-                    {errors.role}
-                  </Typography>
+                  <Typography fontSize="12px" color="error" mt={0.5}>{errors.role}</Typography>
                 )}
               </Box>
             </Box>
 
-            {/* ── Employment Type ───────────────────────────────────────── */}
+            {/* Employment Type */}
             <Box>
-              <CustomInputLabel label="Employment Type" />
-              <CustomSelect
-                value={formData.employmentType}
+              <CustomInputLabel label="Employment Type *" />
+              <CustomSelect value={formData.employmentType}
                 onChange={handleChange("employmentType")}
-                fullWidth
-                height="45px"
-                inputBgColor="#fff"
-                displayEmpty
+                fullWidth height="45px" inputBgColor="#fff" displayEmpty
                 renderValue={(v) =>
                   EMPLOYMENT_TYPE_OPTIONS.find((o) => o.value === v)?.label || (
-                    <Typography fontSize={13} color="text.secondary">Select Employment Type</Typography>
+                    <Typography fontSize={13} color="text.secondary">Select Type</Typography>
                   )
                 }
               >
@@ -353,35 +321,27 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
                 ))}
               </CustomSelect>
               {errors.employmentType && (
-                <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>
-                  {errors.employmentType}
-                </Typography>
+                <Typography fontSize="12px" color="error" mt={0.5}>{errors.employmentType}</Typography>
               )}
             </Box>
 
-            {/* ── Working Hours/Day + Joining Date ──────────────────────── */}
+            {/* Working Hours + Joining Date */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box>
-                <CustomInputLabel label="Working Hours/Day" />
-                <TextInput
-                  placeholder="0"
-                  value={formData.workingHours}
+                <CustomInputLabel label="Working Hours/Day *" />
+                <TextInput placeholder="0" value={formData.workingHours}
                   onChange={handleChange("workingHours")}
-                  inputBgColor="#fff"
-                  fullWidth
-                  type="number"
-                />
+                  onKeyDown={blockInvalidNumericKeys}
+                  inputBgColor="#fff" fullWidth type="number"
+                  inputProps={{ min: 1, max: 24, step: 1 }}
+                  error={!!errors.workingHours} helperText={errors.workingHours} />
               </Box>
-
               <Box>
-                <CustomInputLabel label="Joining Date" />
-                <DatePicker
-                  value={formData.joiningDate}
-                  onChange={handleDateChange}
+                <CustomInputLabel label="Joining Date *" />
+                <DatePicker value={formData.joiningDate} onChange={handleDateChange}
                   slotProps={{
                     textField: {
-                      size: "small",
-                      fullWidth: true,
+                      size: "small", fullWidth: true,
                       placeholder: "dd/mm/yyyy",
                       error: !!errors.joiningDate,
                     },
@@ -389,23 +349,20 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
                   sx={GlobalStyle.datePickerStyle}
                 />
                 {errors.joiningDate && (
-                  <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>
-                    {errors.joiningDate}
-                  </Typography>
+                  <Typography fontSize="12px" color="error" mt={0.5}>{errors.joiningDate}</Typography>
                 )}
               </Box>
             </Box>
 
-            {/* ── Monthly Salary ────────────────────────────────────────── */}
+            {/* Monthly Salary */}
             <Box>
-              <CustomInputLabel label="Monthly Salary" />
-              <TextInput
-                placeholder="0"
-                value={formData.monthlySalary}
+              <CustomInputLabel label="Monthly Salary *" />
+              <TextInput placeholder="0" value={formData.monthlySalary}
                 onChange={handleChange("monthlySalary")}
-                inputBgColor="#fff"
-                fullWidth
-                type="number"
+                onKeyDown={blockInvalidNumericKeys}
+                inputBgColor="#fff" fullWidth type="number"
+                inputProps={{ min: 1 }}
+                error={!!errors.monthlySalary} helperText={errors.monthlySalary}
                 InputStartIcon={
                   <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>
                 }
@@ -420,21 +377,15 @@ const AddEmployee = ({ open, onClose, onSave, editingEmployee = null, loading = 
           onConfirm={handleSave}
           showCancelBtn
           cancelText="Cancel"
-          confirmText="Save Employee"
+          confirmText={
+            loading
+              ? <CircularProgress size={18} sx={{ color: "#fff" }} />
+              : editingEmployee ? "Update Employee" : "Save Employee"
+          }
+          isConfirmBtnDisable={loading}
           variant="gradient"
-          confirmLoading={loading}
         />
       </DialogContainer>
-
-      {/* ── Save success popup ────────────────────────────────────────────── */}
-      <ConfirmationDialog
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        message="Save Successfully"
-        autoClose
-        autoCloseDelay={2000}
-      />
-
     </LocalizationProvider>
   );
 };

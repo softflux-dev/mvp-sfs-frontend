@@ -330,7 +330,7 @@ const HR_ROUTES = [
   },
   {
     id: 2,
-    nameKey: "Attendance",
+    nameKey: "Attendance Management",
     component: <AttendanceMonitoring />,
     exact: "exact",
     path: "/attendance-monitoring",
@@ -344,7 +344,7 @@ const HR_ROUTES = [
   },
   {
     id: 3,
-    nameKey: "Leaves",
+    nameKey: "Leave Management",
     component: <LeaveManagement />,
     exact: "exact",
     
@@ -557,7 +557,7 @@ const EMP_ROUTES = [
     } */
    {
     id: 4,
-    nameKey: "Attendance",
+    nameKey: "My Attendance",
     component: <EmpAttendance/>,
     exact: "exact",
     path: "/emp-attendance",
@@ -586,7 +586,7 @@ const EMP_ROUTES = [
   },
   {
     id: 6,
-    nameKey: "Salary",
+    nameKey: "My Salary",
     component: <Salary />,
     exact: "exact",
     path: "/salary",

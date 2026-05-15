@@ -12,6 +12,8 @@ const Filter = ({
   onFilterChange,
   managers = [],   // pass from parent when needed
   resetKey = 0,
+  departments = [],    
+  roles       = [],
 }) => {
   const [values, setValues] = useState({});
 
@@ -204,53 +206,46 @@ const Filter = ({
     },
   ],
  // ── Employees page ────────────────────────────────────────────────────────
-  employees: [
-    {
-      type: "search",
-      key: "search",
-      placeholder: "Search by name, email or employee ID...",
-      grid: { xs: 12, md: 6 },
-    },
-    {
-      type: "select",
-      key: "department",
-      placeholder: "All Department",
-      grid: { xs: 12, md: 2 },
-      options: [
-        { v: "",            l: "All Departments"         },
-        { v: "engineering", l: "Engineering" },
-        { v: "design",      l: "Design"      },
-        { v: "qa",          l: "QA"          },
-        { v: "hr",          l: "HR"          },
-      ],
-    },
-    {
-      type: "select",
-      key: "role",
-      placeholder: "All Role",
-      grid: { xs: 12, md: 2 },
-      options: [
-        { v: "all",                l: "All Roles"             },
-        { v: "super_admin",       l: "Super Admin"       },
-        { v: "hr_manager",   l: "HR Manager"   },
-        { v: "project_manager", l: "Project Manager" },
-        { v: "developer",       l: "Developer"       },
-        { v: "designer",        l: "Designer"        },
-        { v: "qa_tester",       l: "QA Tester"       },
-      ],
-    },
-    {
-      type: "select",
-      key: "status",
-      placeholder: "All Status",
-      grid: { xs: 12, md: 2 },
-      options: [
-        { v: "",         l: "All Status"      },
-        { v: "active",   l: "Active"   },
-        { v: "inactive", l: "Inactive" },
-      ],
-    },
-  ],
+ 
+employees: ({ departments = [], roles = [] }) => [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search by name, email or employee ID...",
+    grid: { xs: 12, md: 6 },
+  },
+  {
+    type: "select",
+    key: "department",
+    placeholder: "All Departments",
+    grid: { xs: 12, md: 2 },
+    options: [
+      { v: "", l: "All Departments" },
+      ...departments.map((d) => ({ v: d._id, l: d.name })),
+    ],
+  },
+  {
+    type: "select",
+    key: "role",
+    placeholder: "All Roles",
+    grid: { xs: 12, md: 2 },
+    options: [
+      { v: "", l: "All Roles" },
+      ...roles.map((r) => ({ v: r._id, l: r.roleName })),
+    ],
+  },
+  {
+    type: "select",
+    key: "status",
+    placeholder: "All Status",
+    grid: { xs: 12, md: 2 },
+    options: [
+      { v: "",         l: "All Status" },
+      { v: "active",   l: "Active"     },
+      { v: "inactive", l: "Inactive"   },
+    ],
+  },
+],
 
    employee_tasks: [
      {
@@ -759,7 +754,7 @@ salary_history: [
 
   const fields =
     typeof configs[mode] === "function"
-      ? configs[mode]({ managers })
+      ? configs[mode]({ managers, departments, roles })
       : configs[mode] || configs.full;
 
   return (

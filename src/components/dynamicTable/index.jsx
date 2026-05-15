@@ -603,14 +603,23 @@ case "doc_uploaded_by":
 
   // ── Employee type chip (Full-time / Contract) ─────────────────────────────
 case "emp_type": {
+  
+  const typeRaw = (row.type || "").toLowerCase().replace(/[-_\s]/g, "");
+  const typeLabel =
+    typeRaw === "fulltime"   ? "Full-time" :
+    typeRaw === "contract"   ? "Contract"  :
+    typeRaw === "parttime"   ? "Part-time" :
+    row.type || "—";
+
   const typeCfg =
-    row.type === "Full-time" ? { bg: "#04C3731A", color: "#04C373" } :
-    row.type === "Contract"  ? { bg: "#AA24931A", color: "#AA2493" } :
-                               { bg: "#F5F5F5",   color: "#757575" };
+    typeLabel === "Full-time" ? { bg: "#04C3731A", color: "#04C373" } :
+    typeLabel === "Contract"  ? { bg: "#AA24931A", color: "#AA2493" } :
+    typeLabel === "Part-time" ? { bg: "#2B6EFF1A", color: "#2B6EFF" } :
+                                { bg: "#F5F5F5",   color: "#757575" };
   return (
     <TableCell key={val}>
       <Chip
-        label={row.type}
+        label={typeLabel}
         sx={{
           height: "24px", fontSize: "12px", fontWeight: 500,
           px: 1, borderRadius: "12px",
@@ -623,17 +632,25 @@ case "emp_type": {
 
 // ── Employee role chip ────────────────────────────────────────────────────
 case "emp_role": {
+  // Normalize role label for display and color matching
+  const roleRaw = (row.role || "").toLowerCase().replace(/\s+/g, " ").trim();
+   const roleLabel = (row.role || "")
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase()) || "—";
+
   const roleCfg =
-    row.role === "Developer"        ? { bg: "#04C3731A", color: "#04C373" } :
-    row.role === "Project Manager"  ? { bg: "#2B6EFF1A", color: "#2B6EFF" } :
-    row.role === "Designer"         ? { bg: "#AA24931A", color: "#AA2493" } :
-    row.role === "QA Tester"        ? { bg: "#FF972F1A", color: "#FF972F" } :
-    row.role === "HR Manager"       ? { bg: "#AA24931A", color: "#AA2493" } :
+    roleLabel === "Developer"       ? { bg: "#04C3731A", color: "#04C373" } :
+    roleLabel === "Project Manager" ? { bg: "#2B6EFF1A", color: "#2B6EFF" } :
+    roleLabel === "Designer"        ? { bg: "#AA24931A", color: "#AA2493" } :
+    roleLabel === "QA Tester"       ? { bg: "#FF972F1A", color: "#FF972F" } :
+    roleLabel === "HR Manager"      ? { bg: "#AA24931A", color: "#AA2493" } :
+    roleLabel === "Employee"        ? { bg: "#04C3731A", color: "#04C373" } :
                                       { bg: "#F5F5F5",   color: "#757575" };
   return (
     <TableCell key={val}>
       <Chip
-        label={row.role}
+        label={roleLabel}
         sx={{
           height: "24px", fontSize: "12px", fontWeight: 500,
           px: 1, borderRadius: "12px",

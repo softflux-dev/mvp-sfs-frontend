@@ -1,22 +1,16 @@
-// employees/employeeDetailTabs/documentsTab.jsx
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { Box, Grid, Typography } from "@mui/material";
 
-import CustomButton       from "../../../../components/customButton";
-import PaginatedTable     from "../../../../components/dynamicTable";
-import ConfirmationDialog from "../../../../components/popups/confirmation";
-import SuccessPopup       from "../../../../components/popups/confirmationDialog";
+import CustomButton         from "../../../../components/customButton";
+import PaginatedTable       from "../../../../components/dynamicTable";
+import ConfirmationDialog   from "../../../../components/popups/confirmation";
+import SuccessPopup         from "../../../../components/popups/confirmationDialog";
 import UploadDocumentDialog from "./uploadDocumentDialog";
-import UploadIcon from "../../../../assets/icons/upload-doc-icon.svg";
+import { useDocument }      from "../../../../hooks/document";   // ← hook
+
+import UploadIcon   from "../../../../assets/icons/upload-doc-icon.svg";
 import DeleteIcon   from "../../../../assets/icons/delete-icon-inactive.svg";
 import downloadIcon from "../../../../assets/icons/download.svg";
-
-// ── Mock data — replace with real API data ────────────────────────────────────
-const mockDocuments = [
-  { id: 1, fileName: "John Smith Employment Contract", type: "Employment Contract", uploadDate: "2026-01-15", uploadedBy: "HR Admin",   fileSize: "2.4 MB" },
-  { id: 2, fileName: "Confidentiality Agreement",      type: "NDA",                uploadDate: "2026-01-15", uploadedBy: "Legal Team", fileSize: "2.4 MB" },
-  { id: 3, fileName: "John Smith Employment Contract", type: "Employment Contract", uploadDate: "2026-01-15", uploadedBy: "HR Admin",   fileSize: "2.4 MB" },
-];
 
 const tableHeader = [
   { id: "fileName",   label: "Name"        },
@@ -35,50 +29,78 @@ const displayRows = [
 ];
 
 const DocumentsTab = ({ employee = {} }) => {
-  const [documents,     setDocuments]     = useState(mockDocuments);
+  const {
+    documents,
+    loading,
+    actionLoading,
+    error,
+    uploadDocument,
+    deleteDocument,
+    downloadDocument,
+  } = useDocument(employee.id);             // ← pass employeeId
+
   const [uploadOpen,    setUploadOpen]    = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [successMsg,    setSuccessMsg]    = useState("");
+  const [showSuccess,   setShowSuccess]   = useState(false);
+  const [apiError,      setApiError]      = useState("");
 
   const confirmDialogRef = useRef();
 
+  // ── Map API shape → table row shape ───────────────────────────────────────
+  const tableData = documents.map((doc) => ({
+    id:         doc._id,
+    fileName:   doc.title,
+    type:       doc.documentType,
+    uploadDate: doc.createdAt
+      ? new Date(doc.createdAt).toLocaleDateString("en-US", {
+          month: "short", day: "numeric", year: "numeric",
+        })
+      : "—",
+    uploadedBy: doc.uploadedBy?.name || "Admin",
+    fileSize:   doc.fileSize || "—",
+  }));
+
   const handleDelete = (row) => {
     confirmDialogRef.current?.open({
-      title:       "Confirmation !",
-      description: "Are you sure you want to Delete this ?",
-      confirmText: "Yes",
+      title:       "Delete Document?",
+      description: `"${row.fileName}" will be permanently removed.`,
+      confirmText: "Yes, Delete",
       cancelText:  "Cancel",
-      onConfirm: () => {
-        setDocuments((prev) => prev.filter((d) => d.id !== row.id));
-        setDeleteSuccess(true);
+      onConfirm: async () => {
+        const result = await deleteDocument(row.id);
+        if (result.success) {
+          setSuccessMsg(result.message);
+          setShowSuccess(true);
+        } else {
+          setApiError(result.message);
+        }
       },
     });
   };
 
   const handleDownload = (row) => {
-    console.log("Download:", row.fileName);
+    downloadDocument(row.id);
   };
 
-  const handleUploadSave = (data) => {
-    const newDoc = {
-      id:         documents.length + 1,
-      fileName:   data.title || data.file?.name || "Untitled",
-      type:       data.documentType,
-      uploadDate: new Date().toISOString().split("T")[0],
-      uploadedBy: "HR Admin",
-      fileSize:   data.file ? `${(data.file.size / (1024 * 1024)).toFixed(1)} MB` : "-",
-    };
-    setDocuments((prev) => [newDoc, ...prev]);
-    setUploadOpen(false);
+  const handleUploadSave = async (formData) => {
+    const result = await uploadDocument(formData);
+    if (result.success) {
+      setSuccessMsg(result.message);
+      setShowSuccess(true);
+      setUploadOpen(false);
+    } else {
+      setApiError(result.message);
+    }
   };
 
   return (
     <Box sx={{ mt: 2 }}>
 
-      {/* ── Header row ───────────────────────────────────────────────────── */}
+      {/* Header */}
       <Grid container alignItems="center" justifyContent="space-between" mb={2}>
         <Grid item>
           <Typography fontSize="20px" fontWeight={700} color="text.primary">
-            Employees
+            Documents
           </Typography>
         </Grid>
         <Grid item>
@@ -91,39 +113,48 @@ const DocumentsTab = ({ employee = {} }) => {
         </Grid>
       </Grid>
 
-      {/* ── Table ────────────────────────────────────────────────────────── */}
+      {/* API error */}
+      {(error || apiError) && (
+        <Box mb={2} px={2} py={1.5}
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
+        >
+          <Typography fontSize={13} color="error">{error || apiError}</Typography>
+        </Box>
+      )}
+
+      {/* Table */}
       <Box bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable
           tableHeader={tableHeader}
-          tableData={documents}
+          tableData={tableData}
           displayRows={displayRows}
           downloadIcon={downloadIcon}
           onDownloadClick={handleDownload}
           deleteIcon={DeleteIcon}
           onDeleteClick={handleDelete}
-          isLoading={false}
+          isLoading={loading}
         />
       </Box>
 
-      {/* ── Upload Document dialog ────────────────────────────────────────── */}
+      {/* Upload dialog */}
       <UploadDocumentDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         onSave={handleUploadSave}
+        loading={actionLoading}
       />
 
-      {/* ── Delete confirmation ───────────────────────────────────────────── */}
+      {/* Confirm delete */}
       <ConfirmationDialog ref={confirmDialogRef} />
 
-      {/* ── Delete success ────────────────────────────────────────────────── */}
+      {/* Success popup */}
       <SuccessPopup
-        open={deleteSuccess}
-        onClose={() => setDeleteSuccess(false)}
-        message="Successfully Deleted."
+        open={showSuccess}
+        onClose={() => setShowSuccess(false)}
+        message={successMsg}
         autoClose
         autoCloseDelay={2000}
       />
-
     </Box>
   );
 };

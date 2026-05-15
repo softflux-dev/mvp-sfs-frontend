@@ -1,6 +1,6 @@
 // employees/employeeDetailTabs/uploadDocumentDialog.jsx
 import { useRef, useState } from "react";
-import { Box, MenuItem, Typography } from "@mui/material";
+import { Box, MenuItem, Typography, CircularProgress } from "@mui/material";
 import {
   DialogContainer,
   DialogHeader,
@@ -26,7 +26,7 @@ const EMPTY_FORM = {
   file:         null,
 };
 
-const UploadDocumentDialog = ({ open, onClose, onSave }) => {
+const UploadDocumentDialog = ({ open, onClose, onSave, loading = false }) => {
   const [form,        setForm]        = useState({ ...EMPTY_FORM });
   const [successOpen, setSuccessOpen] = useState(false);
   const fileInputRef = useRef(null);
@@ -152,14 +152,19 @@ const UploadDocumentDialog = ({ open, onClose, onSave }) => {
           </Box>
         </DialogBody>
 
-        <DialogActionButtons
-          onCancel={handleClose}
-          onConfirm={handleSave}
-          showCancelBtn
-          cancelText="Cancel"
-          confirmText="Save"
-          variant="gradient"
-        />
+       <DialogActionButtons
+        onCancel={handleClose}
+        onConfirm={handleSave}
+        showCancelBtn
+        cancelText="Cancel"
+        confirmText={
+          loading
+            ? <CircularProgress size={18} sx={{ color: "#fff" }} />
+            : "Save"
+        }
+        isConfirmBtnDisable={!form.title || !form.file || loading}
+        variant="gradient"
+      />
       </DialogContainer>
 
       {/* ── Upload success popup ──────────────────────────────────────────── */}

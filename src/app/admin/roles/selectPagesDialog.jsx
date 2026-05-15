@@ -19,9 +19,9 @@ import {
 // ── Portal sections config ────────────────────────────────────────────────────
 const PORTAL_SECTIONS = [
   { key: "Admin",           label: "Admin Portal",           color: "#AA2493", data: adminPages          },
-  { key: "HR",              label: "HR Portal",              color: "#EF5322", data: hrPages              },
-  { key: "Project Manager", label: "Project Manager Portal", color: "#022179", data: projectManagerPages  },
-  { key: "Employee",        label: "Employee Portal",        color: "#0E9E6E", data: employeePages        },
+  { key: "HR",              label: "HR Portal",              color: "#AA2493", data: hrPages              },
+  { key: "Project Manager", label: "Project Manager Portal", color: "#AA2493", data: projectManagerPages  },
+  { key: "Employee",        label: "Employee Portal",        color: "#AA2493", data: employeePages        },
 ];
 
 const SelectPagesDialog = ({
