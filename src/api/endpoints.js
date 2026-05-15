@@ -35,6 +35,12 @@ getMe:          "auth/me",
   deleteEmployeeDocument:  "admin/employees",
   downloadEmployeeDocument:"admin/employees",
 
+  // Project Types
+  getProjectTypes:    "admin/project-types",
+  createProjectType:  "admin/project-types",
+  updateProjectType:  "admin/project-types",
+  deleteProjectType:  "admin/project-types",
+
 };
 
 export default ENDPOINTS;
