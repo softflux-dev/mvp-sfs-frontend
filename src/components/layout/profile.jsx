@@ -12,9 +12,9 @@ import personIcon  from "../../assets/icons/profile-active.svg";
 import { useNavigate } from "react-router-dom";
 import useUserStore from "../../zustand/useUserStore";
 
-export default function Profile({ user }) {
+export default function Profile() {
   const [anchorEl, setAnchorEl] = useState(null);
-  const { clearUserData } = useUserStore();
+  const { user, clearUserData } = useUserStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -69,18 +69,18 @@ export default function Profile({ user }) {
               mb: 2,
               border: "3px solid #AA2493",
             }}
-            src={
-              user?.profilePicture ||
-              "https://i.pinimg.com/736x/36/83/32/3683323f88954ae8c498f8a8bec7272b.jpg"
-            }
+            src={user?.avatar || user?.profileImage || user?.profilePicture || "https://...fallback"}
+
           />
 
           <Typography fontSize="20px" fontWeight="600" mb={0.5}>
-            {user?.fullName || "User Name"}
+            {user?.fullName || user?.name || "User Name"}
+
           </Typography>
 
           <Typography fontSize="14px" color="#666" mb={3}>
             {user?.email || "user@email.com"}
+
           </Typography>
 
           <Stack direction="column" gap={1} width="100%" mt={3}>

@@ -1,57 +1,37 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import PipelineCard    from "../../../components/cards/pipelineCard";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
-const INITIAL_COLUMNS = [
-  {
-    id: "planning",
-    label: "Planning",
-    tasks: [
-      { id: "t1", title: "Create Ui Dashboard", priority: "Low",    deadline: "march 16", comments: 5, attachments: 2, assigneeName: "Sara"  },
-      { id: "t2", title: "Create Ui Dashboard", priority: "Low",    deadline: "march 16", comments: 5,                 assigneeName: "Jon"   },
-    ],
-  },
-  {
-    id: "development",
-    label: "Development",
-    tasks: [
-      { id: "t3", title: "Create Ui Dashboard", priority: "Medium", deadline: "march 16", comments: 5,                 assigneeName: "Sara"  },
-      { id: "t4", title: "Create Ui Dashboard", priority: "Low",    deadline: "march 16", comments: 5,                 assigneeName: "Peter" },
-    ],
-  },
-  {
-    id: "testing",
-    label: "Testing",
-    tasks: [
-      { id: "t5", title: "Create Ui Dashboard", priority: "High",   deadline: "march 16", comments: 5,                 assigneeName: "Sara"  },
-    ],
-  },
-  {
-    id: "review",
-    label: "Review",
-    tasks: [
-      { id: "t6", title: "Create Ui Dashboard", priority: "Low",    deadline: "march 16", comments: 5,                 assigneeName: "Jon"   },
-    ],
-  },
-  {
-    id: "completed",
-    label: "Completed",
-    tasks: [
-      { id: "t7", title: "Create Ui Dashboard", priority: "Medium", deadline: "march 16", comments: 5,                 assigneeName: "Sara"  },
-    ],
-  },
+const DEFAULT_COLUMNS = [
+  { id: "planning", label: "Planning", tasks: [] },
+  { id: "development", label: "Development", tasks: [] },
+  { id: "testing", label: "Testing", tasks: [] },
+  { id: "review", label: "Review", tasks: [] },
+  { id: "completed", label: "Completed", tasks: [] },
 ];
 
-const KanbanView = ({ project = {} }) => {
+const KanbanView = ({ tasks = [] }) => {
    const navigate = useNavigate();
-  const [columns,     setColumns]     = useState(INITIAL_COLUMNS);
+  const [columns, setColumns] = useState(DEFAULT_COLUMNS);
   const [selectedCard,setSelectedCard]= useState(null);
   const [selectedCol, setSelectedCol] = useState("");
   const [editingColId,  setEditingColId]  = useState(null);
   const [editingLabel,  setEditingLabel]  = useState("");
+
+  useEffect(() => {
+    const updatedColumns = DEFAULT_COLUMNS.map((column) => ({
+      ...column,
+      tasks: tasks.filter(
+        (task) =>
+          task.status?.toLowerCase() === column.id.toLowerCase()
+      ),
+    }));
+
+    setColumns(updatedColumns);
+  }, [tasks]);
 
   const onDragEnd = (result) => {
     const { source, destination } = result;
@@ -175,19 +155,15 @@ const KanbanView = ({ project = {} }) => {
                           }}
                         >
                           <PipelineCard
-                            title={task.title}
-                            priority={task.priority}
-                            deadline={task.deadline}
-                            comments={task.comments}
-                            attachments={task.attachments}
-                            assigneeName={task.assigneeName}
-                            assignee={task.assigneeAvatar || ""}
-                            project={task.project || ""}
-                            onClick={() => navigate(`/pm-tasks/${task.id}`, { state: { task, canEdit: true } })}
-
-                            
-
-                          />
+                          title={task.title}
+                          priority={task.priority}
+                          deadline={task.endDate}
+                          comments={task.comments}           
+                          attachments={task.attachments}
+                          assignees={task.assignees}
+                          project={task.projectName || task.project?.projectName || task.project || ""}  
+                          onClick={() => navigate(`/pm-tasks/${task.id || task._id}`, { state: { task, canEdit: true, role: "pm" } })}
+                        />
                         </Box>
                       )}
                     </Draggable>

@@ -22,7 +22,7 @@ const ProjectDetailHeader = ({ project = {}, onEditClick }) => {
   const metaRow2 = [
     { label: "Start Date", value: project.startDate || "Oct 1, 2025"  },
     { label: "End Date",   value: project.endDate   || "Jun 30, 2026" },
-    { label: "Budget",     value: project.budget    || "$ 2,500,000"  },
+   
   ];
 
   return (
@@ -62,15 +62,7 @@ const ProjectDetailHeader = ({ project = {}, onEditClick }) => {
           />
         </Box>
 
-        {/* ── Edit button using CustomButton with gradientText variant ─── */}
-        <CustomButton
-          btnLabel="Edit Project"
-          variant="gradientText"
-          handlePressBtn={onEditClick}
-          startIcon={
-            <img src={editIcon} alt="edit" style={{ width: 15, height: 15 }} />
-          }
-        />
+       
       </Box>
 
 <Box sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", p: 2 }}>

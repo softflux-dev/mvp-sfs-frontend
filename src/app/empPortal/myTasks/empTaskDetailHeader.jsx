@@ -1,73 +1,93 @@
 import { Box, Typography, Chip, Grid } from "@mui/material";
 
-const STATUS_CONFIG = {
-  "New":         { bg: "#2B6EFF1A", color: "#2B6EFF" },
-  "Assigned":    { bg: "#AA24931A", color: "#AA2493" },
-  "In Progress": { bg: "#FF972F1A", color: "#FF972F" },
-  "Review":      { bg: "#9E9E9E1A", color: "#9E9E9E" },
-  "Completed":   { bg: "#04C3731A", color: "#04C373" },
-  "Under Review":{ bg: "#9E9E9E1A", color: "#9E9E9E" },
+const TASK_STATUS_CONFIG = {
+  "new":          { label: "New",          bg: "#2B6EFF1A", color: "#2B6EFF" },
+  "in_progress":  { label: "In Progress",  bg: "#FF972F1A", color: "#FF972F" },
+  "under_review": { label: "Under Review", bg: "#9E9E9E1A", color: "#9E9E9E" },
+  "completed":    { label: "Completed",    bg: "#04C3731A", color: "#04C373" },
 };
 
 const PRIORITY_CONFIG = {
-  High:   { bg: "#FF3B301A", color: "#FF3B30" },
-  Medium: { bg: "#AA24931A", color: "#AA2493" },
-  Low:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
+  "high":   { label: "High",   bg: "#FF3B301A", color: "#FF3B30" },
+  "medium": { label: "Medium", bg: "#AA24931A", color: "#AA2493" },
+  "low":    { label: "Low",    bg: "#2B6EFF1A", color: "#2B6EFF" },
 };
 
 const EmpTaskDetailHeader = ({ task = {} }) => {
-  const statusCfg   = STATUS_CONFIG[task.status]     || { bg: "#F5F5F5", color: "#757575" };
-  const priorityCfg = PRIORITY_CONFIG[task.priority] || { bg: "#F5F5F5", color: "#757575" };
+  const rawPriority   = task.priority?.toLowerCase()   || "";
+  const rawTaskStatus = task.taskStatus?.toLowerCase() || "";
+
+  const priorityCfg   = PRIORITY_CONFIG[rawPriority]     || { label: task.priority   || "—", bg: "#F5F5F5", color: "#757575" };
+  const taskStatusCfg = TASK_STATUS_CONFIG[rawTaskStatus] || { label: task.taskStatus || "—", bg: "#F5F5F5", color: "#757575" };
+
+  // "Assigned By" — the creator (admin/PM) who created the task
+  const assignedBy =
+    task.createdBy?.name     ||
+    task.createdBy?.fullName ||
+    task.createdByName       ||
+    "—";
 
   const metaFields = [
-    { label: "Assigned By",  value: task.assignedBy  || "Sara Ahmad"   },
-    { label: "Deadline",     value: task.deadline    || "Oct 1, 2025"  },
-    { label: "Created Date", value: task.createdDate || "Created Date" },
+    {
+      label: "Assigned By",
+      value: assignedBy,
+    },
+    {
+      label: "Deadline",
+      value: task.endDate
+        ? new Date(task.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : task.deadline
+          ? new Date(task.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : "—",
+    },
+    {
+      label: "Created Date",
+      value: task.createdAt
+        ? new Date(task.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : "—",
+    },
   ];
 
   return (
     <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: "20px 24px", mb: 3 }}>
 
-      {/* ── Title ───────────────────────────────────────────────────────── */}
-      <Typography
-        fontSize="24px"
-        fontWeight={700}
-        color="text.primary"
-        mb={0.8}
-        lineHeight={1.2}
-      >
-        {task.title || "Design CRM dashboard wireframes"}
+      {/* Title */}
+      <Typography fontSize="24px" fontWeight={700} color="text.primary" mb={0.8} lineHeight={1.2}>
+        {task.title || "—"}
       </Typography>
 
-      {/* ── Project · Module · Chips row ────────────────────────────────── */}
+      {/* Project · Module · Priority chip · Task Status chip */}
       <Box display="flex" alignItems="center" gap={1} flexWrap="wrap" mb={3}>
         <Typography fontSize="13px" color="text.secondary">
-          {task.project || "CRM Dashboard"}
+          {task.project?.projectName || task.project || "—"}
         </Typography>
         <Typography fontSize="13px" color="text.secondary">·</Typography>
         <Typography fontSize="13px" color="text.secondary">
-          {task.module || "UI Design"}
+          {task.module?.title || task.module?.moduleName || task.module || "—"}
         </Typography>
 
+        {/* Priority — uses lowercase key lookup */}
         <Chip
-          label={task.priority || "Medium"}
+          label={priorityCfg.label}
           sx={{
             height: "22px", fontSize: "11px", fontWeight: 500,
             px: 0.5, borderRadius: "12px",
             backgroundColor: priorityCfg.bg, color: priorityCfg.color,
           }}
         />
+
+        {/* Task Status — replaces pipeline status */}
         <Chip
-          label={task.status || "In Progress"}
+          label={taskStatusCfg.label}
           sx={{
             height: "22px", fontSize: "11px", fontWeight: 500,
             px: 0.5, borderRadius: "12px",
-            backgroundColor: statusCfg.bg, color: statusCfg.color,
+            backgroundColor: taskStatusCfg.bg, color: taskStatusCfg.color,
           }}
         />
       </Box>
 
-      {/* ── Meta info row ───────────────────────────────────────────────── */}
+      {/* Meta row */}
       <Box sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", p: 2 }}>
         <Grid container spacing={2}>
           {metaFields.map((f) => (

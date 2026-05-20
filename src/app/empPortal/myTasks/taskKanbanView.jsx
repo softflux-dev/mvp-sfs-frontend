@@ -1,20 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { useNavigate } from "react-router-dom"; // ← add this
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import PipelineCard from "../../../components/cards/pipelineCard";
-import { empMockTasks, KANBAN_COLUMNS } from "./empMockTasks";
+import {KANBAN_COLUMNS } from "./empMockTasks";
 
-const TaskKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
+const TaskKanbanView = ({ tasks = [], loading }) => {
   const navigate = useNavigate(); // ← add this
 
-  const [columns, setColumns] = useState(() =>
-    KANBAN_COLUMNS.map((col) => ({
-      ...col,
-      tasks: initialTasks.filter((t) => t.status === col.id),
-    }))
+  const [columns, setColumns] = useState(
+    KANBAN_COLUMNS.map((col) => ({ ...col, tasks: [] }))
   );
+  useEffect(() => {
+    setColumns(
+      KANBAN_COLUMNS.map((col) => ({
+        ...col,
+        tasks: tasks.filter((t) => t.status === col.id),
+      }))
+    );
+  }, [tasks]);
 
   const [editingColId, setEditingColId] = useState(null);
   const [editingLabel, setEditingLabel] = useState("");
@@ -55,7 +60,7 @@ const TaskKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
 
   // ← same navigation pattern as EmpListView's onViewClick
   const handleCardClick = (task) => {
-  navigate(`/emp/tasks/${task.id}`, { state: { task } }); 
+  navigate(`/emp/tasks/${task._id || task.id}`, { state: { task } }); 
 };
 
   return (
@@ -138,7 +143,8 @@ const TaskKanbanView = ({ tasks: initialTasks = empMockTasks }) => {
 
                 {/* Cards */}
                 {col.tasks.map((task, index) => (
-                  <Draggable draggableId={String(task.id)} index={index} key={String(task.id)}>
+                  <Draggable draggableId={String(task._id || task.id)} index={index} key={String(task._id || task.id)}>
+
                     {(dragProvided, dragSnapshot) => (
                       <Box
                         ref={dragProvided.innerRef}

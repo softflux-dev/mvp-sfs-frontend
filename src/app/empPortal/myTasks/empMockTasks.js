@@ -1,9 +1,9 @@
 export const KANBAN_COLUMNS = [
-  { id: "New",          label: "New"          },
-  { id: "Assigned",     label: "Assigned"     },
-  { id: "In Progress",  label: "In Progress"  },
-  { id: "Under Review", label: "Under Review" },
-  { id: "Completed",    label: "Completed"    },
+  { id: "planning",    label: "Planning"    },
+  { id: "development", label: "Development" },
+  { id: "testing",     label: "Testing"     },
+  { id: "review",      label: "Review"      },
+  { id: "completed",   label: "Completed"   },
 ];
 
 export const empMockTasks = [

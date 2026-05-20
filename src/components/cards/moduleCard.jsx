@@ -86,27 +86,15 @@ const ModuleCard = ({
 
       {/* ── Members + Actions ───────────────────────────────────────────── */}
       <Box display="flex" alignItems="center" justifyContent="space-between">
-        {/* Member avatars */}
-        <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 28, height: 28, fontSize: "11px" } }}>
-          {members.length > 0
-            ? members.map((src, i) => (
-                <Avatar key={i} src={src} sx={{ width: 28, height: 28 }} />
-              ))
-            : [1, 2, 3].map((i) => (
-                <Avatar
-                  key={i}
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-                    fontSize: "10px",
-                    fontWeight: 600,
-                  }}
-                >
-                  {String.fromCharCode(64 + i)}
-                </Avatar>
-              ))}
-        </AvatarGroup>
+        {members.length > 0 ? (
+          <AvatarGroup max={4} sx={{ "& .MuiAvatar-root": { width: 28, height: 28, fontSize: "11px" } }}>
+            {members.map((src, i) => (
+              <Avatar key={i} src={src} sx={{ width: 28, height: 28 }} />
+            ))}
+          </AvatarGroup>
+        ) : (
+          <Typography fontSize="11px" color="text.secondary">No assignees</Typography>
+        )}
 
         {/* Edit / Delete — visible on card hover */}
         <Box

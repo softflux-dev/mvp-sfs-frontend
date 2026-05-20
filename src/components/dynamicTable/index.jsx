@@ -60,7 +60,50 @@ const PRIORITY_CONFIG = {
    Holiday: { bg: "#AA24931A", color: "#AA2493" },
    Weekend: { bg: "#F5F5F5",   color: "#9CA3AF" },
  };
+function TaskAssigneesCell({ row }) {
+  const [showAll, setShowAll] = useState(false);
 
+  const names   = Array.isArray(row.assigneeNames) ? row.assigneeNames : [];
+  const visible  = names.slice(0, 2);
+  const overflow = names.slice(2);
+
+  if (!names.length) {
+    return (
+      <TableCell>
+        <Typography fontSize="13px" color="text.secondary">—</Typography>
+      </TableCell>
+    );
+  }
+
+  return (
+    <TableCell>
+      <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
+        {visible.map((name, i) => (
+          <Box key={i} sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#F0F0F0", fontSize: "12px", fontWeight: 500, color: "#374151", whiteSpace: "nowrap" }}>
+            {name}
+          </Box>
+        ))}
+        {!showAll && overflow.length > 0 && (
+          <Box onClick={(e) => { e.stopPropagation(); setShowAll(true); }}
+            sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#AA24931A", fontSize: "12px", fontWeight: 600, color: "#AA2493", cursor: "pointer", whiteSpace: "nowrap", "&:hover": { backgroundColor: "#AA249330" } }}>
+            +{overflow.length} more
+          </Box>
+        )}
+        {showAll && overflow.map((name, i) => (
+          <Box key={i} sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#F0F0F0", fontSize: "12px", fontWeight: 500, color: "#374151", whiteSpace: "nowrap" }}>
+            {name}
+          </Box>
+        ))}
+        {showAll && overflow.length > 0 && (
+          <Box onClick={(e) => { e.stopPropagation(); setShowAll(false); }}
+            sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#F5F5F5", fontSize: "12px", fontWeight: 600, color: "#9CA3AF", cursor: "pointer", "&:hover": { backgroundColor: "#E5E5E5" } }}>
+            less
+          </Box>
+        )}
+      </Box>
+    </TableCell>
+  );
+}
  
 
 export default function PaginatedTable({
@@ -169,29 +212,8 @@ export default function PaginatedTable({
         );
 
       // ── Task assignee — avatar + name ─────────────────────────────────────
-      case "task_assignee":
-        return (
-          <TableCell key={val}>
-            <Stack direction="row" alignItems="center" gap={1}>
-              <Avatar
-                src={row.assigneeAvatar}
-                alt={row.assigneeName}
-                sx={{
-                  width: 32,
-                  height: 32,
-                  background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                }}
-              >
-                {row.assigneeName?.charAt(0) || "A"}
-              </Avatar>
-              <Typography fontSize="13px" fontWeight={500} color="text.black">
-                {row.assigneeName || "-"}
-              </Typography>
-            </Stack>
-          </TableCell>
-        );
+  case "task_assignees":
+  return <TaskAssigneesCell key={val} row={row} />;
 
       // ── Task priority chip ────────────────────────────────────────────────
       case "task_priority": {
@@ -253,20 +275,47 @@ export default function PaginatedTable({
         );
       }
 
-      // ── Project progress bar ──────────────────────────────────────────────
-      case "project_progress":
+        case "task_status": {
+        const cfg = STATUS_CONFIG[row.taskStatus] || { bg: "#F5F5F5", color: "#757575" };
         return (
           <TableCell key={val}>
-            <Box minWidth="140px">
-              <ProgressBar
-                value={row.progress ?? 0}
-                showPercentage={true}
-                percentage={`${row.progress ?? 0}%`}
-                height={6}
-              />
-            </Box>
+            <Chip
+              label={row.taskStatus}
+              sx={{
+                height: "26px",
+                fontSize: "12px",
+                fontWeight: 500,
+                px: 1.5,
+                borderRadius: "12px",
+                backgroundColor: cfg.bg,
+                color: cfg.color,
+              }}
+            />
           </TableCell>
         );
+      }
+
+      // ── Project progress bar ──────────────────────────────────────────────
+     case "project_progress":
+      return (
+        <TableCell key={val}>
+          <Box minWidth="150px">
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.5}>
+              <Typography fontSize="11px" fontWeight={500} color="text.secondary">
+                {row.completedTasks ?? 0}/{row.totalTasks ?? 0} tasks
+              </Typography>
+              <Typography fontSize="11px" fontWeight={600} color="text.primary">
+                {row.progress ?? 0}%
+              </Typography>
+            </Box>
+            <ProgressBar
+              value={row.progress ?? 0}
+              showPercentage={false}
+              height={6}
+            />
+          </Box>
+        </TableCell>
+      );
 
       // ── Generic progress bar ──────────────────────────────────────────────
       case "progress_bar":
@@ -640,13 +689,16 @@ case "emp_role": {
     .replace(/\b\w/g, (c) => c.toUpperCase()) || "—";
 
   const roleCfg =
-    roleLabel === "Developer"       ? { bg: "#04C3731A", color: "#04C373" } :
+    roleLabel === "Junior Full Stack Developer"       ? { bg: "#04C3731A", color: "#04C373" } :
+     roleLabel === "Frontend Developer" ? { bg: "#04C3731A", color: "#04C373" } :
     roleLabel === "Project Manager" ? { bg: "#2B6EFF1A", color: "#2B6EFF" } :
     roleLabel === "Designer"        ? { bg: "#AA24931A", color: "#AA2493" } :
     roleLabel === "QA Tester"       ? { bg: "#FF972F1A", color: "#FF972F" } :
     roleLabel === "HR Manager"      ? { bg: "#AA24931A", color: "#AA2493" } :
+    roleLabel === "HR"      ? { bg: "#AA24931A", color: "#AA2493" } :
     roleLabel === "Employee"        ? { bg: "#04C3731A", color: "#04C373" } :
-                                      { bg: "#F5F5F5",   color: "#757575" };
+    roleLabel === "Full Stack Developer" ? { bg: "#04C3731A", color: "#04C373" } :
+                                     { bg: "#AA24931A", color: "#AA2493" } ;
   return (
     <TableCell key={val}>
       <Chip
@@ -2515,6 +2567,8 @@ case "task_assignees": {
     </TableCell>
   );
 }
+
+
 case "proj_type_label": {
   const typeList = projectTypes.length ? projectTypes : [];
   const matched  = typeList.find((t) => t.value === row.projectType);

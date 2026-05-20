@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useRef,useState, useEffect } from "react";
 import { Box, Grid } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
@@ -6,25 +6,23 @@ import HeaderText         from "../../../components/headerText";
 import CustomButton       from "../../../components/customButton";
 import Filter             from "../../../components/filterBar/filter";
 import KanbanView         from "./kanbanView";
-import ListView           from "./listView";
+//import ListView           from "./listView";
+import TaskListView from "../../../shared/taskDetail/TaskListView";
 import AddTaskDialog      from "./addTaskDialog";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";
-import { mockTasks }      from "./mockTasks";
+import { usePMTasks }     from "../../../hooks/task";
+import { getEmployeesApi } from "../../../api/modules/employee";
+import { getPMProjectsApi } from "../../../api/modules/project";
 
 import KanbanIcon from "../../../assets/icons/kanban-active.svg";
 import ListIcon   from "../../../assets/icons/tasks-inactive.svg";
 
-const fmt = (d) =>
-  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-";
-
-const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
-
 const TaskManagement = () => {
   const navigate = useNavigate();
+  const [projects,  setProjects]  = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [view,          setView]          = useState("kanban");
-  const [filters,       setFilters]       = useState({});
-  const [tasks,         setTasks]         = useState(mockTasks);
   const [taskOpen,      setTaskOpen]      = useState(false);
   const [editingTask,   setEditingTask]   = useState(null);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
@@ -32,57 +30,63 @@ const TaskManagement = () => {
 
   const confirmRef = useRef();
 
-  const filteredTasks = tasks.filter((t) => {
-    const search   = filters.search?.toLowerCase() || "";
-    const project  = filters.project               || "";
-    const priority = filters.priority              || "";
-    const status   = filters.status                || "";
-    const matchSearch   = !search   || t.title.toLowerCase().includes(search);
-    const matchProject  = !project  || t.project.toLowerCase().replace(/ /g, "_").includes(project);
-    const matchPriority = !priority || t.priority.toLowerCase() === priority;
-    const matchStatus   = !status   || t.status.toLowerCase().replace(/ /g, "_") === status;
-    return matchSearch && matchProject && matchPriority && matchStatus;
-  });
+   useEffect(() => {
+    getPMProjectsApi({ limit: 100 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setProjects(res.data.data.projects || []);
+      }
+    });
 
-  const handleSave = (data) => {
-    if (editingTask) {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === editingTask.id
-            ? {
-                ...t,
-                title:       data.title,
-                description: data.description,
-                project:     data.project,
-                module:      data.module,
-                assigneeIds: data.assigneeIds,
-                priority:    capitalize(data.priority),
-                startDate:   fmt(data.startDate),
-                endDate:     fmt(data.endDate),
-              }
-            : t
-        )
-      );
-    } else {
-      setTasks((prev) => [
-        ...prev,
-        {
-          id:             Date.now(),
-          title:          data.title,
-          description:    data.description,
-          project:        data.project,
-          module:         data.module,
-          assigneeIds:    data.assigneeIds,
-          assigneeAvatar: "",
-          priority:       capitalize(data.priority),
-          status:         "New",
-          startDate:      fmt(data.startDate),
-          endDate:        fmt(data.endDate),
-        },
-      ]);
-    }
-    setSaveSuccess(true);
+    getEmployeesApi({ limit: 100 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setEmployees(res.data.data.employees || []);
+      }
+    });
+  }, []);
+
+  const {
+    tasks,
+    loading,
+    actionLoading,
+    error,
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    handleFilterChange,
+  } = usePMTasks();
+
+ const handleSave = async (data) => {
+  const payload = {
+    title:       data.title,
+    module:      data.module       || null,
+    department:  data.department   || null,
+    assignees:   data.assigneeIds  || [],
+    priority:    data.priority     || "medium",
+    status:      data.pipelineStatus || "planning",
+    taskStatus:  data.taskStatus   || "new",
+    startDate:   data.startDate    || null,
+    endDate:     data.endDate      || null,
+    description: data.description  || "",
   };
+
+  let result;
+  if (editingTask) {
+    result = await updateTask(
+      editingTask.projectId || editingTask.project,
+      editingTask._id || editingTask.id,
+      payload
+    );
+  } else {
+    result = await createTask(data.project, payload);
+  }
+
+  if (result?.success) {
+    setSaveSuccess(true);
+    setTaskOpen(false);      
+    setEditingTask(null);    
+  }
+};
 
   const handleMenuAction = (action, row) => {
     if (action === "edit") {
@@ -95,13 +99,15 @@ const TaskManagement = () => {
         description: "This action cannot be undone.",
         confirmText: "Yes",
         cancelText:  "Cancel",
-        onConfirm: () => {
-          setTasks((prev) => prev.filter((t) => t.id !== row.id));
-          setDeleteSuccess(true);
+        onConfirm: async () => {
+          const result = await deleteTask(row.projectId || row.project, row._id || row.id);
+          if (result?.success) setDeleteSuccess(true);
         },
       });
     }
-    if (action === "view") navigate(`/pm-tasks/${row.id}`,{ state: { task: row, canEdit: true } });
+    if (action === "view") {
+      navigate(`/pm-tasks/${row.id || row._id}`, { state: { task: row, canEdit: true, role: "pm" } });
+    }
   };
 
   return (
@@ -147,12 +153,21 @@ const TaskManagement = () => {
       </Grid>
 
       {/* ── Filters ────────────────────────────────────────────────────── */}
-      <Filter mode="task_management" onFilterChange={setFilters} />
+      <Filter mode="task_management" 
+      projects={projects} 
+      employees={employees}
+      onFilterChange={(f) => handleFilterChange({
+          search:     f.search     || "",
+          taskStatus: f.status     || "",   
+          priority:   f.priority   || "",
+          project:    f.project    || "",
+        })}
+   />
 
       {/* ── View ───────────────────────────────────────────────────────── */}
       {view === "kanban"
-        ? <KanbanView tasks={filteredTasks} />
-        : <ListView   tasks={filteredTasks} onMenuAction={handleMenuAction} />
+        ? <KanbanView tasks={tasks} loading={loading} />
+        : <TaskListView role="pm" tasks={tasks} loading={loading} onMenuAction={handleMenuAction} />
       }
 
       {/* ── Add / Edit Task dialog ──────────────────────────────────────── */}
@@ -161,6 +176,8 @@ const TaskManagement = () => {
         onClose={() => { setTaskOpen(false); setEditingTask(null); }}
         onSave={handleSave}
         editingTask={editingTask}
+        loading={actionLoading}
+        projects={projects}
       />
 
       {/* ── Delete confirmation ─────────────────────────────────────────── */}

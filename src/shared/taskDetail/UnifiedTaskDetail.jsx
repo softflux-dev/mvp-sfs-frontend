@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, IconButton, Typography, Avatar, Grid } from "@mui/material";
+import { Box, IconButton, Typography, Avatar, Grid, CircularProgress } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Send } from "lucide-react";
 
@@ -8,58 +8,73 @@ import TextInput           from "../../components/textInput";
 import AttachmentCard      from "../../components/cards/attachmentCard";
 import SuccessPopup        from "../../components/popups/confirmationDialog";
 import EmpTaskDetailHeader from "../../app/empPortal/myTasks/empTaskDetailHeader";
-import EmpTaskSidebar from "../../app/empPortal/myTasks/empTaskSidebar";
+import EmpTaskSidebar      from "../../app/empPortal/myTasks/empTaskSidebar";
+import AddTask       from "../../app/admin/projects/projectDetailTabs/addTask";
+import AddTaskDialog from "../../app/projectManagerPortal/taskManagement/addTaskDialog";
+import { useTaskDetail }   from "../../hooks/task";
+import { downloadTaskAttachmentApi } from "../../api/modules/task";
 
 import backIcon from "../../assets/icons/downlaod-back-btn.svg";
 import editIcon from "../../assets/icons/edit-icon.svg";
-
-const mockAttachments = [
-  { id: 1, fileName: "wireframe-v2.fig",  fileSize: "installation-guide.pdf" },
-  { id: 2, fileName: "requirements.pdf",  fileSize: "installation-guide.pdf" },
-];
-const mockActivity = [
-  { id: 1, text: "Status changed to In Progress", by: "Priya Patel", date: "2026-03-18 09:30" },
-  { id: 2, text: "Task assigned to Priya Patel",  by: "You",         date: "2026-03-18 09:30" },
-  { id: 3, text: "Task created",                  by: "You",         date: "2026-03-18 09:30" },
-];
-const mockComments = [
-  { id: 1, author: "Priya Patel", avatar: "", text: "Started working on the grid layout. Will share progress by EOD.", date: "2026-03-18 09:30" },
-  { id: 2, author: "Sarah Chen",  avatar: "", text: "Make sure to include the quick-view modal.", date: "2026-03-18 09:30" },
-];
 
 /**
  * UnifiedTaskDetail
  *
  * Props injected via React Router location.state:
- *   task      — the task object
+ *   task      — the task object (must include _id or id)
  *   canEdit   — boolean: show Edit Task button (admin/PM only)
- *   sidebar   — optional JSX: right-column content (emp passes EmpTaskSidebar, admin/PM pass TaskInfoSidebar)
  *   EditDialog — optional component: the Add/Edit dialog (admin/PM only)
  *   backLabel — optional string: back button label
  */
-const UnifiedTaskDetail = ({
-  EditDialog,
-  backLabel = "Back",
-}) => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  const task      = location.state?.task    || {};
-  const canEdit   = location.state?.canEdit ?? false;
+const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const task     = location.state?.task    || {};
+  const canEdit  = location.state?.canEdit ?? false;
+  const role = location.state?.role || "admin"; // "admin" | "pm"
+  const EditDialog = role === "pm" ? AddTaskDialog : AddTask;
+
+
+  const taskId = task?._id || task?.id;
+
+  const {
+    task:        taskDetail,
+    comments,
+    activityLogs,
+    submissions,
+    loading,
+    commentLoading,
+    statusLoading,
+    submitLoading,
+    error,
+    sendComment,
+    updateStatus,
+    submitWork,
+    fetchDetail,
+  } = useTaskDetail(taskId);
+
+ const displayTask = {
+  ...(task || {}),       
+  ...(taskDetail || {}), 
+};
 
   const [editOpen,    setEditOpen]    = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [comment,     setComment]     = useState("");
-  const [comments,    setComments]    = useState(mockComments);
 
-  const handleSendComment = () => {
+  const handleSendComment = async () => {
     if (!comment.trim()) return;
-    setComments((prev) => [...prev, {
-      id: Date.now(), author: "You", avatar: "",
-      text: comment.trim(),
-      date: new Date().toISOString().slice(0, 16).replace("T", " "),
-    }]);
+    await sendComment(comment.trim());
     setComment("");
   };
+
+  if (loading && !taskDetail) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <>
@@ -68,15 +83,18 @@ const UnifiedTaskDetail = ({
         <IconButton onClick={() => navigate(-1)} disableRipple>
           <img src={backIcon} alt="back" style={{ width: 40, height: 40 }} />
         </IconButton>
-        <Typography fontSize="14px" fontWeight={500} color="text.secondary"
-          sx={{ cursor: "pointer" }} onClick={() => navigate(-1)}>
+        <Typography
+          fontSize="14px" fontWeight={500} color="text.secondary"
+          sx={{ cursor: "pointer" }}
+          onClick={() => navigate(-1)}
+        >
           {backLabel}
         </Typography>
       </Box>
 
       {/* Header + optional Edit button */}
       <Box sx={{ position: "relative" }}>
-        <EmpTaskDetailHeader task={task} />
+        <EmpTaskDetailHeader task={displayTask} />
         {canEdit && (
           <Box sx={{ position: "absolute", top: 20, right: 24 }}>
             <CustomButton
@@ -98,66 +116,172 @@ const UnifiedTaskDetail = ({
             <Typography fontSize="16px" fontWeight={700} mb={2}>Description</Typography>
             <Box sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", p: 2 }}>
               <Typography fontSize="13px" color="text.secondary" lineHeight={1.7}>
-                {task.description || "Create a responsive product listing page with filters, sorting, and pagination. Must support grid and list views."}
+                {displayTask.description ||
+                  "Create a responsive product listing page with filters, sorting, and pagination. Must support grid and list views."}
               </Typography>
             </Box>
           </Box>
 
-          {/* Attachments */}
-          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
-            <Typography fontSize="16px" fontWeight={700} mb={1.5}>Attachments from PM</Typography>
+        
+          {/* 2. Attachments */}
+         {/* Attachments */}
+        <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
+          <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>
+            Attachments
+          </Typography>
+
+          {!displayTask.attachments?.length ? (
+            <Typography fontSize="13px" color="text.secondary">
+              No attachments yet.
+            </Typography>
+          ) : (
             <Box display="flex" flexDirection="column" gap={1.5}>
-              {mockAttachments.map((att) => (
-                <AttachmentCard key={att.id} fileName={att.fileName} fileSize={att.fileSize}
-                  onDownload={() => console.log("Download:", att.fileName)} />
-              ))}
+              {displayTask.attachments.map((att) => {
+                const uploaderName =
+                  att.uploadedBy?.fullName ||
+                  att.uploadedBy?.name     ||
+                  "Unknown";
+
+                const uploaderRole = att.uploadedBy?.role
+                  ? ` (${att.uploadedBy.role.replace(/_/g, " ")})`
+                  : "";
+
+                const uploadedAt = att.uploadedAt
+                  ? new Date(att.uploadedAt).toLocaleDateString("en-US", {
+                      month: "short", day: "numeric", year: "numeric",
+                    })
+                  : "";
+
+                return (
+                  <Box
+                    key={att._id || att.id}
+                    sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", p: 1.5 }}
+                  >
+                    <AttachmentCard
+                      fileName={att.fileName || att.name}
+                      fileSize={att.fileSize || att.size}
+                      onDownload={() => {
+                        const url = downloadTaskAttachmentApi(
+                          displayTask.projectId || displayTask.project,
+                          taskId,
+                          att._id || att.id
+                        );
+                        window.open(url, "_blank");
+                      }}
+                    />
+                    <Typography fontSize="11px" color="text.secondary" mt={0.5} ml={0.5}>
+                      Uploaded by{" "}
+                      <Typography component="span" fontSize="11px" fontWeight={600} color="text.primary">
+                        {uploaderName}{uploaderRole}
+                      </Typography>
+                      {uploadedAt && ` · ${uploadedAt}`}
+                    </Typography>
+                  </Box>
+                );
+              })}
             </Box>
-          </Box>
+          )}
+        </Box>
 
           {/* Comments */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
             <Typography fontSize="16px" fontWeight={700} mb={2}>Comments & Discussion</Typography>
             <Box display="flex" flexDirection="column" gap={1.5} mb={2}>
-              {comments.map((c) => (
-                <Box key={c.id} sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}>
-                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Avatar src={c.avatar} sx={{ width: 32, height: 32, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600 }}>
-                        {c.author?.charAt(0)}
-                      </Avatar>
-                      <Typography fontSize="13px" fontWeight={600}>{c.author}</Typography>
-                    </Box>
-                    <Typography fontSize="11px" color="text.secondary">{c.date}</Typography>
+              {comments.length === 0 && (
+                <Typography fontSize="13px" color="text.secondary">No comments yet.</Typography>
+              )}
+            
+            {comments.map((c, idx) => (
+              <Box
+                key={c._id || c.id || idx}
+                sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}
+              >
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Avatar
+                      src={c.authorAvatar || c.author?.avatar || ""}
+                      sx={{
+                        width: 32, height: 32,
+                        background: "linear-gradient(135deg, #AA2493, #022179)",
+                        fontSize: "13px", fontWeight: 600,
+                      }}
+                    >
+                      {(c.authorName || c.author?.name || "?").charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Typography fontSize="13px" fontWeight={600} color="text.primary">
+                      {c.authorName || c.author?.name || c.author}
+                    </Typography>
                   </Box>
-                  <Typography fontSize="12px" color="text.secondary" ml={5}>{c.text}</Typography>
+                  <Typography fontSize="11px" color="text.secondary">
+                    {c.createdAt
+                      ? new Date(c.createdAt).toLocaleString()
+                      : c.date}
+                  </Typography>
                 </Box>
-              ))}
+                <Typography fontSize="12px" color="text.secondary" ml={5}>
+                  {c.text}
+                </Typography>
+              </Box>
+            ))}
             </Box>
-            <TextInput placeholder="Write a comment..." value={comment}
+            <TextInput
+              placeholder="Write a comment..."
+              value={comment}
               onChange={(e) => setComment(e.target.value)}
-              inputBgColor="#F5F5F5" fullWidth multiline rows={3}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
+              inputBgColor="#F5F5F5"
+              fullWidth
+              multiline
+              rows={3}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendComment();
+                }
+              }}
             />
             <Box display="flex" justifyContent="flex-end" mt={1}>
-              <CustomButton btnLabel="Send" variant="gradient" handlePressBtn={handleSendComment}
-                startIcon={<Send size={14} />} />
+              <CustomButton
+                btnLabel={commentLoading ? "Sending..." : "Send"}
+                variant="gradient"
+                handlePressBtn={handleSendComment}
+                disabled={commentLoading}
+                startIcon={<Send size={14} />}
+              />
             </Box>
           </Box>
 
           {/* Activity Log */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
             <Typography fontSize="16px" fontWeight={700} mb={2}>Activity Log</Typography>
+            {activityLogs.length === 0 && (
+              <Typography fontSize="13px" color="text.secondary">No activity yet.</Typography>
+            )}
             <Box display="flex" flexDirection="column" gap={1}>
-              {mockActivity.map((item) => (
-                <Box key={item.id} sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}>
+              {activityLogs.map((item, idx) => (
+                <Box
+                  key={item._id || item.id || idx}
+                  sx={{
+                    backgroundColor: "#F5F5F5", borderRadius: "12px",
+                    px: 2, py: 1.5, display: "flex",
+                    alignItems: "flex-start", justifyContent: "space-between", gap: 2,
+                  }}
+                >
                   <Box display="flex" alignItems="flex-start" gap={1.5}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "linear-gradient(135deg, #AA2493, #022179)", flexShrink: 0, mt: 0.5 }} />
+                    <Box sx={{
+                      width: 10, height: 10, borderRadius: "50%",
+                      background: "linear-gradient(135deg, #AA2493, #022179)",
+                      flexShrink: 0, mt: 0.5,
+                    }} />
                     <Box>
-                      <Typography fontSize="13px" fontWeight={500}>{item.text}</Typography>
-                      <Typography fontSize="11px" color="text.secondary">{item.by}</Typography>
+                      <Typography fontSize="13px" fontWeight={500}>{item.text || item.action}</Typography>
+                      <Typography fontSize="11px" color="text.secondary">
+                        {item.by || item.user?.name || "System"}
+                      </Typography>
                     </Box>
                   </Box>
-                  <Typography fontSize="11px" color="text.secondary" whiteSpace="nowrap">{item.date}</Typography>
+                  <Typography fontSize="11px" color="text.secondary" whiteSpace="nowrap">
+                    {item.createdAt ? new Date(item.createdAt).toLocaleString() : item.date}
+                  </Typography>
                 </Box>
               ))}
             </Box>
@@ -166,27 +290,38 @@ const UnifiedTaskDetail = ({
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
-        <EmpTaskSidebar
-            task={task}
-            onStatusUpdate={(status) => console.log("Status updated:", status)}
-        />
+          <EmpTaskSidebar
+            task={displayTask}
+            onStatusUpdate={updateStatus}
+          />
         </Grid>
-
-
       </Grid>
 
-      {/* Edit dialog — admin/PM only */}
       {canEdit && EditDialog && (
         <EditDialog
           open={editOpen}
           onClose={() => setEditOpen(false)}
-          onSave={(data) => { console.log("Updated:", data); setSaveSuccess(true); setEditOpen(false); }}
-          editingTask={task}
+          onSave={(data) => {
+            setSaveSuccess(true);
+            setEditOpen(false);
+            fetchDetail();
+          }}
+          editingTask={displayTask}
+          // PM dialog fetches projects internally; admin dialog needs these:
+          moduleOptions={[]}
+          departmentOptions={[]}
+          deptEmployees={[]}
+          allEmployees={[]}
         />
       )}
 
-      <SuccessPopup open={saveSuccess} onClose={() => setSaveSuccess(false)}
-        message="Task updated successfully" autoClose autoCloseDelay={2000} />
+      <SuccessPopup
+        open={saveSuccess}
+        onClose={() => setSaveSuccess(false)}
+        message="Task updated successfully"
+        autoClose
+        autoCloseDelay={2000}
+      />
     </>
   );
 };

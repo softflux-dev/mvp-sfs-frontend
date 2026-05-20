@@ -1,5 +1,4 @@
 import * as React from "react";
-import { Routes, Route } from "react-router-dom";
 import {
   Drawer as MuiDrawer,
   Box,
@@ -19,99 +18,117 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import CloseIcon from "@mui/icons-material/Close";
 import { useLocation } from "react-router-dom";
 import useUserStore from "../../zustand/useUserStore";
-import { getUserRoutes } from "../../utils/routeMapper";
 import { ADMIN_ROUTES, HR_ROUTES, PM_ROUTES, EMP_ROUTES } from "../../routes";
 import logo from "../../assets/images/softwareflux-logo.png";
-
-const ADMIN_DESIGNATION_ID = '69aa5fb7f19750bbdf3de0d8';
 
 export const drawerWidth = 220;
 export const collapsedWidth = 64;
 
+// Map each role to its full route list + section label
+const ROLE_ROUTE_MAP = {
+  ADMIN:           { routes: ADMIN_ROUTES, label: "Admin Panel"             },
+  HR:              { routes: HR_ROUTES,    label: "HR Portal"               },
+  PROJECT_MANAGER: { routes: PM_ROUTES,   label: "Project Manager Portal"  },
+  EMPLOYEE:        { routes: EMP_ROUTES,  label: "Employee Portal"         },
+};
+const ALL_ROUTES = [
+  ...ADMIN_ROUTES,
+  ...HR_ROUTES,
+  ...PM_ROUTES,
+  ...EMP_ROUTES,
+];
+
+
 export default function Drawer({ drawerOpen, handleNavigation, toggleDrawer }) {
-  const location = useLocation();
-  const { user } = useUserStore();
-  
+  const location  = useLocation();
+  const { user }  = useUserStore();
+  const theme     = useTheme();
+  const isMobileOrTablet = useMediaQuery(theme.breakpoints.down("md"));
+
   const [openSubmenu, setOpenSubmenu] = React.useState({});
 
   const handleSubmenuToggle = (routeId) => {
-    setOpenSubmenu((prev) => ({
-      ...prev,
-      [routeId]: !prev[routeId],
-    }));
+    setOpenSubmenu((prev) => ({ ...prev, [routeId]: !prev[routeId] }));
   };
-
-  const theme = useTheme();
-  const isMobileOrTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   const isRouteActive = (path) => location.pathname === path;
 
-  //const isAdmin = user?.designation?._id === ADMIN_DESIGNATION_ID;
-  const isAdmin = true; // TODO: remove when auth is ready
+  const isAdmin = user?.role === "ADMIN";
 
-  const userRoutes = React.useMemo(() => {
-    return getUserRoutes(user);
-  }, [user]);
+  // ── Build the set of allowed paths from user.rolePages ──────────────────
+  // rolePages is stored on login: user.role.pages populated by backend
+ const allowedPathSet = React.useMemo(() => {
+  if (isAdmin) return null;
+  const pages = user?.rolePages || [];
+  return new Set(pages.map((p) => p.path));
+}, [user?.rolePages, isAdmin]);
 
+const { label: roleLabel } = ROLE_ROUTE_MAP[user?.role] || { label: "" };
+
+// ← REPLACE the old visibleRoutes useMemo with this:
+const visibleRoutes = React.useMemo(() => {
+  if (!allowedPathSet) return [];
+
+  const pages = user?.rolePages || [];
+  const result = [];
+  const seen = new Set();
+
+  for (const page of pages) {
+    const route = ALL_ROUTES.find(
+      (r) => !r.isHideMenu && r.path === page.path
+    );
+    if (route && !seen.has(route.path)) {
+      seen.add(route.path);
+      result.push(route);
+    }
+  }
+  return result;
+}, [user?.rolePages, allowedPathSet]);
+
+    
+
+  // ── Render a single route item ───────────────────────────────────────────
   const renderRouteItem = (route) => {
     if (route.isHideMenu) return null;
 
-    const routePath = route.path || (route.children && route.children[0]?.path);
-    const isActive = routePath ? isRouteActive(routePath) : false;
-    const hasChildren = route.children && route.children.length > 0;
-const displayName = route.title || route.nameKey;
+    const routePath  = route.path || route.children?.[0]?.path;
+    const isActive   = routePath ? isRouteActive(routePath) : false;
+    const hasChildren = route.children?.length > 0;
+    const displayName = route.nameKey || route.title;
+
     return (
-      <React.Fragment key={route.id || `route-${route.order}`}>
+      <React.Fragment key={route.id || routePath}>
         <ListItem disablePadding sx={{ px: 1, mb: 0.5 }}>
           <ListItemButton
             onClick={() => {
-              if (hasChildren) {
-                handleSubmenuToggle(route.id);
-              } else if (routePath) {
-                handleNavigation(routePath);
-              }
+              if (hasChildren) handleSubmenuToggle(route.id);
+              else if (routePath) handleNavigation(routePath);
             }}
             sx={{
               justifyContent: drawerOpen ? "flex-start" : "center",
               px: 2,
               borderRadius: "10px",
-              // ── Active state: full gradient bg, white text, no left border ──
               ...(isActive && {
                 background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
                 color: "#fff",
-                "& .MuiListItemIcon-root": {
-                  color: "#fff",
-                },
-                "& .MuiListItemText-primary": {
-                  color: "#fff",
-                  fontWeight: 600,
-                },
+                "& .MuiListItemIcon-root":      { color: "#fff" },
+                "& .MuiListItemText-primary":   { color: "#fff", fontWeight: 600 },
                 "&:hover": {
                   background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
                   opacity: 0.92,
                 },
               }),
-              // ── Inactive hover ──
               ...(!isActive && {
                 "&:hover": {
                   background: "#AA24930F",
                   color: "#AA2493",
-                  "& .MuiListItemIcon-root": {
-                    color: "#AA2493",
-                  },
+                  "& .MuiListItemIcon-root": { color: "#AA2493" },
                 },
               }),
             }}
           >
-            <ListItemIcon
-              sx={{
-                minWidth: 0,
-                color: isActive ? "#fff" : "inherit",
-              }}
-            >
-              {isActive && route.activeIcon
-                ? route.activeIcon
-                : route.inActiveIcon || null}
+            <ListItemIcon sx={{ minWidth: 0, color: isActive ? "#fff" : "inherit" }}>
+              {isActive && route.activeIcon ? route.activeIcon : route.inActiveIcon || null}
             </ListItemIcon>
 
             {drawerOpen && (
@@ -121,29 +138,24 @@ const displayName = route.title || route.nameKey;
                   sx={{
                     ml: 2,
                     "& .MuiListItemText-primary": {
-                      fontSize: "0.875rem",
+                      fontSize:   "0.875rem",
                       fontWeight: isActive ? 600 : 400,
-                      color: isActive ? "#fff" : "inherit",
+                      color:      isActive ? "#fff" : "inherit",
                     },
                   }}
                 />
-                {hasChildren &&
-                  (openSubmenu[route.id] ? (
-                    <ExpandLess sx={{ color: isActive ? "#fff" : "inherit" }} />
-                  ) : (
-                    <ExpandMore sx={{ color: isActive ? "#fff" : "inherit" }} />
-                  ))}
+                {hasChildren && (
+                  openSubmenu[route.id]
+                    ? <ExpandLess sx={{ color: isActive ? "#fff" : "inherit" }} />
+                    : <ExpandMore sx={{ color: isActive ? "#fff" : "inherit" }} />
+                )}
               </>
             )}
           </ListItemButton>
         </ListItem>
 
         {hasChildren && drawerOpen && (
-          <Collapse
-            in={openSubmenu[route.id]}
-            timeout="auto"
-            unmountOnExit
-          >
+          <Collapse in={openSubmenu[route.id]} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
               {route.children.map((child) => {
                 const isChildActive = isRouteActive(child.path);
@@ -157,29 +169,23 @@ const displayName = route.title || route.nameKey;
                         ...(isChildActive && {
                           background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
                           color: "#fff",
-                          "& .MuiListItemText-primary": {
-                            color: "#fff",
-                            fontWeight: 600,
-                          },
+                          "& .MuiListItemText-primary": { color: "#fff", fontWeight: 600 },
                           "&:hover": {
                             background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
                             opacity: 0.92,
                           },
                         }),
                         ...(!isChildActive && {
-                          "&:hover": {
-                            background: "#AA24930F",
-                            color: "#AA2493",
-                          },
+                          "&:hover": { background: "#AA24930F", color: "#AA2493" },
                         }),
                       }}
                     >
                       <ListItemText
-                        primary={child.title || child.nameKey}                        
+                        primary={child.title || child.nameKey}
                         sx={{
                           "& .MuiListItemText-primary": {
                             fontSize: "0.85rem",
-                            color: isChildActive ? "#fff" : "inherit",
+                            color:    isChildActive ? "#fff" : "inherit",
                           },
                         }}
                       />
@@ -201,10 +207,9 @@ const displayName = route.title || route.nameKey;
         <Box
           onClick={toggleDrawer}
           sx={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            zIndex: (theme) => theme.zIndex.drawer - 1,
+            position: "fixed", inset: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: (t) => t.zIndex.drawer - 1,
           }}
         />
       )}
@@ -228,127 +233,54 @@ const displayName = route.title || route.nameKey;
           },
         }}
       >
-        {/* HEADER */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: drawerOpen ? "space-between" : "center",
-            px: 2,
-            py: 2,
-          }}
-        >
+        {/* Logo */}
+        <Box sx={{
+          display: "flex", alignItems: "center",
+          justifyContent: drawerOpen ? "space-between" : "center",
+          px: 2, py: 2,
+        }}>
           <img
-            src={logo}
-            alt="logo"
-            style={{
-              width: drawerOpen ? "120px" : "40px",
-              transition: "0.3s",
-            }}
+            src={logo} alt="logo"
+            style={{ width: drawerOpen ? "120px" : "40px", transition: "0.3s" }}
           />
-
           {isMobileOrTablet && (
-            <IconButton onClick={toggleDrawer}>
-              <CloseIcon />
-            </IconButton>
+            <IconButton onClick={toggleDrawer}><CloseIcon /></IconButton>
           )}
         </Box>
 
-        {/* MENU */}
-        
-
+        {/* Menu */}
         <List sx={{ px: 0.5 }}>
           {isAdmin ? (
+            // ── ADMIN: show all portals with section headings ──────────────
             <>
-              {/* ── Admin Panel ── */}
-              {ADMIN_ROUTES.length > 0 && (
-                <>
-                  {drawerOpen && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        px: 2, py: 1,
-                        color: "text.secondary",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        fontSize: "0.7rem",
-                        display: "block",
-                      }}
-                    >
-                      Admin Panel
-                    </Typography>
-                  )}
-                  {ADMIN_ROUTES.filter((r) => !r.isHideMenu).map(renderRouteItem)}
-                </>
-              )}
-
-              {/* ── HR Portal ── */}
-              {HR_ROUTES.length > 0 && (
-                <>
-                  {drawerOpen && (
-                    <Typography
-                      variant="caption"
-                      sx={{
+              {[
+                { routes: ADMIN_ROUTES, label: "Admin Panel"            },
+                { routes: HR_ROUTES,    label: "HR Portal"              },
+                { routes: PM_ROUTES,    label: "Project Manager Portal" },
+                { routes: EMP_ROUTES,   label: "Employee Portal"        },
+              ].map(({ routes, label }) => {
+                const visible = routes.filter((r) => !r.isHideMenu);
+                if (!visible.length) return null;
+                return (
+                  <React.Fragment key={label}>
+                    {drawerOpen && (
+                      <Typography variant="caption" sx={{
                         px: 2, py: 1, mt: 1,
-                        color: "text.secondary",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        fontSize: "0.7rem",
+                        color: "text.secondary", fontWeight: 600,
+                        textTransform: "uppercase", fontSize: "0.7rem",
                         display: "block",
-                      }}
-                    >
-                      HR Portal
-                    </Typography>
-                  )}
-                  {HR_ROUTES.filter((r) => !r.isHideMenu).map(renderRouteItem)}
-                </>
-              )}
-
-              {/* ── PM Portal ── */}
-              {PM_ROUTES.length > 0 && (
-                <>
-                  {drawerOpen && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        px: 2, py: 1, mt: 1,
-                        color: "text.secondary",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        fontSize: "0.7rem",
-                        display: "block",
-                      }}
-                    >
-                      Project Manager Portal
-                    </Typography>
-                  )}
-                  {PM_ROUTES.filter((r) => !r.isHideMenu).map(renderRouteItem)}
-                </>
-              )}
-              {/* ── Employee Portal ── */}
-              {EMP_ROUTES.length > 0 && (
-                <>
-                  {drawerOpen && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        px: 2, py: 1, mt: 1,
-                        color: "text.secondary",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        fontSize: "0.7rem",
-                        display: "block",
-                      }}
-                    >
-                      Employee Portal
-                    </Typography>
-                  )}
-                  {EMP_ROUTES.filter((r) => !r.isHideMenu).map(renderRouteItem)}
-                </>
-              )}
+                      }}>
+                        {label}
+                      </Typography>
+                    )}
+                    {visible.map(renderRouteItem)}
+                  </React.Fragment>
+                );
+              })}
             </>
           ) : (
-            userRoutes.length === 0 ? (
+            // ── NON-ADMIN: show only role-specific + page-filtered routes ──
+            visibleRoutes.length === 0 ? (
               <ListItem>
                 <ListItemText
                   primary="No routes available"
@@ -356,7 +288,19 @@ const displayName = route.title || route.nameKey;
                 />
               </ListItem>
             ) : (
-              userRoutes.map(renderRouteItem)
+              <>
+                {drawerOpen && roleLabel && (
+                  <Typography variant="caption" sx={{
+                    px: 2, py: 1,
+                    color: "text.secondary", fontWeight: 600,
+                    textTransform: "uppercase", fontSize: "0.7rem",
+                    display: "block",
+                  }}>
+                    {roleLabel}
+                  </Typography>
+                )}
+                {visibleRoutes.map(renderRouteItem)}
+              </>
             )
           )}
         </List>

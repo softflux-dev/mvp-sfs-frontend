@@ -1,9 +1,17 @@
 // components/cards/bugCard.jsx
 import { useState, useRef } from "react";
-import { Box, Typography, IconButton, Menu, MenuItem } from "@mui/material";
+import { Box, Typography, IconButton, Menu, MenuItem, Chip } from "@mui/material";
 import { MoreVertical } from "lucide-react";
 import ConfirmationDialog from "../popups/confirmation";
 import SuccessPopup       from "../popups/confirmationDialog";
+
+const BUG_STATUS_CONFIG = {
+  open:        { label: "Open",        bg: "#DBEAFE",   color: "#2563EB" },
+  in_progress: { label: "In Progress", bg: "#FEF3C7",   color: "#D97706" },
+  resolved:    { label: "Resolved",    bg: "#04C3731A", color: "#04C373" },
+  closed:      { label: "Closed",      bg: "#F5F5F5",   color: "#757575" },
+  rework:      { label: "Rework",      bg: "#F3E8FF",   color: "#7C3AED" },
+};
 
 const BugCard = ({ bug = {}, onView, onEdit, onDelete }) => {
   const [anchorEl,      setAnchorEl]      = useState(null);
@@ -26,11 +34,12 @@ const BugCard = ({ bug = {}, onView, onEdit, onDelete }) => {
     });
   };
 
-  // Support both bug.screenshot (string) and bug.screenshots (array)
   const previewSrc = bug.screenshot
     || (Array.isArray(bug.screenshots) && bug.screenshots.length > 0
         ? (typeof bug.screenshots[0] === "string" ? bug.screenshots[0] : bug.screenshots[0]?.url)
         : null);
+
+  const statusCfg = BUG_STATUS_CONFIG[bug.status] || { label: bug.status, bg: "#F5F5F5", color: "#757575" };
 
   return (
     <>
@@ -47,9 +56,22 @@ const BugCard = ({ bug = {}, onView, onEdit, onDelete }) => {
             </Typography>
           </Box>
 
-          <IconButton size="small" onClick={handleOpen} sx={{ flexShrink: 0, mt: "-2px", color: "#67768B" }}>
-            <MoreVertical size={16} />
-          </IconButton>
+          <Box display="flex" flexDirection="row" alignItems="center" flexShrink={0} gap={0.75}>
+            {bug.status && (
+              <Chip
+                label={statusCfg.label}
+                size="small"
+                sx={{
+                  height: "20px", fontSize: "10px", fontWeight: 600,
+                  px: 0.5, borderRadius: "6px",
+                  backgroundColor: statusCfg.bg, color: statusCfg.color,
+                }}
+              />
+            )}
+            <IconButton size="small" onClick={handleOpen} sx={{ color: "#67768B", p: "2px" }}>
+              <MoreVertical size={16} />
+            </IconButton>
+          </Box>
 
           <Menu
             anchorEl={anchorEl}

@@ -13,16 +13,10 @@ import CustomInputLabel    from "../../../../components/customInputLabel";
 import CustomButton        from "../../../../components/customButton";
 import SuccessPopup        from "../../../../components/popups/confirmationDialog";
 
-const DOCUMENT_TYPES = [
-  { value: "employment_contract", label: "Employment Contract" },
-  { value: "nda",                 label: "NDA"                 },
-  { value: "id_document",         label: "ID Document"         },
-  { value: "other",               label: "Other"               },
-];
+
 
 const EMPTY_FORM = {
   title:        "",
-  documentType: "",
   file:         null,
 };
 
@@ -79,31 +73,7 @@ const UploadDocumentDialog = ({ open, onClose, onSave }) => {
               />
             </Box>
 
-            {/* ── Type ───────────────────────────────────────────────────── */}
-            <Box>
-              <CustomInputLabel label="Type" />
-              <CustomSelect
-                value={form.documentType}
-                onChange={set("documentType")}
-                fullWidth
-                height="45px"
-                inputBgColor="#fff"
-                displayEmpty
-                renderValue={(v) =>
-                  DOCUMENT_TYPES.find((t) => t.value === v)?.label || (
-                    <Typography fontSize={13} color="text.secondary">
-                      Select Type
-                    </Typography>
-                  )
-                }
-              >
-                {DOCUMENT_TYPES.map((t) => (
-                  <MenuItem key={t.value} value={t.value}>
-                    {t.label}
-                  </MenuItem>
-                ))}
-              </CustomSelect>
-            </Box>
+          
 
             {/* ── File ───────────────────────────────────────────────────── */}
             <Box>

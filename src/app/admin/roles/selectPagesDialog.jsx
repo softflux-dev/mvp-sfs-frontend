@@ -1,145 +1,169 @@
 // app/admin/roles/selectPagesDialog.jsx
 import { useState, useEffect } from "react";
-import { Box, Grid, MenuItem, Typography } from "@mui/material";
-import {
-  DialogContainer,
-  DialogHeader,
-  DialogBody,
-} from "../../../components";
-import { TextInput, CustomSelect } from "../../../components";
-import CustomCheckbox     from "../../../components/customChecked";
+import { Box, Typography, Checkbox } from "@mui/material";
+import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
-import {
-  adminPages,
-  hrPages,
-  projectManagerPages,
-  employeePages,
-} from "./pagesData";
-
-// ── Portal sections config ────────────────────────────────────────────────────
-const PORTAL_SECTIONS = [
-  { key: "Admin",           label: "Admin Portal",           color: "#AA2493", data: adminPages          },
-  { key: "HR",              label: "HR Portal",              color: "#AA2493", data: hrPages              },
-  { key: "Project Manager", label: "Project Manager Portal", color: "#AA2493", data: projectManagerPages  },
-  { key: "Employee",        label: "Employee Portal",        color: "#AA2493", data: employeePages        },
-];
+import TextInput           from "../../../components/textInput";
+import { ALL_PAGE_GROUPS } from "./pagesData";
 
 const SelectPagesDialog = ({
   open,
   onClose,
   formData,
-  editingRole,
+  editingRole   = null,
   onSaveSuccess,
-  loading,
+  loading       = false,
 }) => {
-  const [searchText,     setSearchText]     = useState("");
-  const [selectedPortal, setSelectedPortal] = useState("all");
-  const [selectedPages,  setSelectedPages]  = useState([]);
+  const [search,   setSearch]   = useState("");
+  const [selected, setSelected] = useState([]); 
 
-  const isEditMode = !!editingRole;
-
-  // Pre-populate pages when editing
+  // Pre-populate when editing
   useEffect(() => {
-    if (open && editingRole?.pages?.length) {
-      setSelectedPages(editingRole.pages);
-    } else if (!open) {
-      setSelectedPages([]);
-      setSearchText("");
-      setSelectedPortal("all");
+    if (!open) return;
+    if (editingRole?.pages?.length) {
+      // Match existing pages against our page list by path
+      const flat = ALL_PAGE_GROUPS.flatMap((g) => g.pages);
+      const matched = editingRole.pages
+        .map((p) => flat.find((fp) => fp.path === p.path || fp.id === p.id))
+        .filter(Boolean);
+      setSelected(matched);
+    } else {
+      setSelected([]);
     }
+    setSearch("");
   }, [open, editingRole]);
 
-  const filterData = (data) => {
-    if (!searchText) return data;
-    return data.filter((item) =>
-      item.title.toLowerCase().includes(searchText.toLowerCase())
+  const toggle = (page) => {
+    setSelected((prev) =>
+      prev.some((p) => p.id === page.id)
+        ? prev.filter((p) => p.id !== page.id)
+        : [...prev, page]
     );
   };
 
-  const shouldShow = (portalKey) =>
-    selectedPortal === "all" || selectedPortal === portalKey;
-
-  const handleCheck = (item, checked) => {
-    if (checked) {
-      setSelectedPages((prev) => [...prev, item]);
-    } else {
-      setSelectedPages((prev) =>
-        prev.filter((p) => !(p.id === item.id && p.path === item.path))
-      );
-    }
-  };
-
-  const isSelected = (item) =>
-    selectedPages.some((p) => p.id === item.id && p.path === item.path);
+  const isSelected = (page) => selected.some((p) => p.id === page.id);
 
   const handleSave = () => {
-    onSaveSuccess?.(selectedPages);
-    setSelectedPages([]);
-    setSearchText("");
-    setSelectedPortal("all");
+    // Convert to the shape the backend Role model expects
+    const pages = selected.map((p, i) => ({
+      id:    p.id,
+      title: p.title,
+      path:  p.path,
+    }));
+    onSaveSuccess?.(pages);
+  };
+
+  const filterPages = (pages) => {
+    if (!search.trim()) return pages;
+    return pages.filter((p) =>
+      p.title.toLowerCase().includes(search.toLowerCase())
+    );
   };
 
   return (
-    <DialogContainer
-      open={open}
-      onClose={onClose}
-      maxWidth="600px"
-      disableBackdropClick
-    >
+    <DialogContainer open={open} onClose={onClose} maxWidth="520px" fullWidth>
       <DialogHeader
-        title={isEditMode ? "Edit Role Pages" : "Select Pages"}
+        title={editingRole ? "Edit Role Pages" : "Select Pages"}
         onClose={onClose}
       />
 
       <DialogBody>
-        <Box bgcolor="primary.lightGray" px={2} py={1} borderRadius="10px">
+        <Box sx={{
+          backgroundColor: "#F5F5F5",
+          borderRadius: "16px",
+          p: 2.5,
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+        }}>
 
-      
+          {/* Search */}
+          <TextInput
+            placeholder="Search pages..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            inputBgColor="#fff"
+            fullWidth
+          />
 
-          {/* ── Portal sections ─────────────────────────────────────────── */}
-          {PORTAL_SECTIONS.map((section) =>
-            shouldShow(section.key) ? (
-              <Box key={section.key} mt={2}>
+          {/* Selected count */}
+          <Typography fontSize="12px" color="text.secondary">
+            {selected.length} page{selected.length !== 1 ? "s" : ""} selected
+          </Typography>
+
+          {/* Page groups */}
+          {ALL_PAGE_GROUPS.map((group) => {
+            const filtered = filterPages(group.pages);
+            if (!filtered.length) return null;
+
+            return (
+              <Box key={group.label}>
                 <Typography
-                  color={section.color}
-                  fontWeight={500}
-                  fontSize="18px"
-                  mb={0.5}
+                  fontSize="13px"
+                  fontWeight={700}
+                  mb={1}
+                  sx={{ color: group.color }}
                 >
-                  {section.label}
+                  {group.label}
                 </Typography>
-                {filterData(section.data).map((item) => (
-                  <Box
-                    key={item.id}
-                    bgcolor="secondary.contrastText"
-                    px={2}
-                    py={1}
-                    borderRadius="10px"
-                    mt={1.5}
-                  >
-                    <CustomCheckbox
-                      label={item.title}
-                      fontSize="16px"
-                      fontWeight={500}
-                      labelColor="text.color"
-                      checked={isSelected(item)}
-                      onChange={(e) => handleCheck(item, e.target.checked)}
-                    />
-                  </Box>
-                ))}
+
+                <Box display="flex" flexDirection="column" gap={0.5}>
+                  {filtered.map((page) => (
+                    <Box
+                      key={page.id}
+                      onClick={() => toggle(page)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        backgroundColor: isSelected(page) ? "#F0E8FA" : "#fff",
+                        borderRadius: "10px",
+                        px: 2,
+                        py: 1,
+                        cursor: "pointer",
+                        border: isSelected(page)
+                          ? "1px solid #AA2493"
+                          : "1px solid transparent",
+                        transition: "all 0.15s ease",
+                        "&:hover": { backgroundColor: "#F0E8FA" },
+                      }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={isSelected(page)}
+                        onChange={() => toggle(page)}
+                        disableRipple
+                        sx={{
+                          p: 0,
+                          color: "#D1D5DB",
+                          "&.Mui-checked": { color: "#AA2493" },
+                        }}
+                      />
+                      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+                        {page.title}
+                      </Typography>
+                      <Typography fontSize="11px" color="text.secondary" ml="auto">
+                        {page.path}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
-            ) : null
-          )}
+            );
+          })}
 
         </Box>
       </DialogBody>
 
       <DialogActionButtons
-        onConfirm={handleSave}
         onCancel={onClose}
+        onConfirm={handleSave}
+        showCancelBtn
+        cancelText="Back"
         confirmText="Save Role"
-        cancelText="Cancel"
+        variant="gradient"
         confirmLoading={loading}
+        isConfirmBtnDisable={selected.length === 0 || loading}
       />
     </DialogContainer>
   );

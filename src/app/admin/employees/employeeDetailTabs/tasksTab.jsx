@@ -1,20 +1,9 @@
-// employees/employeeDetailTabs/tasksTab.jsx
 import { useState } from "react";
-import { Box } from "@mui/material";
-import Filter from "../../../../components/filterBar/filter";
-import PaginatedTable from "../../../../components/dynamicTable";
+import { Box, Typography } from "@mui/material";
 
-// ── Mock tasks data — replace with real API data ──────────────────────────────
-const mockTasks = [
-  { id: 1,  taskName: "Build API Endpoints",          project: "E-Commerce Platform",  module: "Backend API",   priority: "High",   status: "In Progress" },
-  { id: 2,  taskName: "User Authentication Module",   project: "HR Management System", module: "—",             priority: "High",   status: "Completed"   },
-  { id: 3,  taskName: "Build API Endpoints",          project: "E-Commerce Platform",  module: "Backend API",   priority: "High",   status: "Completed"   },
-  { id: 4,  taskName: "Design Dashboard UI",          project: "HR Management System", module: "Frontend",      priority: "Medium", status: "In Progress" },
-  { id: 5,  taskName: "Write Unit Tests",             project: "E-Commerce Platform",  module: "QA",            priority: "Low",    status: "Completed"   },
-  { id: 6,  taskName: "Database Schema Migration",    project: "E-Commerce Platform",  module: "Backend API",   priority: "High",   status: "Completed"   },
-  { id: 7,  taskName: "Implement Notification System",project: "HR Management System", module: "Backend",       priority: "Medium", status: "In Progress" },
-  { id: 8,  taskName: "Fix Login Bug",                project: "E-Commerce Platform",  module: "Auth",          priority: "High",   status: "Completed"   },
-];
+import Filter         from "../../../../components/filterBar/filter";
+import PaginatedTable from "../../../../components/dynamicTable";
+import { useEmployeeTask } from "../../../../hooks/task";      // ← hook
 
 const tableHeader = [
   { id: "taskName", label: "Task"     },
@@ -33,35 +22,68 @@ const displayRows = [
 ];
 
 const TasksTab = ({ employee = {} }) => {
+  const { tasks, loading, error, fetchTasks } = useEmployeeTask(employee.id);
   const [filters, setFilters] = useState({});
 
-  const filteredTasks = mockTasks.filter((t) => {
+  // client-side filter (no pagination needed for emp tasks)
+  const filteredTasks = tasks.filter((t) => {
     const search = filters.search?.toLowerCase() || "";
     const status = filters.status || "";
 
     const matchSearch =
       !search ||
-      t.taskName.toLowerCase().includes(search) ||
-      t.project.toLowerCase().includes(search);
+      t.taskName?.toLowerCase().includes(search) ||
+      t.project?.toLowerCase().includes(search);
 
-    const matchStatus = !status || t.status.toLowerCase().replace(" ", "_") === status;
+    const matchStatus = !status ||
+      t.status?.toLowerCase().replace(/\s/g, "_") === status;
 
     return matchSearch && matchStatus;
   });
 
+  // map API shape → table row shape
+  const tableData = tasks
+    .filter((t) => {
+      const search = filters.search?.toLowerCase() || "";
+      const status = filters.status || "";
+      const matchSearch = !search ||
+        t.title?.toLowerCase().includes(search) ||
+        t.project?.projectName?.toLowerCase().includes(search);
+      const matchStatus = !status || t.status === status;
+      return matchSearch && matchStatus;
+    })
+    .map((t) => ({
+      id:       t._id,
+      taskName: t.title,
+      project:  t.project?.projectName || "—",
+      module:   t.module?.title        || "—",
+      priority: t.priority
+        ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
+        : "—",
+      status: t.status
+        ? t.status.charAt(0).toUpperCase() + t.status.slice(1)
+        : "—",
+    }));
+
   return (
     <Box sx={{ mt: 2 }}>
 
-      {/* ── Filter bar ────────────────────────────────────────────────────── */}
+      {error && (
+        <Box mb={2} px={2} py={1.5}
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
+        >
+          <Typography fontSize={13} color="error">{error}</Typography>
+        </Box>
+      )}
+
       <Filter mode="employee_tasks" onFilterChange={setFilters} />
 
-      {/* ── Table ─────────────────────────────────────────────────────────── */}
       <Box mt={2} bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable
           tableHeader={tableHeader}
-          tableData={filteredTasks}
+          tableData={tableData}
           displayRows={displayRows}
-          isLoading={false}
+          isLoading={loading}
         />
       </Box>
 

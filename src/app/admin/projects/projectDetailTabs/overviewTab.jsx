@@ -8,10 +8,24 @@ import overdueIcon  from "../../../../assets/icons/overdue-time.svg";
 
 
 const OverviewTab = ({ project = {} }) => {
+
+    // ── Calculate days remaining from today to endDate ──────────────────────
+  const daysRemaining = (() => {
+    if (!project.endDate) return "—";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const end = new Date(project.endDate);
+    end.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+    if (diff < 0)  return "Overdue";
+    if (diff === 0) return "Due today";
+    return `${diff} days`;
+  })();
+
   const infoFields = [
     { label: "Start Date",     value: project.startDate || "Jan 15, 2026"  },
     { label: "End Date",       value: project.endDate   || "Jun 30, 2026"  },
-    { label: "Days Remaining", value: "110"                                  },
+    { label: "Days Remaining", value: daysRemaining            },
     { label: "Budget",         value: project.budget    || "$150,000"       },
   ];
 
