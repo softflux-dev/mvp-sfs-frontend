@@ -39,6 +39,7 @@ export const employeePages = [
   { id: "emp-messages",   title: "Messages",     path: "/messages"           },
   { id: "emp-salary",     title: "My Salary",    path: "/salary"             },
   { id: "emp-profile",    title: "Profile",      path: "/profile"            },
+  { id: "emp-documents", title: "My Documents", path: "/my-documents" },
 ];
 
 // All pages grouped — used in SelectPagesDialog

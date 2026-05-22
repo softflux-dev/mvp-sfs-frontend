@@ -1,45 +1,57 @@
-// profile/tabs/personalTab.jsx
-import { useState } from "react";
-import { Box, Typography, Grid } from "@mui/material";
+import { useState, useEffect } from "react";
+import { Box, Typography, Grid, CircularProgress } from "@mui/material";
 
-import { TextInput } from "../../../../components";
-import CustomInputLabel from "../../../../components/customInputLabel";
-import CustomButton from "../../../../components/customButton";
-import SuccessPopup from "../../../../components/popups/confirmationDialog";
+import { TextInput }     from "../../../../components";
+import CustomInputLabel  from "../../../../components/customInputLabel";
+import CustomButton      from "../../../../components/customButton";
+import SuccessPopup      from "../../../../components/popups/confirmationDialog";
 
-const PersonalTab = ({ profile = {} }) => {
+const PersonalTab = ({ profile = {}, loading = false, onSave }) => {
+
+  if (!profile) return null;
   const [formData, setFormData] = useState({
-    fullName:       profile.name         || "John Doe",
-    email:          profile.email        || "john.doe@company.com",
-    phoneNumber:    profile.phone        || "+1 (555) 123-4567",
-    department:     profile.department   || "Engineering",
-    designation:    profile.designation  || "Senior Developer",
-    joiningDate:    profile.joiningDate  || "2024-06-15",
-    employmentType: profile.empType      || "Full-time",
-    workingHours:   profile.workingHours || "8 hours",
+    fullName:     "",
+    phone:        "",
   });
-
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [error,       setError]       = useState("");
+
+  // seed form when profile loads
+  useEffect(() => {
+    if (profile?.name) {
+      setFormData({
+        fullName: profile.name  || "",
+        phone:    profile.phone || "",
+      });
+    }
+  }, [profile]);
 
   const handleChange = (field) => (e) => {
-    const val = e?.target ? e.target.value : e;
-    setFormData((prev) => ({ ...prev, [field]: val }));
+    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
   };
 
-  const handleSave = () => {
-    console.log("Save personal profile:", formData);
-    setSaveSuccess(true);
+  const handleSave = async () => {
+    setError("");
+    const fd = new FormData();
+    fd.append("fullName", formData.fullName);
+    fd.append("phone",    formData.phone);
+
+    const result = await onSave?.(fd);
+    if (result?.success) {
+      setSaveSuccess(true);
+    } else {
+      setError(result?.message || "Failed to save.");
+    }
   };
 
-  const fields = [
-    { key: "fullName",       label: "Full Name",          placeholder: "Enter Full Name"      },
-    { key: "email",          label: "Email Address",      placeholder: "Enter Email Address"  },
-    { key: "phoneNumber",    label: "Phone Number",       placeholder: "Enter Phone Number"   },
-    { key: "department",     label: "Department",         placeholder: "Enter Department"     },
-    { key: "designation",    label: "Designation",        placeholder: "Enter Designation"    },
-    { key: "joiningDate",    label: "Joining Date",       placeholder: "YYYY-MM-DD"           },
-    { key: "employmentType", label: "Employment Type",    placeholder: "e.g. Full-time"       },
-    { key: "workingHours",   label: "Working Hours / Day",placeholder: "e.g. 8 hours"         },
+  // read-only fields — admin controls these
+  const readOnlyFields = [
+    { label: "Email Address",      value: profile.email        || "—" },
+    { label: "Department",         value: profile.department   || "—" },
+    { label: "Role",               value: profile.role         || "—" },
+    { label: "Joining Date",       value: profile.joiningDate  || "—" },
+    { label: "Employment Type",    value: profile.empType      || "—" },
+    { label: "Working Hours / Day",value: profile.workingHours || "—" },
   ];
 
   return (
@@ -48,36 +60,61 @@ const PersonalTab = ({ profile = {} }) => {
         Personal Profile
       </Typography>
 
-      <Box
-        sx={{
-          borderRadius: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 2.5,
-        }}
-      >
-        <Grid container spacing={2}>
-          {fields.map(({ key, label, placeholder }) => (
-            <Grid key={key} size={{ xs: 12, md: 6 }}>
-              <CustomInputLabel label={label} />
-              <TextInput
-                placeholder={placeholder}
-                value={formData[key]}
-                onChange={handleChange(key)}
-                inputBgColor="#F5F5F5"
-                fullWidth
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+      {error && (
+        <Box mb={2} px={2} py={1}
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "8px", border: "1px solid #FFCCCC" }}
+        >
+          <Typography fontSize={13} color="error">{error}</Typography>
+        </Box>
+      )}
 
-      {/* Save button */}
+      <Grid container spacing={2}>
+        {/* Editable fields */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <CustomInputLabel label="Full Name" />
+          <TextInput
+            placeholder="Enter Full Name"
+            value={formData.fullName}
+            onChange={handleChange("fullName")}
+            inputBgColor="#F5F5F5"
+            fullWidth
+          />
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 6 }}>
+          <CustomInputLabel label="Phone Number" />
+          <TextInput
+            placeholder="Enter Phone Number"
+            value={formData.phone}
+            onChange={handleChange("phone")}
+            inputBgColor="#F5F5F5"
+            fullWidth
+          />
+        </Grid>
+
+        {/* Read-only fields */}
+        {readOnlyFields.map(({ label, value }) => (
+          <Grid key={label} size={{ xs: 12, md: 6 }}>
+            <CustomInputLabel label={label} />
+            <TextInput
+              value={value}
+              inputBgColor="#F5F5F5"
+              fullWidth
+              disabled
+            />
+          </Grid>
+        ))}
+      </Grid>
+
       <Box display="flex" justifyContent="flex-end" mt={2.5}>
         <CustomButton
-          btnLabel="Save Changes"
+          btnLabel={loading
+            ? <CircularProgress size={18} sx={{ color: "#fff" }} />
+            : "Save Changes"
+          }
           variant="gradient"
           handlePressBtn={handleSave}
+          disabled={loading}
         />
       </Box>
 

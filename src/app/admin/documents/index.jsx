@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Box, Grid, MenuItem } from "@mui/material";
+import { useState, useRef, useEffect } from "react";
+import { Box, Grid, Typography } from "@mui/material";
 
 import HeaderText         from "../../../components/headerText";
 import CustomButton       from "../../../components/customButton";
@@ -7,19 +7,14 @@ import Filter             from "../../../components/filterBar/filter";
 import PaginatedTable     from "../../../components/dynamicTable";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";
-import UploadDocument     from "./uploadDocument"; 
-
-import { MoreVerticalIcon } from "lucide-react";
-
-// ── Mock data ──────────────────────────────────────────────────────────────
-const mockDocuments = [
-  { id: 1, fileName: "Employee Handbook 2024",         type: "Other",                uploadedBy: "David Kim",      date: "Jun 29, 2026", fileSize: "3.2 MB" },
-  { id: 2, fileName: "NDA - Acme Corp",                type: "NDA",                  uploadedBy: "David Kim",      date: "Jun 29, 2026", fileSize: "450 KB" },
-  { id: 3, fileName: "Mobile App v2 - Technical Spec", type: "Project Documentation",uploadedBy: "James Wilson",   date: "Jun 29, 2026", fileSize: "1.8 MB" },
-  { id: 4, fileName: "Sarah Chen - Employment Contract",type: "Employment Contract",  uploadedBy: "David Kim",      date: "Jun 29, 2026", fileSize: "1.8 MB" },
-  { id: 5, fileName: "Sarah Chen - Employment Contract",type: "Employment Contract",  uploadedBy: "Marcus Johnson", date: "Jun 29, 2026", fileSize: "890 KB" },
-  { id: 6, fileName: "Client Portal - SLA Agreement",  type: "Client Agreement",     uploadedBy: "James Wilson",   date: "Jun 29, 2026", fileSize: "1.8 MB" },
-];
+import UploadDocument     from "./uploadDocument";
+import { useSharedDocument }    from "../../../hooks/sharedDocument";
+import useUserStore              from "../../../zustand/useUserStore";
+import { useProjectType }        from "../../../hooks/projectType";
+import { useDepartment }         from "../../../hooks/department";
+import { getProjectManagersApi } from "../../../api/modules/project";
+import { getProjectsApi }        from "../../../api/modules/project";
+import { getEmployeesApi }       from "../../../api/modules/employee";
 
 const tableHeader = [
   { id: "fileName",   label: "Document Name" },
@@ -40,23 +35,85 @@ const displayRows = [
 ];
 
 const Documents = () => {
-  const [documents,     setDocuments]     = useState(mockDocuments);
+  const { user } = useUserStore();
+  const isEmployee = user?.role === "EMPLOYEE";
+
+  const {
+    documents,
+    loading,
+    actionLoading,
+    error,
+    uploadDocument,
+    deleteDocument,
+    downloadDocument,
+    fetchDocuments,
+  } = useSharedDocument();
+
+  const { projectTypes, fetchProjectTypes } = useProjectType();
+  const { departments,  fetchDepartments  } = useDepartment();
+
+  const [managers,      setManagers]      = useState([]);
+  const [employees,     setEmployees]     = useState([]);
+  const [allProjects,   setAllProjects]   = useState([]);
+
   const [filters,       setFilters]       = useState({});
   const [openModal,     setOpenModal]     = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [apiError,      setApiError]      = useState("");
 
   const confirmDialogRef = useRef();
 
-  const menuOptions = [
-    { value: "download", label: "Download" },
-    { value: "delete",   label: "Delete", color: "#FF0000" },
-  ];
+  // ── Fetch supporting data for the upload modal ────────────────────────
+  useEffect(() => {
+    if (isEmployee) return; // employees can't upload, skip the fetches
+
+    fetchProjectTypes();
+    fetchDepartments({ limit: 100 });
+
+    getProjectManagersApi().then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setManagers(res.data.data.managers || []);
+      }
+    });
+
+    getProjectsApi({ limit: 200 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setAllProjects(res.data.data.projects || []);
+      }
+    });
+
+    getEmployeesApi({ limit: 200 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setEmployees(res.data.data.employees || []);
+      }
+    });
+  }, [isEmployee]);
+
+  // ── Map API shape → table row ─────────────────────────────────────────
+  const tableData = documents.map((doc) => ({
+    id:         doc._id,
+    fileName:   doc.title,
+    type:       doc.documentType,
+    uploadedBy: doc.uploadedBy?.fullName || doc.uploadedBy?.name || "—",
+    date:       doc.createdAt
+      ? new Date(doc.createdAt).toLocaleDateString("en-US", {
+          month: "short", day: "numeric", year: "numeric",
+        })
+      : "—",
+    fileSize:   doc.fileSize || "—",
+  }));
+
+  const menuOptions = isEmployee
+    ? [{ value: "download", label: "Download" }]
+    : [
+        { value: "download", label: "Download"                  },
+        { value: "delete",   label: "Delete", color: "#FF0000"  },
+      ];
 
   const handleMenuAction = (action, row) => {
     if (action === "download") {
-      // handle download
-      console.log("Download:", row);
+      downloadDocument(row.id);
     }
     if (action === "delete") {
       confirmDialogRef.current?.open({
@@ -64,17 +121,45 @@ const Documents = () => {
         description: "This action cannot be undone.",
         confirmText: "Yes",
         cancelText:  "Cancel",
-        onConfirm: () => {
-          setDocuments((prev) => prev.filter((d) => d.id !== row.id));
-          setDeleteSuccess(true);
+        onConfirm: async () => {
+          const result = await deleteDocument(row.id);
+          if (result.success) {
+            setDeleteSuccess(true);
+          } else {
+            setApiError(result.message);
+          }
         },
       });
     }
   };
 
+  const handleUploadSave = async (formData) => {
+    const fd = new FormData();
+    fd.append("title",        formData.title);
+    fd.append("documentType", formData.type || "other");
+    fd.append("description",  formData.description || "");
+
+    const assignees = formData.assigneeId
+      ? [formData.assigneeId]
+      : (formData.assigneeIds || []);
+    fd.append("assigneeIds", JSON.stringify(assignees));
+
+    if (formData.files?.[0]) {
+      fd.append("file", formData.files[0]);
+    }
+
+    const result = await uploadDocument(fd);
+    if (result.success) {
+      setOpenModal(false);
+      setUploadSuccess(true);
+      setApiError("");
+    } else {
+      setApiError(result.message);
+    }
+  };
+
   return (
     <>
-      {/* ── Header ─────────────────────────────────────────────────────── */}
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid size={{ xs: 12, md: 6 }}>
           <HeaderText
@@ -82,52 +167,66 @@ const Documents = () => {
             subtitle="Manage and organize all company documents"
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Box display="flex" justifyContent="flex-end">
-            <CustomButton
-              btnLabel="+ Upload Document"
-              handlePressBtn={() => setOpenModal(true)}
-              variant="gradient"
-            />
-          </Box>
-        </Grid>
+        {!isEmployee && (
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Box display="flex" justifyContent="flex-end">
+              <CustomButton
+                btnLabel="+ Upload Document"
+                handlePressBtn={() => setOpenModal(true)}
+                variant="gradient"
+              />
+            </Box>
+          </Grid>
+        )}
       </Grid>
 
-      {/* ── Filter ─────────────────────────────────────────────────────── */}
-      <Filter mode="documents" onFilterChange={(f) => setFilters(f)} />
+      {(error || apiError) && (
+        <Box mb={2} px={2} py={1.5}
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
+        >
+          <Typography fontSize={13} color="error">{error || apiError}</Typography>
+        </Box>
+      )}
 
-      {/* ── Table ──────────────────────────────────────────────────────── */}
+      <Filter
+        mode="documents"
+        onFilterChange={(f) => {
+          setFilters(f);
+          fetchDocuments({ search: f.search || "", type: f.type || "" });
+        }}
+      />
+
       <Box mt={2} bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable
           tableHeader={tableHeader}
-          tableData={documents}
+          tableData={tableData}
           displayRows={displayRows}
-          menuIcon={MoreVerticalIcon}
           menuOptions={menuOptions}
           onMenuAction={handleMenuAction}
-          isLoading={false}
+          isLoading={loading}
         />
       </Box>
 
-      {/* ── Upload Document dialog ──────────────────────────────────────── */}
-     <UploadDocument
-        open={openModal}
-        onClose={() => setOpenModal(false)}
-        onSave={(data) => {
-            console.log("Upload:", data);
-            setOpenModal(false);
-            setUploadSuccess(true);
-        }}
+      {!isEmployee && (
+        <UploadDocument
+          open={openModal}
+          onClose={() => { setOpenModal(false); setApiError(""); }}
+          onSave={handleUploadSave}
+          loading={actionLoading}
+          projectTypeOptions={projectTypes}
+          allProjects={allProjects}
+          managerOptions={managers}
+          employeeOptions={employees}
+          departmentOptions={departments}
         />
+      )}
 
-      {/* ── Delete confirmation ─────────────────────────────────────────── */}
       <ConfirmationDialog ref={confirmDialogRef} />
 
-      {/* ── Delete success ──────────────────────────────────────────────── */}
       <SuccessPopup
         open={deleteSuccess}
         onClose={() => setDeleteSuccess(false)}
-        message="Document deleted"
+        message="Document deleted successfully"
         autoClose
         autoCloseDelay={2000}
       />
@@ -137,7 +236,7 @@ const Documents = () => {
         message="Document uploaded successfully"
         autoClose
         autoCloseDelay={2000}
-        />
+      />
     </>
   );
 };

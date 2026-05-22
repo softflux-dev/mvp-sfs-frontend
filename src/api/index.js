@@ -6,7 +6,7 @@ export const baseUrl = "https://ctp7cjsl-5000.inc1.devtunnels.ms/api/";
 
 
 
-const api = async (path, params, method, isMultipart = false) => {
+const api = async (path, params, method, isMultipart = false, extraConfig = {}) => {
   const userToken = localStorage.getItem("token");
 
   let url = path;
@@ -28,6 +28,7 @@ const api = async (path, params, method, isMultipart = false) => {
     },
     method,
     ...(method !== "get" && params && { data: params }),
+    ...extraConfig,
   };
 
   try {

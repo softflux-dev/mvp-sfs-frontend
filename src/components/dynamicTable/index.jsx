@@ -969,17 +969,17 @@ case "role_employees":
   // ── Document type chip (colored) ──────────────────────────────────────────
 case "doc_type_chip": {
   const DOC_TYPE_CONFIG = {
-    "NDA":                    { bg: "#AA24931A", color: "#AA2493" },
-    "Employment Contract":    { bg: "#2B6EFF1A", color: "#2B6EFF" },
-    "Project Documentation":  { bg: "#FF972F1A", color: "#FF972F" },
-    "Client Agreement":       { bg: "#04C3731A", color: "#04C373" },
-    "Other":                  { bg: "#F5F5F5",   color: "#757575" },
+    "nda":                    { bg: "#AA24931A", color: "#AA2493", label: "NDA"                    },
+    "employment_contract":    { bg: "#2B6EFF1A", color: "#2B6EFF", label: "Employment Contract"    },
+    "project_documentation":  { bg: "#FF972F1A", color: "#FF972F", label: "Project Documentation"  },
+    "client_agreement":       { bg: "#04C3731A", color: "#04C373", label: "Client Agreement"       },
+    "other":                  { bg: "#F5F5F5",   color: "#757575", label: "Other"                  },
   };
-  const cfg = DOC_TYPE_CONFIG[row.type] || { bg: "#F5F5F5", color: "#757575" };
+  const cfg = DOC_TYPE_CONFIG[row.type] || { bg: "#F5F5F5", color: "#757575", label: row.type };
   return (
     <TableCell key={val}>
       <Chip
-        label={row.type}
+        label={cfg.label}
         sx={{
           height: "24px", fontSize: "12px", fontWeight: 500,
           px: 1, borderRadius: "12px",

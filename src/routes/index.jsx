@@ -27,7 +27,7 @@ import PayrollManagement from "../app/hrPortal/payroll";
 import HRDocuments         from "../app/hrPortal/documents";
 import PMDashboard from "../app/projectManagerPortal/dashboard";
 import MyProjects from "../app/projectManagerPortal/myProjects";
-import PMprojectDetail from "../app/projectManagerPortal/myProjects/projectDetail";
+import PMprojectDetail from "../app/projectManagerPortal/myProjects/PMprojectDetail";
 import TaskManagement from "../app/projectManagerPortal/taskManagement";
 import TaskDetail from "../app/projectManagerPortal/taskManagement/taskDetail";
 import TeamPerformance from "../app/projectManagerPortal/teamPerformance";
@@ -41,6 +41,7 @@ import EmpAttendance from "../app/empPortal/myAttendance";
 import Profile from "../app/empPortal/profile";
 import Salary from "../app/empPortal/salary";
 import AllBugsPage from "../app/empPortal/myTasks/allBugsPage";
+import MyDocuments from "../app/empPortal/document";
 
 
 // routes/icons
@@ -619,7 +620,17 @@ const EMP_ROUTES = [
     exact: "exact",
     path: "/employee/bugs",
     isHideMenu: true,
-  }
+  },
+  {
+  id: 9,
+  nameKey: "My Documents",
+  component: <MyDocuments />,
+  exact: "exact",
+  path: "/my-documents",
+  activeIcon:   <img src={DocumentsActiveIcon}   alt="Documents" style={{ width: 20, height: 20 }} />,
+  inActiveIcon: <img src={DocumentsInactiveIcon} alt="Documents" style={{ width: 20, height: 20 }} />,
+  isHideMenu: false,
+}
 ];
 
 

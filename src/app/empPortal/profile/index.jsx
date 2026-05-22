@@ -1,64 +1,100 @@
-// profile/index.jsx
 import { useState } from "react";
-import { Box, Grid } from "@mui/material";
+import { Box, Grid, CircularProgress, Typography } from "@mui/material";
 
-import HeaderText  from "../../../components/headerText";
-import CustomTabs  from "../../../components/tabs";
-import ProfileHeader from "./profileHeader";
-import PersonalTab   from "./tabs/personalTab";
-import SecurityTab   from "./tabs/securityTab";
-
-
-
-// ── Static mock — swap with API/redux data ─────────────────────────────
-const MOCK_PROFILE = {
-  name:         "John Doe",
-  status:       "Active",
-  designation:  "Senior Developer",
-  department:   "Engineering",
-  empId:        "EMP-2024-042",
-  email:        "john.doe@company.com",
-  phone:        "+1 (555) 123-4567",
-  joiningDate:  "2024-06-15",
-  empType:      "Full-time",
-  workingHours: "8 hours",
-};
+import HeaderText     from "../../../components/headerText";
+import CustomTabs     from "../../../components/tabs";
+import ProfileHeader  from "./profileHeader";
+import PersonalTab    from "./tabs/personalTab";
+import SecurityTab    from "./tabs/securityTab";
+import { useProfile } from "../../../hooks/profile";
 
 const tabs = [
-  { id: 1, label: "Personal"  },
-  { id: 2, label: "Security"  },
-  
+  { id: 1, label: "Personal" },
+  { id: 2, label: "Security" },
 ];
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState(1);
 
+  const {
+    profile,
+    loading,
+    actionLoading,
+    error,
+    updateProfile,
+    changePassword,
+  } = useProfile();
 
+  // ── Normalize API shape → component shape ─────────────────────────────
+  const normalized = profile ? {
+    name:         profile.fullName         || "—",
+    avatar:       profile.avatar           || "",
+    role:         profile.role?.roleName   || "—",
+    department:   profile.department?.name || "—",
+    empId:        profile.empId            || "—",
+    email:        profile.email            || "—",
+    phone:        profile.phone            || "",
+    joiningDate:  profile.joiningDate
+      ? new Date(profile.joiningDate).toLocaleDateString("en-US", {
+          month: "short", day: "numeric", year: "numeric",
+        })
+      : "—",
+    empType:      profile.employmentType   || "—",
+    workingHours: profile.workingHours
+      ? `${profile.workingHours} hours`
+      : "—",
+  } : null;
 
   return (
     <Box>
-      {/* ── Page header ── */}
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid size={{ xs: 12 }}>
-          <HeaderText
-            title="Profile"
-            subtitle="Configure system preferences"
-          />
+          <HeaderText title="Profile" subtitle="Configure system preferences" />
         </Grid>
       </Grid>
 
-      {/* ── Employee card ── */}
-      <ProfileHeader profile={MOCK_PROFILE}  />
+      {error && (
+        <Box mb={2} px={2} py={1.5}
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
+        >
+          <Typography fontSize={13} color="error">{error}</Typography>
+        </Box>
+      )}
 
-      {/* ── Tabs ── */}
-      <CustomTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      {loading ? (
+        <Box display="flex" justifyContent="center" py={10}>
+          <CircularProgress size={32} sx={{ color: "#AA2493" }} />
+        </Box>
+      ) : (
+        <>
+          <ProfileHeader
+            profile={normalized}
+            onAvatarChange={async (file) => {
+              const fd = new FormData();
+              fd.append("avatar", file);
+              await updateProfile(fd);
+            }}
+          />
 
-      {/* ── Tab content ── */}
-      <Box mt={2}>
-        {activeTab === 1 && <PersonalTab  profile={MOCK_PROFILE} />}
-        {activeTab === 2 && <SecurityTab />}
-       
-      </Box>
+          <CustomTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+
+          <Box mt={2}>
+            {activeTab === 1 && (
+              <PersonalTab
+                profile={normalized}
+                loading={actionLoading}
+                onSave={updateProfile}
+              />
+            )}
+            {activeTab === 2 && (
+              <SecurityTab
+                loading={actionLoading}
+                onSave={changePassword}
+              />
+            )}
+          </Box>
+        </>
+      )}
     </Box>
   );
 };

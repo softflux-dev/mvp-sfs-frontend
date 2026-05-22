@@ -104,7 +104,19 @@ employeeResetPassword:  "employee/auth/reset-password",
   getBugReports:    "tasks",  
   createBugReport:  "tasks",  
   updateBugReport:  "tasks",  
-  deleteBugReport:  "tasks",  
+  deleteBugReport:  "tasks", 
+  
+  // ── Employee Profile (/api/employee/profile) ──────────────────────────────
+  getProfile:      "employee/profile",
+  updateProfile:   "employee/profile",
+  changePassword:  "employee/profile/change-password",
+
+  // ── Shared Documents (/api/documents) ────────────────────────────────────
+  getSharedDocuments:    "documents",
+  uploadSharedDocument:  "documents",
+  deleteSharedDocument:  "documents",
+  downloadSharedDocument:"documents",
 };
+
 
 export default ENDPOINTS;
