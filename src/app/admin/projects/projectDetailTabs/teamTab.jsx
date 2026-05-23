@@ -1,12 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { Box, Typography }             from "@mui/material";
 
+import CustomButton       from "../../../../components/customButton";
 import Filter             from "../../../../components/filterBar/filter";
 import PaginatedTable     from "../../../../components/dynamicTable";
 import ConfirmationDialog from "../../../../components/popups/confirmation";
 import SuccessPopup       from "../../../../components/popups/confirmationDialog";
+import AddTeamMember      from "./addTeamMember";
 
-import { getProjectTeamApi, removeTeamMemberApi } from "../../../../api/modules/project";
+import {
+  getProjectTeamApi,
+  removeTeamMemberApi,
+  addTeamMembersApi,
+} from "../../../../api/modules/project";
+import { getEmployeesApi } from "../../../../api/modules/employee";
 import DeleteIcon from "../../../../assets/icons/delete-icon-inactive.svg";
 
 const tableHeader = [
@@ -34,58 +41,74 @@ const TeamTab = ({ project = {} }) => {
   const [allEmployees,     setAllEmployees]      = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
+  // ── Add Member dialog ─────────────────────────────────────────────────────
+  const [addOpen,    setAddOpen]    = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError,   setAddError]   = useState("");
+  const [addSuccess, setAddSuccess] = useState(false);
+
   const confirmDialogRef = useRef();
 
   // ── Fetch team ────────────────────────────────────────────────────────────
-const fetchTeam = async () => {
-  if (!project.id) return;  
-  setLoading(true);
-  setError("");
-  try {
-    const res = await getProjectTeamApi(project.id);
-    if (res?.status === 200 || res?.status === 201) {
-      setMembers(res.data.data.team || []);
-    } else {
-      setError(res?.data?.message || "Failed to fetch team.");
+  const fetchTeam = async () => {
+    if (!project.id) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await getProjectTeamApi(project.id);
+      if (res?.status === 200 || res?.status === 201) {
+        setMembers(res.data.data.team || []);
+      } else {
+        setError(res?.data?.message || "Failed to fetch team.");
+      }
+    } catch {
+      setError("Something went wrong.");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.log("fetchTeam error:", err);  
-    setError("Something went wrong.");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-    useEffect(() => {
-    import("../../../../api/modules/employee").then(({ getEmployeesApi }) => {
-      getEmployeesApi({ limit: 1000 }).then((res) => {
-        if (res?.status === 200 || res?.status === 201) {
-          setAllEmployees(res.data.data.employees || []);
-        }
-      });
+  // ── Fetch all employees for filter bar ────────────────────────────────────
+  useEffect(() => {
+    getEmployeesApi({ limit: 1000 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setAllEmployees(res.data.data.employees || []);
+      }
     });
   }, []);
 
+  useEffect(() => { fetchTeam(); }, [project.id]);
 
-  useEffect(() => {
-    fetchTeam();
-  }, [project.id]);
+  // ── Save handler passed to AddTeamMember ──────────────────────────────────
+  const handleAddSave = async (selectedIds) => {
+    setAddLoading(true);
+    setAddError("");
+    try {
+      const res = await addTeamMembersApi(project.id, selectedIds);
+      if (res?.status === 200 || res?.status === 201) {
+        await fetchTeam();
+        setAddSuccess(true);
+        setAddOpen(false);
+      } else {
+        setAddError(res?.data?.message || "Failed to add members.");
+      }
+    } catch {
+      setAddError("Something went wrong.");
+    } finally {
+      setAddLoading(false);
+    }
+  };
 
-  // ── Filter locally by search ──────────────────────────────────────────────
-const filtered = members.filter((m) => {
-  const matchesSearch = search.trim()
-    ? m.name.toLowerCase().includes(search.toLowerCase()) ||
-      m.role.toLowerCase().includes(search.toLowerCase())
-    : true;
+  // ── Filter locally ────────────────────────────────────────────────────────
+  const filtered = members.filter((m) => {
+    const matchesSearch = search.trim()
+      ? m.name.toLowerCase().includes(search.toLowerCase()) ||
+        m.role.toLowerCase().includes(search.toLowerCase())
+      : true;
+    const matchesEmployee = selectedEmployee ? m._id === selectedEmployee : true;
+    return matchesSearch && matchesEmployee;
+  });
 
-  const matchesEmployee = selectedEmployee
-    ? m._id === selectedEmployee   
-    : true;
-
-  return matchesSearch && matchesEmployee;
-});
-
-  // ── Table row shape ───────────────────────────────────────────────────────
   const tableData = filtered.map((m) => ({
     id:        m._id,
     name:      m.name,
@@ -121,15 +144,23 @@ const filtered = members.filter((m) => {
   return (
     <Box sx={{ mt: 2 }}>
 
-      <Box mb={2}>
-        <Filter
-        mode="team"
-        employees={allEmployees}
-        onFilterChange={(f) => {
-          setSearch(f.search || "");
-          setSelectedEmployee(f.employee || "");  
-        }}
-      />
+      {/* ── Top bar ──────────────────────────────────────────────────────── */}
+      <Box display="flex" alignItems="center" gap={2} mb={2}>
+        <Box flex={1}>
+          <Filter
+            mode="team"
+            employees={allEmployees}
+            onFilterChange={(f) => {
+              setSearch(f.search || "");
+              setSelectedEmployee(f.employee || "");
+            }}
+          />
+        </Box>
+        <CustomButton
+          btnLabel="+ Add Member"
+          variant="gradient"
+          handlePressBtn={() => { setAddError(""); setAddOpen(true); }}
+        />
       </Box>
 
       {error && (
@@ -151,12 +182,29 @@ const filtered = members.filter((m) => {
         />
       </Box>
 
+      {/* ── Add Team Member dialog ────────────────────────────────────────── */}
+      <AddTeamMember
+        open={addOpen}
+        onClose={() => { setAddOpen(false); setAddError(""); }}
+        onSave={handleAddSave}
+        loading={addLoading}
+        apiError={addError}
+      />
+
       <ConfirmationDialog ref={confirmDialogRef} />
 
       <SuccessPopup
         open={deleteSuccess}
         onClose={() => setDeleteSuccess(false)}
         message="Team member removed successfully."
+        autoClose
+        autoCloseDelay={2000}
+      />
+
+      <SuccessPopup
+        open={addSuccess}
+        onClose={() => setAddSuccess(false)}
+        message="Team members added successfully."
         autoClose
         autoCloseDelay={2000}
       />

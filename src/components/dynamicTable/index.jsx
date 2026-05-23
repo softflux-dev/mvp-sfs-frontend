@@ -43,6 +43,9 @@ const STATUS_CONFIG = {
   Inactive:      { bg: "#FECACA", color: "#DC2626" },
   Rejected:      { bg: "#FECACA", color: "#DC2626" },
   Overdue:       { bg: "#FECACA", color: "#DC2626" },
+   "New":         { bg: "#E9D5FF", color: "#7C3AED" },
+  "In Progress": { bg: "#FEF3C7", color: "#D97706" },
+  "Paused":      { bg: "#FEF9C3", color: "#CA8A04" },
 };
 
 // ── Priority color map ────────────────────────────────────────────────────
@@ -973,6 +976,7 @@ case "doc_type_chip": {
     "employment_contract":    { bg: "#2B6EFF1A", color: "#2B6EFF", label: "Employment Contract"    },
     "project_documentation":  { bg: "#FF972F1A", color: "#FF972F", label: "Project Documentation"  },
     "client_agreement":       { bg: "#04C3731A", color: "#04C373", label: "Client Agreement"       },
+    "id_document":            { bg: "#9E9E9E1A", color: "#034aac", label: "ID Document"            },
     "other":                  { bg: "#F5F5F5",   color: "#757575", label: "Other"                  },
   };
   const cfg = DOC_TYPE_CONFIG[row.type] || { bg: "#F5F5F5", color: "#757575", label: row.type };

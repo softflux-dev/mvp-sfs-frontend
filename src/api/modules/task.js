@@ -79,14 +79,12 @@ export const empGetTaskByIdApi = (taskId) =>
 export const getBugReportsApi = (taskId, params) =>
   api(`${ENDPOINTS.getBugReports}/${taskId}/bugs`, params, "get");
 
-export const createBugReportApi = (taskId, formData) =>
-  api(`${ENDPOINTS.createBugReport}/${taskId}/bugs`, formData, "post", true);
+export const createBugReportApi = (taskId, payload) =>
+  api(`${ENDPOINTS.createBugReport}/${taskId}/bugs`, payload, "post", false);
 
-export const updateBugReportApi = (taskId, bugId, formData) =>
-  api(`${ENDPOINTS.updateBugReport}/${taskId}/bugs/${bugId}`, formData, "put", true);
+export const updateBugReportApi = (taskId, bugId, payload) =>
+  api(`${ENDPOINTS.updateBugReport}/${taskId}/bugs/${bugId}`, payload, "put", false);
 
 export const deleteBugReportApi = (taskId, bugId) =>
   api(`${ENDPOINTS.deleteBugReport}/${taskId}/bugs/${bugId}`, null, "delete");
 
-export const bugScreenshotUrl = (taskId, bugId, index) =>
-  `${import.meta.env.VITE_API_BASE_URL || ""}/api/tasks/${taskId}/bugs/${bugId}/screenshots/${index}/view`;

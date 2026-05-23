@@ -1,22 +1,50 @@
+import { useState, useEffect } from "react";
+import { Box, Grid, Typography } from "@mui/material";
+
+import HeaderText         from "../../../components/headerText";
+import Filter             from "../../../components/filterBar/filter";
+import PaginatedTable     from "../../../components/dynamicTable";
+import { useSharedDocument } from "../../../hooks/sharedDocument";
+import useUserStore          from "../../../zustand/useUserStore";
+
+const tableHeader = [
+  { id: "fileName",   label: "Document Name" },
+  { id: "type",       label: "Type"          },
+  { id: "uploadedBy", label: "Uploaded By"   },
+  { id: "date",       label: "Date"          },
+  { id: "fileSize",   label: "Size"          },
+  { id: "actions",    label: "Actions"       },
+];
+
+const displayRows = [
+  "doc_name_bold",
+  "doc_type_chip",
+  "doc_uploader",
+  "doc_date",
+  "doc_size",
+  "doc_actions_menu",
+];
+
 const MyDocuments = () => {
   const { user } = useUserStore();
 
   const {
-    documents, loading, actionLoading,
-    error, downloadDocument, fetchDocuments,
-  } = useSharedDocument();
+    documents,
+    loading,
+    error,
+    downloadDocument,
+    fetchDocuments,
+  } = useSharedDocument(); // backend filters by EMPLOYEE role automatically
 
   const [apiError, setApiError] = useState("");
 
-  useEffect(() => {
-  fetchDocuments();
-}, []);
+  // ── DO NOT add a manual useEffect here — hook already fetches on mount ──
 
   const tableData = documents.map((doc) => ({
     id:         doc._id,
     fileName:   doc.title,
     type:       doc.documentType,
-    uploadedBy: doc.uploadedBy?.fullName || "—",
+    uploadedBy: doc.uploadedBy?.fullName || doc.uploadedBy?.name || "—",
     date:       doc.createdAt
       ? new Date(doc.createdAt).toLocaleDateString("en-US", {
           month: "short", day: "numeric", year: "numeric",
@@ -52,8 +80,9 @@ const MyDocuments = () => {
 
       <Filter
         mode="documents"
+        isPM={false}
         onFilterChange={(f) => {
-         fetchDocuments({ search: f.search || "", type: f.type || "" });
+          fetchDocuments({ search: f.search || "", type: f.type || "" });
         }}
       />
 

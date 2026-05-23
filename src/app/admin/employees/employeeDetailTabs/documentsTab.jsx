@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Chip, Grid, Typography } from "@mui/material";
 
 import CustomButton         from "../../../../components/customButton";
 import PaginatedTable       from "../../../../components/dynamicTable";
 import ConfirmationDialog   from "../../../../components/popups/confirmation";
 import SuccessPopup         from "../../../../components/popups/confirmationDialog";
 import UploadDocumentDialog from "./uploadDocumentDialog";
-import { useDocument }      from "../../../../hooks/document";   // ← hook
+import { useDocument }      from "../../../../hooks/document";
 
 import UploadIcon   from "../../../../assets/icons/upload-doc-icon.svg";
 import DeleteIcon   from "../../../../assets/icons/delete-icon-inactive.svg";
@@ -22,7 +22,7 @@ const tableHeader = [
 
 const displayRows = [
   "doc_name",
-  "doc_type",
+  "doc_type_chip",
   "uploadDate",
   "doc_uploaded_by",
   "actions",
@@ -37,16 +37,15 @@ const DocumentsTab = ({ employee = {} }) => {
     uploadDocument,
     deleteDocument,
     downloadDocument,
-  } = useDocument(employee.id);             // ← pass employeeId
+  } = useDocument(employee.id);
 
-  const [uploadOpen,    setUploadOpen]    = useState(false);
-  const [successMsg,    setSuccessMsg]    = useState("");
-  const [showSuccess,   setShowSuccess]   = useState(false);
-  const [apiError,      setApiError]      = useState("");
+  const [uploadOpen,  setUploadOpen]  = useState(false);
+  const [successMsg,  setSuccessMsg]  = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [apiError,    setApiError]    = useState("");
 
   const confirmDialogRef = useRef();
 
-  // ── Map API shape → table row shape ───────────────────────────────────────
   const tableData = documents.map((doc) => ({
     id:         doc._id,
     fileName:   doc.title,
@@ -56,11 +55,20 @@ const DocumentsTab = ({ employee = {} }) => {
           month: "short", day: "numeric", year: "numeric",
         })
       : "—",
-    uploadedBy: doc.uploadedBy?.name || "Admin",
+    uploadedBy: doc.uploadedBy?.fullName || doc.uploadedBy?.name || "Admin",
     fileSize:   doc.fileSize || "—",
+    // carry source so handlers know which API to call
+    _source:    doc._source || "employee",
+    // render a small badge in the Source column
+    
   }));
 
   const handleDelete = (row) => {
+    // shared docs are read-only here — admin manages them from Document Management
+    if (row._source === "shared") {
+      setApiError("Shared documents can only be deleted from Document Management.");
+      return;
+    }
     confirmDialogRef.current?.open({
       title:       "Delete Document?",
       description: `"${row.fileName}" will be permanently removed.`,
@@ -68,18 +76,14 @@ const DocumentsTab = ({ employee = {} }) => {
       cancelText:  "Cancel",
       onConfirm: async () => {
         const result = await deleteDocument(row.id);
-        if (result.success) {
-          setSuccessMsg(result.message);
-          setShowSuccess(true);
-        } else {
-          setApiError(result.message);
-        }
+        if (result.success) { setSuccessMsg(result.message); setShowSuccess(true); }
+        else setApiError(result.message);
       },
     });
   };
 
   const handleDownload = (row) => {
-    downloadDocument(row.id);
+    downloadDocument(row.id, row._source);
   };
 
   const handleUploadSave = async (formData) => {
@@ -95,8 +99,6 @@ const DocumentsTab = ({ employee = {} }) => {
 
   return (
     <Box sx={{ mt: 2 }}>
-
-      {/* Header */}
       <Grid container alignItems="center" justifyContent="space-between" mb={2}>
         <Grid item>
           <Typography fontSize="20px" fontWeight={700} color="text.primary">
@@ -113,7 +115,6 @@ const DocumentsTab = ({ employee = {} }) => {
         </Grid>
       </Grid>
 
-      {/* API error */}
       {(error || apiError) && (
         <Box mb={2} px={2} py={1.5}
           sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
@@ -122,7 +123,6 @@ const DocumentsTab = ({ employee = {} }) => {
         </Box>
       )}
 
-      {/* Table */}
       <Box bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable
           tableHeader={tableHeader}
@@ -136,7 +136,6 @@ const DocumentsTab = ({ employee = {} }) => {
         />
       </Box>
 
-      {/* Upload dialog */}
       <UploadDocumentDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
@@ -144,10 +143,8 @@ const DocumentsTab = ({ employee = {} }) => {
         loading={actionLoading}
       />
 
-      {/* Confirm delete */}
       <ConfirmationDialog ref={confirmDialogRef} />
 
-      {/* Success popup */}
       <SuccessPopup
         open={showSuccess}
         onClose={() => setShowSuccess(false)}

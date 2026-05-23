@@ -48,18 +48,17 @@ const DocumentsTab = ({ project = {} }) => {
 
   const confirmDialogRef = useRef();
 
-  const tableData = documents.map((doc) => ({
-    id:         doc._id,
-    fileName:   doc.title,
-   
-    uploadDate: doc.createdAt
-      ? new Date(doc.createdAt).toLocaleDateString("en-US", {
-          month: "short", day: "numeric", year: "numeric",
-        })
-      : "—",
- 
-    fileSize:   doc.fileSize || "—",
-  }));
+ const tableData = documents.map((doc) => ({
+  id:         doc._id,
+  fileName:   doc.title,
+  uploadDate: doc.createdAt
+    ? new Date(doc.createdAt).toLocaleDateString("en-US", {
+        month: "short", day: "numeric", year: "numeric",
+      })
+    : "—",
+  fileSize:   doc.fileSize || "—",
+  _source:    doc._source || "project",  
+}));
 
   const handleDelete = (row) => {
     confirmDialogRef.current?.open({
@@ -68,7 +67,7 @@ const DocumentsTab = ({ project = {} }) => {
       confirmText: "Yes, Delete",
       cancelText:  "Cancel",
       onConfirm: async () => {
-        const result = await deleteDocument(row.id);
+        const result = await deleteDocument(row.id, row._source);
         if (result.success) {
           setSuccessMsg(result.message);
           setShowSuccess(true);
@@ -124,14 +123,14 @@ const DocumentsTab = ({ project = {} }) => {
           tableData={tableData}
           displayRows={displayRows}
           downloadIcon={downloadIcon}
-          onDownloadClick={(row) => downloadDocument(row.id)}
+          onDownloadClick={(row) => downloadDocument(row.id, row._source)}
           deleteIcon={DeleteIcon}
           onDeleteClick={handleDelete}
           isLoading={loading}
         />
       </Box>
 
-      {/* reuse same UploadDocumentDialog from employee detail */}
+     
       <UploadDocumentDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}

@@ -37,6 +37,7 @@ const displayRows = [
 const Documents = () => {
   const { user } = useUserStore();
   const isEmployee = user?.role === "EMPLOYEE";
+  const isPM       = user?.role === "PROJECT_MANAGER";
 
   const {
     documents,
@@ -47,7 +48,9 @@ const Documents = () => {
     deleteDocument,
     downloadDocument,
     fetchDocuments,
-  } = useSharedDocument();
+  } = useSharedDocument({
+    pmId: isPM ? (user?._id || user?.id) : null,
+  });
 
   const { projectTypes, fetchProjectTypes } = useProjectType();
   const { departments,  fetchDepartments  } = useDepartment();
@@ -66,16 +69,19 @@ const Documents = () => {
 
   // ── Fetch supporting data for the upload modal ────────────────────────
   useEffect(() => {
-    if (isEmployee) return; // employees can't upload, skip the fetches
+    if (isEmployee) return;
 
     fetchProjectTypes();
     fetchDepartments({ limit: 100 });
 
-    getProjectManagersApi().then((res) => {
-      if (res?.status === 200 || res?.status === 201) {
-        setManagers(res.data.data.managers || []);
-      }
-    });
+    // PM doesn't need managers list (no manager assignment in their upload form)
+    if (!isPM) {
+      getProjectManagersApi().then((res) => {
+        if (res?.status === 200 || res?.status === 201) {
+          setManagers(res.data.data.managers || []);
+        }
+      });
+    }
 
     getProjectsApi({ limit: 200 }).then((res) => {
       if (res?.status === 200 || res?.status === 201) {
@@ -88,7 +94,7 @@ const Documents = () => {
         setEmployees(res.data.data.employees || []);
       }
     });
-  }, [isEmployee]);
+  }, [isEmployee, isPM]);
 
   // ── Map API shape → table row ─────────────────────────────────────────
   const tableData = documents.map((doc) => ({
@@ -102,14 +108,31 @@ const Documents = () => {
         })
       : "—",
     fileSize:   doc.fileSize || "—",
+    // keep uploadedBy id so PM can only delete their own docs
+    uploadedById: doc.uploadedBy?._id || doc.uploadedBy?.id || "",
   }));
 
-  const menuOptions = isEmployee
-    ? [{ value: "download", label: "Download" }]
-    : [
-        { value: "download", label: "Download"                  },
-        { value: "delete",   label: "Delete", color: "#FF0000"  },
-      ];
+  // ── Menu options per role ─────────────────────────────────────────────
+  const menuOptions = (row) => {
+    if (isEmployee) {
+      return [{ value: "download", label: "Download" }];
+    }
+    if (isPM) {
+      // PM can only delete docs they uploaded themselves
+      const canDelete = row.uploadedById?.toString() === (user?._id || user?.id)?.toString();
+      return canDelete
+        ? [
+            { value: "download", label: "Download" },
+            { value: "delete",   label: "Delete", color: "#FF0000" },
+          ]
+        : [{ value: "download", label: "Download" }];
+    }
+    // Admin
+    return [
+      { value: "download", label: "Download" },
+      { value: "delete",   label: "Delete", color: "#FF0000" },
+    ];
+  };
 
   const handleMenuAction = (action, row) => {
     if (action === "download") {
@@ -188,8 +211,9 @@ const Documents = () => {
         </Box>
       )}
 
-      <Filter
+     <Filter
         mode="documents"
+        isPM={isPM}          
         onFilterChange={(f) => {
           setFilters(f);
           fetchDocuments({ search: f.search || "", type: f.type || "" });
@@ -218,6 +242,7 @@ const Documents = () => {
           managerOptions={managers}
           employeeOptions={employees}
           departmentOptions={departments}
+          isPM={isPM}
         />
       )}
 

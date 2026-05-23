@@ -12,11 +12,16 @@ import UploadBox           from "../../../components/uploadBox";
 import UploadIcon          from "../../../assets/icons/upload.svg";
 
 // ── Option lists ──────────────────────────────────────────────────────────
-const DOC_TYPE_OPTIONS = [
+const ADMIN_DOC_TYPES = [
   { value: "employment_contract",   label: "Employment Contract"   },
   { value: "nda",                   label: "NDA"                   },
   { value: "project_documentation", label: "Project Documentation" },
   { value: "client_agreement",      label: "Client Agreement"      },
+  { value: "other",                 label: "Other"                 },
+];
+
+const PM_DOC_TYPES = [
+  { value: "project_documentation", label: "Project Documentation" },
   { value: "other",                 label: "Other"                 },
 ];
 
@@ -63,7 +68,9 @@ const UploadDocument = ({
   allProjects        = [],  // [{ _id, projectName, projectType: { _id } }]
   employeeOptions    = [],  // [{ _id, fullName, avatar }]
   departmentOptions  = [],  // not used in form currently, available if needed
+  isPM = false,
 }) => {
+  const DOC_TYPE_OPTIONS = isPM ? PM_DOC_TYPES : ADMIN_DOC_TYPES; 
   const [formData,   setFormData]   = useState(INITIAL_FORM);
   const [errors,     setErrors]     = useState({});
   const [dragActive, setDragActive] = useState(false);

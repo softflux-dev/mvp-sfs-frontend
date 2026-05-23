@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Box, MenuItem, Typography, Avatar, Checkbox, CircularProgress } from "@mui/material";
+import { Box, MenuItem, Typography, CircularProgress } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -12,25 +12,11 @@ import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
 
 const STATUS_OPTIONS = [
-  { value: "planning",    label: "Planning"    },
-  { value: "development", label: "Development" },
-  { value: "testing",     label: "Testing"     },
-  { value: "review",      label: "Review"      },
+  { value: "new",         label: "New"         },
+  { value: "in_progress", label: "In Progress" },
+  { value: "paused",      label: "Paused"      },
   { value: "completed",   label: "Completed"   },
 ];
-
-const getInitials = (name = "") =>
-  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-
-const multiMenuProps = {
-  PaperProps: {
-    sx: {
-      borderRadius: "14px", mt: 0.5,
-      boxShadow: "0px 8px 24px rgba(0,0,0,0.10)",
-      maxHeight: 300,
-    },
-  },
-};
 
 const INITIAL_FORM = {
   projectName:    "",
@@ -38,8 +24,6 @@ const INITIAL_FORM = {
   description:    "",
   projectManager: "",
   projectType:    "",
-  departmentIds:  [],
-  assigneeIds:    [],
   startDate:      null,
   endDate:        null,
   status:         "",
@@ -50,13 +34,11 @@ const AddProject = ({
   open,
   onClose,
   onSave,
-  editingProject    = null,
-  loading           = false,
-  apiError          = "",
+  editingProject     = null,
+  loading            = false,
+  apiError           = "",
   projectTypeOptions = [],
-  managerOptions     = [],   // [{ _id, fullName }]
-  departmentOptions  = [],   // [{ _id, name }]
-  employeeOptions    = [],   // [{ _id, fullName, avatar }]
+  managerOptions     = [],
 }) => {
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [errors,   setErrors]   = useState({});
@@ -70,8 +52,6 @@ const AddProject = ({
         description:    editingProject.description    || "",
         projectManager: editingProject.projectManagerId || "",
         projectType:    editingProject.projectTypeId    || "",
-        departmentIds:  editingProject.departmentIds    || [],
-        assigneeIds:    editingProject.assigneeIds      || [],
         startDate:      editingProject.startDate ? new Date(editingProject.startDate) : null,
         endDate:        editingProject.endDate   ? new Date(editingProject.endDate)   : null,
         status:         editingProject.status?.toLowerCase() || "",
@@ -134,7 +114,6 @@ const AddProject = ({
             display: "flex", flexDirection: "column", gap: 2.5,
           }}>
 
-            {/* API error */}
             {apiError && (
               <Box px={1.5} py={1}
                 sx={{ backgroundColor: "#FFF0F0", borderRadius: "8px", border: "1px solid #FFCCCC" }}
@@ -167,7 +146,7 @@ const AddProject = ({
                 fullWidth multiline rows={3} />
             </Box>
 
-            {/* Project Manager — real API data */}
+            {/* Project Manager */}
             <Box>
               <CustomInputLabel label="Project Manager *" />
               <CustomSelect value={formData.projectManager}
@@ -188,7 +167,7 @@ const AddProject = ({
               )}
             </Box>
 
-            {/* Project Type — real API data */}
+            {/* Project Type */}
             <Box>
               <CustomInputLabel label="Project Type" />
               <CustomSelect value={formData.projectType}
@@ -203,91 +182,6 @@ const AddProject = ({
                 {projectTypeOptions.map((t) => (
                   <MenuItem key={t._id} value={t._id}>{t.label}</MenuItem>
                 ))}
-              </CustomSelect>
-            </Box>
-
-            {/* Departments — real API data */}
-            <Box>
-              <CustomInputLabel label="Departments" />
-              <CustomSelect multiple value={formData.departmentIds}
-                onChange={(e) => setFormData((prev) => ({ ...prev, departmentIds: e.target.value }))}
-                fullWidth height="45px" inputBgColor="#fff" displayEmpty
-                renderValue={(selected) => {
-                  if (!selected?.length) return <Typography fontSize={13} color="text.secondary">Select departments</Typography>;
-                  const names = departmentOptions.filter((d) => selected.includes(d._id)).map((d) => d.name);
-                  return <Typography fontSize={13} noWrap>{names.length === 1 ? names[0] : `${names[0]} +${names.length - 1} more`}</Typography>;
-                }}
-                MenuProps={multiMenuProps}
-              >
-                {departmentOptions.map((dept) => {
-                  const isSelected = formData.departmentIds.includes(dept._id);
-                  return (
-                    <MenuItem key={dept._id} value={dept._id} disableRipple
-                      sx={{ px: 1.5, py: 1, gap: 1.5,
-                        backgroundColor: isSelected ? "#F9FAFB" : "transparent",
-                        "&:hover": { backgroundColor: "#F5F5F5" },
-                        "&.Mui-selected": { backgroundColor: "#F9FAFB" },
-                      }}
-                    >
-                      <Typography fontSize="13px" fontWeight={500} sx={{ flex: 1 }}>{dept.name}</Typography>
-                      <Checkbox checked={isSelected} disableRipple
-                        sx={{ p: 0, color: "#D1D5DB", "&.Mui-checked": { color: "#AA2493" }, "& .MuiSvgIcon-root": { fontSize: 20 } }}
-                      />
-                    </MenuItem>
-                  );
-                })}
-              </CustomSelect>
-            </Box>
-
-            {/* Assignees — real API data */}
-            <Box>
-              <CustomInputLabel label="Assign Team Members" />
-              <CustomSelect multiple value={formData.assigneeIds}
-                onChange={(e) => setFormData((prev) => ({ ...prev, assigneeIds: e.target.value }))}
-                fullWidth height="45px" inputBgColor="#fff" displayEmpty
-                renderValue={(selected) => {
-                  if (!selected?.length) return <Typography fontSize={13} color="text.secondary">Select team members</Typography>;
-                  const matched = employeeOptions.filter((e) => selected.includes(e._id));
-                  return (
-                    <Box display="flex" alignItems="center" gap={0.75} overflow="hidden">
-                      <Box display="flex" sx={{ "& > *:not(:first-of-type)": { ml: -0.75 } }}>
-                        {matched.slice(0, 4).map((m) => (
-                          <Avatar key={m._id} src={m.avatar}
-                            sx={{ width: 22, height: 22, fontSize: "9px", fontWeight: 700,
-                              background: "linear-gradient(135deg, #AA2493, #022179)",
-                              color: "#fff", border: "1.5px solid #fff" }}
-                          >{getInitials(m.fullName)}</Avatar>
-                        ))}
-                      </Box>
-                      <Typography fontSize={13} noWrap>
-                        {matched.length === 1 ? matched[0].fullName : `${matched[0].fullName} +${matched.length - 1} more`}
-                      </Typography>
-                    </Box>
-                  );
-                }}
-                MenuProps={multiMenuProps}
-              >
-                {employeeOptions.map((emp) => {
-                  const isSelected = formData.assigneeIds.includes(emp._id);
-                  return (
-                    <MenuItem key={emp._id} value={emp._id} disableRipple
-                      sx={{ px: 1.5, py: 1, gap: 1.5,
-                        backgroundColor: isSelected ? "#F9FAFB" : "transparent",
-                        "&:hover": { backgroundColor: "#F5F5F5" },
-                        "&.Mui-selected": { backgroundColor: "#F9FAFB" },
-                      }}
-                    >
-                      <Avatar src={emp.avatar}
-                        sx={{ width: 32, height: 32, fontSize: "11px", fontWeight: 600,
-                          background: "linear-gradient(135deg, #AA2493, #022179)", color: "#fff", flexShrink: 0 }}
-                      >{getInitials(emp.fullName)}</Avatar>
-                      <Typography fontSize="13px" fontWeight={500} sx={{ flex: 1 }}>{emp.fullName}</Typography>
-                      <Checkbox checked={isSelected} disableRipple
-                        sx={{ p: 0, color: "#D1D5DB", "&.Mui-checked": { color: "#AA2493" }, "& .MuiSvgIcon-root": { fontSize: 20 } }}
-                      />
-                    </MenuItem>
-                  );
-                })}
               </CustomSelect>
             </Box>
 
@@ -314,7 +208,7 @@ const AddProject = ({
             {/* Status + Budget */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box>
-                <CustomInputLabel label="Status *" />
+                <CustomInputLabel label="Project Status *" />
                 <CustomSelect value={formData.status} onChange={handleChange("status")}
                   fullWidth height="45px" inputBgColor="#fff" displayEmpty
                   renderValue={(v) =>

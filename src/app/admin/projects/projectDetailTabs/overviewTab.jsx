@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Box, Typography, Grid } from "@mui/material";
 import StatsCard from "../../../../components/cards/statsCard";
 
@@ -5,9 +6,23 @@ import taskIcon     from "../../../../assets/icons/tasks.svg";
 import completeIcon from "../../../../assets/icons/complete-active.svg";
 import progressIcon from "../../../../assets/icons/time-icon.svg";
 import overdueIcon  from "../../../../assets/icons/overdue-time.svg";
+import { getProjectStatsApi }  from "../../../../api/modules/project";
+
 
 
 const OverviewTab = ({ project = {} }) => {
+  const [stats, setStats] = useState({
+    total: 0, completed: 0, inProgress: 0, overdue: 0,
+  });
+
+  useEffect(() => {
+    if (!project.id && !project._id) return;
+    getProjectStatsApi(project.id || project._id).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setStats(res.data.data);
+      }
+    });
+  }, [project.id, project._id]);
 
     // ── Calculate days remaining from today to endDate ──────────────────────
   const daysRemaining = (() => {
@@ -29,11 +44,11 @@ const OverviewTab = ({ project = {} }) => {
     { label: "Budget",         value: project.budget    || "$150,000"       },
   ];
 
-   const statsData = [
-    { id: 1, title: "Total Tasks", value: "12", icon: taskIcon                        },
-    { id: 2, title: "Completed",   value: "3",  icon: completeIcon },
-    { id: 3, title: "In Progress", value: "2",  icon: progressIcon                    },
-    { id: 4, title: "Overdue",     value: "0",  icon: overdueIcon                     },
+    const statsData = [
+    { id: 1, title: "Total Tasks",  value: String(stats.total),      icon: taskIcon     },
+    { id: 2, title: "Completed",    value: String(stats.completed),   icon: completeIcon },
+    { id: 3, title: "In Progress",  value: String(stats.inProgress),  icon: progressIcon },
+    { id: 4, title: "Overdue",      value: String(stats.overdue),     icon: overdueIcon  },
   ];
 
   return (

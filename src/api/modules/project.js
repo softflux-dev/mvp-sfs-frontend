@@ -30,3 +30,9 @@ export const getPMProjectsApi = (params) =>
 
 export const getPMProjectByIdApi = (id) =>
   api(`${ENDPOINTS.pmGetProjects}/${id}`, null, "get");
+
+export const getProjectStatsApi = (id) =>
+  api(`${ENDPOINTS.getProjectById}/${id}/stats`, null, "get");
+
+export const addTeamMembersApi = (projectId, employeeIds) =>
+  api(`${ENDPOINTS.getProjects}/${projectId}/team/add`, { employeeIds }, "patch");

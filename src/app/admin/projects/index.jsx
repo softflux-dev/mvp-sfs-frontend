@@ -22,7 +22,7 @@ const tableHeader = [
   { id: "projectType",    label: "Project Type"    },
   { id: "startDate",      label: "Start Date"      },
   { id: "endDate",        label: "End Date"        },
-  { id: "status",         label: "Status"          },
+  { id: "status",         label: "Project Status"          },
   { id: "progress",       label: "Progress"        },
   { id: "actions",        label: "Actions"         },
 ];
@@ -57,10 +57,8 @@ const Projects = () => {
   } = useProject();
 
   const { projectTypes, fetchProjectTypes } = useProjectType();
-  const { departments,  fetchDepartments  } = useDepartment();
 
   const [managers,       setManagers]       = useState([]);
-  const [employees,      setEmployees]      = useState([]);
   const [openModal,      setOpenModal]      = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [typeModalOpen,  setTypeModalOpen]  = useState(false);
@@ -72,25 +70,13 @@ const Projects = () => {
 
   // ── Fetch supporting dropdown data ────────────────────────────────────────
   useEffect(() => {
-    fetchDepartments({ limit: 100 });
-    fetchProjectTypes();
-
-    // fetch project managers
-    getProjectManagersApi().then((res) => {
-      if (res?.status === 200 || res?.status === 201) {
-        setManagers(res.data.data.managers || []);
-      }
-    });
-
-    // fetch all employees for assignees dropdown
-    import("../../../api/modules/employee").then(({ getEmployeesApi }) => {
-      getEmployeesApi({ limit: 100 }).then((res) => {
-        if (res?.status === 200 || res?.status === 201) {
-          setEmployees(res.data.data.employees || []);
-        }
-      });
-    });
-  }, []);
+  fetchProjectTypes();
+  getProjectManagersApi().then((res) => {
+    if (res?.status === 200 || res?.status === 201) {
+      setManagers(res.data.data.managers || []);
+    }
+  });
+}, []);
 
   // ── Map API shape → table row shape ──────────────────────────────────────
   const tableData = projects.map((proj) => ({
@@ -157,36 +143,34 @@ const Projects = () => {
 
   const handleSave = async (formData) => {
     // ── Build clean payload for backend ──────────────────────────────────
-    const payload = {
+  const payload = {
       projectName:    formData.projectName,
       clientName:     formData.clientName,
       description:    formData.description    || "",
       projectManager: formData.projectManager || null,
       projectType:    formData.projectType    || null,
-      departments:    formData.departmentIds  || [],
-      assignees:      formData.assigneeIds    || [],
       startDate:      formData.startDate      || null,
       endDate:        formData.endDate        || null,
       status:         formData.status         || "planning",
       budget:         formData.budget         ? Number(formData.budget) : 0,
     };
 
-    let result;
-    if (editingProject) {
-      result = await updateProject(editingProject.id, payload);
-    } else {
-      result = await createProject(payload);
-    }
+  let result;
+  if (editingProject) {
+    result = await updateProject(editingProject.id, payload);
+  } else {
+    result = await createProject(payload);
+  }
 
     if (result.success) {
-      setSuccessMsg(result.message);
-      setShowSuccess(true);
-      setOpenModal(false);
-      setEditingProject(null);
-      setApiError("");
-    } else {
-      setApiError(result.message);
-    }
+    setSuccessMsg(result.message);
+    setShowSuccess(true);
+    setOpenModal(false);
+    setEditingProject(null);
+    setApiError("");
+  } else {
+    setApiError(result.message);
+  }
   };
 
   return (
@@ -260,18 +244,16 @@ const Projects = () => {
       />
 
       {/* Add / Edit Project */}
-      <AddProject
-        open={openModal}
-        onClose={() => { setOpenModal(false); setEditingProject(null); setApiError(""); }}
-        onSave={handleSave}
-        editingProject={editingProject}
-        loading={actionLoading}
-        apiError={apiError}
-        projectTypeOptions={projectTypes}
-        managerOptions={managers}
-        departmentOptions={departments}
-        employeeOptions={employees}
-      />
+    <AddProject
+      open={openModal}
+      onClose={() => { setOpenModal(false); setEditingProject(null); setApiError(""); }}
+      onSave={handleSave}
+      editingProject={editingProject}
+      loading={actionLoading}
+      apiError={apiError}
+      projectTypeOptions={projectTypes}
+      managerOptions={managers}
+    />
 
       <ConfirmationDialog ref={confirmDialogRef} />
 

@@ -4,15 +4,15 @@ import {
   createBugReportApi,
   updateBugReportApi,
   deleteBugReportApi,
-  bugScreenshotUrl,
 } from "../../api/modules/task";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 
 export const useBugReports = (taskId) => {
-  const [bugs,         setBugs]         = useState([]);
-  const [loading,      setLoading]      = useState(false);
-  const [actionLoading,setActionLoading]= useState(false);
-  const [error,        setError]        = useState("");
-  const [filters,      setFilters]      = useState({ search: "", severity: "", status: "" });
+  const [bugs,          setBugs]          = useState([]);
+  const [loading,       setLoading]       = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error,         setError]         = useState("");
+  const [filters,       setFilters]       = useState({ search: "", severity: "", status: "" });
 
   const fetchBugs = useCallback(async (customParams = {}) => {
     if (!taskId) return;
@@ -25,66 +25,117 @@ export const useBugReports = (taskId) => {
         status:   customParams.status   ?? filters.status,
       };
       Object.keys(params).forEach((k) => { if (!params[k]) delete params[k]; });
+
       const res = await getBugReportsApi(taskId, params);
       if (res?.status === 200 || res?.status === 201) {
-        // Normalise screenshot paths to full URLs
-        const raw = res.data.data.bugs || [];
-        const normalised = raw.map((b) => ({
-          ...b,
-          screenshots: (b.screenshots || []).map((s, i) => ({
-            ...s,
-            url: bugScreenshotUrl(taskId, b._id, i),
-          })),
-        }));
-        setBugs(normalised);
+        // screenshots now have direct Cloudinary URLs stored in DB
+        setBugs(res.data.data.bugs || []);
         return { success: true };
       }
       const msg = res?.data?.message || "Failed to fetch bugs.";
-      setError(msg); return { success: false, message: msg };
-    } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
-    finally   { setLoading(false); }
+      setError(msg);
+      return { success: false, message: msg };
+    } catch {
+      setError("Something went wrong.");
+      return { success: false };
+    } finally {
+      setLoading(false);
+    }
   }, [taskId, filters]);
 
   const createBug = useCallback(async (formData) => {
     if (!taskId) return { success: false };
     setActionLoading(true);
     try {
-      // Build multipart form
-      const fd = new FormData();
       const { screenshots, ...fields } = formData;
-      Object.entries(fields).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, v); });
-      (screenshots || []).forEach((s) => { if (s.file) fd.append("screenshots", s.file); });
 
-      const res = await createBugReportApi(taskId, fd);
+      // ── Upload new screenshots to Cloudinary first ────────────────────
+      const uploadedScreenshots = await Promise.all(
+        (screenshots || [])
+          .filter((s) => s.file) // only new files
+          .map(async (s) => {
+            const result = await uploadToCloudinary(s.file, "bugs");
+            return {
+              url:      result.url,
+              publicId: result.publicId,
+              fileName: result.fileName,
+              fileSize: result.fileSize,
+            };
+          })
+      );
+
+      // ── Send JSON to backend (no multipart needed) ────────────────────
+      const payload = {
+        ...fields,
+        screenshots: uploadedScreenshots,
+      };
+
+      const res = await createBugReportApi(taskId, payload);
       if (res?.status === 200 || res?.status === 201) {
         await fetchBugs();
         return { success: true, message: "Bug report created successfully." };
       }
       const msg = res?.data?.message || "Failed to create bug report.";
-      setError(msg); return { success: false, message: msg };
-    } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
-    finally   { setActionLoading(false); }
+      setError(msg);
+      return { success: false, message: msg };
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+      return { success: false };
+    } finally {
+      setActionLoading(false);
+    }
   }, [taskId, fetchBugs]);
 
   const updateBug = useCallback(async (bugId, formData) => {
     if (!taskId) return { success: false };
     setActionLoading(true);
     try {
-      const fd = new FormData();
       const { screenshots, ...fields } = formData;
-      Object.entries(fields).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, v); });
-      // Only upload new screenshots (ones with a .file property)
-      (screenshots || []).filter((s) => s.file).forEach((s) => fd.append("screenshots", s.file));
 
-      const res = await updateBugReportApi(taskId, bugId, fd);
+      // ── Upload only NEW screenshots (ones with .file) ─────────────────
+      const newUploads = await Promise.all(
+        (screenshots || [])
+          .filter((s) => s.file)
+          .map(async (s) => {
+            const result = await uploadToCloudinary(s.file, "bugs");
+            return {
+              url:      result.url,
+              publicId: result.publicId,
+              fileName: result.fileName,
+              fileSize: result.fileSize,
+            };
+          })
+      );
+
+      // ── Keep existing screenshots (ones without .file, already have url) ─
+      const existingScreenshots = (screenshots || [])
+        .filter((s) => !s.file && s.url)
+        .map((s) => ({
+          url:      s.url,
+          publicId: s.publicId || "",
+          fileName: s.fileName || "",
+          fileSize: s.fileSize || "",
+        }));
+
+      const payload = {
+        ...fields,
+        screenshots: [...existingScreenshots, ...newUploads],
+      };
+
+      const res = await updateBugReportApi(taskId, bugId, payload);
       if (res?.status === 200 || res?.status === 201) {
         await fetchBugs();
         return { success: true, message: "Bug report updated successfully." };
       }
       const msg = res?.data?.message || "Failed to update bug report.";
-      setError(msg); return { success: false, message: msg };
-    } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
-    finally   { setActionLoading(false); }
+      setError(msg);
+      return { success: false, message: msg };
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+      return { success: false };
+    } finally {
+      setActionLoading(false);
+    }
   }, [taskId, fetchBugs]);
 
   const deleteBug = useCallback(async (bugId) => {
@@ -94,12 +145,17 @@ export const useBugReports = (taskId) => {
       const res = await deleteBugReportApi(taskId, bugId);
       if (res?.status === 200 || res?.status === 201) {
         setBugs((prev) => prev.filter((b) => b._id !== bugId));
-        return { success: true, message: "Bug report deleted successfully." };
+        return { success: true };
       }
       const msg = res?.data?.message || "Failed to delete bug report.";
-      setError(msg); return { success: false, message: msg };
-    } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
-    finally   { setActionLoading(false); }
+      setError(msg);
+      return { success: false, message: msg };
+    } catch {
+      setError("Something went wrong.");
+      return { success: false };
+    } finally {
+      setActionLoading(false);
+    }
   }, [taskId]);
 
   const handleFilterChange = useCallback((values = {}) => {

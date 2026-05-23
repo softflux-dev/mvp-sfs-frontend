@@ -6,7 +6,9 @@ import {
   downloadSharedDocumentApi,
 } from "../../api/modules/sharedDocument";
 
-export const useSharedDocument = () => {
+export const useSharedDocument = (options = {}) => {
+  const { pmId = null } = options; // pass PM's user id when role is PM
+
   const [documents,     setDocuments]     = useState([]);
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -16,7 +18,12 @@ export const useSharedDocument = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await getSharedDocumentsApi(params);
+      // If PM, always filter by their id so they only see their own docs
+      const finalParams = pmId
+        ? { ...params, assigneeId: pmId }
+        : params;
+
+      const res = await getSharedDocumentsApi(finalParams);
       if (res?.status === 200 || res?.status === 201) {
         setDocuments(res.data.data.documents || []);
         return { success: true };
@@ -30,7 +37,7 @@ export const useSharedDocument = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pmId]);
 
   const uploadDocument = useCallback(async (formData) => {
     setActionLoading(true);
@@ -75,30 +82,25 @@ export const useSharedDocument = () => {
   const downloadDocument = useCallback(async (id) => {
     try {
       const res = await downloadSharedDocumentApi(id);
-
-      // pull filename from Content-Disposition header if available
       const disposition = res.headers?.["content-disposition"] || "";
       const nameMatch   = disposition.match(/filename="?([^";\n]+)"?/);
       const fileName    = nameMatch?.[1]?.trim() || "document";
-
       const blob = new Blob([res.data], {
         type: res.headers?.["content-type"] || "application/octet-stream",
       });
-
       const url = window.URL.createObjectURL(blob);
       const a   = document.createElement("a");
-      a.href     = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); a.remove();
       window.URL.revokeObjectURL(url);
     } catch {
       setError("Failed to download document.");
     }
   }, []);
 
-  
+  useEffect(() => {
+    fetchDocuments();
+  }, [pmId]); // re-fetch if pmId changes
 
   return {
     documents,

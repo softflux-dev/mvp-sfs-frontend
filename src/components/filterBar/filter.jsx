@@ -17,6 +17,7 @@ const Filter = ({
   projectTypes = [],
   employees   = [],
   projects    = [],
+  isPM        = false,
 }) => {
   const [values, setValues] = useState({});
 
@@ -49,10 +50,9 @@ const Filter = ({
       grid: { xs: 12, md: 2 },
       options: [
         { v: "",            l: "All Status"  },
-        { v: "planning",    l: "Planning"    },
-        { v: "development", l: "Development" },
-        { v: "testing",     l: "Testing"     },
-        { v: "review",      l: "Review"      },
+        { v: "new",         l: "New"         },
+        { v: "in_progress", l: "In Progress" },
+        { v: "paused",      l: "Paused"      },
         { v: "completed",   l: "Completed"   },
       ],
     },
@@ -288,7 +288,7 @@ employees: ({ departments = [], roles = [] }) => [
       grid: { xs: 12, md: 3 },
     },
   ],
-  documents: [
+  documents: ({ isPM = false } = {}) => [
   {
     type: "search",
     key: "search",
@@ -300,14 +300,20 @@ employees: ({ departments = [], roles = [] }) => [
     key: "type",
     placeholder: "All",
     grid: { xs: 12, md: 3 },
-    options: [
-      { v: "",                      l: "All"                    },
-      { v: "employment_contract",   l: "Employment Contract"    },
-      { v: "nda",                   l: "NDA"                    },
-      { v: "project_documentation", l: "Project Documentation"  },
-      { v: "client_agreement",      l: "Client Agreement"       },
-      { v: "other",                 l: "Other"                  },
-    ],
+    options: isPM
+      ? [
+          { v: "",                      l: "All"                   },
+          { v: "project_documentation", l: "Project Documentation" },
+          { v: "other",                 l: "Other"                 },
+        ]
+      : [
+          { v: "",                      l: "All"                    },
+          { v: "employment_contract",   l: "Employment Contract"    },
+          { v: "nda",                   l: "NDA"                    },
+          { v: "project_documentation", l: "Project Documentation"  },
+          { v: "client_agreement",      l: "Client Agreement"       },
+          { v: "other",                 l: "Other"                  },
+        ],
   },
 ],
 
@@ -736,7 +742,7 @@ salary_history: [
 
   const fields =
     typeof configs[mode] === "function"
-      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects })
+      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM })
       : configs[mode] || configs.full;
 
   return (
