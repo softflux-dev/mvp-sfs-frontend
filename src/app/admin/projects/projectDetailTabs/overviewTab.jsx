@@ -10,7 +10,9 @@ import { getProjectStatsApi }  from "../../../../api/modules/project";
 
 
 
-const OverviewTab = ({ project = {} }) => {
+const OverviewTab = ({ project = {}, role = "admin" }) => {
+    const isPM = role === "pm";
+
   const [stats, setStats] = useState({
     total: 0, completed: 0, inProgress: 0, overdue: 0,
   });
@@ -40,9 +42,9 @@ const OverviewTab = ({ project = {} }) => {
   const infoFields = [
     { label: "Start Date",     value: project.startDate || "Jan 15, 2026"  },
     { label: "End Date",       value: project.endDate   || "Jun 30, 2026"  },
-    { label: "Days Remaining", value: daysRemaining            },
-    { label: "Budget",         value: project.budget    || "$150,000"       },
-  ];
+    { label: "Days Remaining", value: daysRemaining                        },
+    !isPM && { label: "Budget", value: project.budget ? `$${Number(project.budget).toLocaleString()}` : "$150,000" },
+  ].filter(Boolean);
 
     const statsData = [
     { id: 1, title: "Total Tasks",  value: String(stats.total),      icon: taskIcon     },

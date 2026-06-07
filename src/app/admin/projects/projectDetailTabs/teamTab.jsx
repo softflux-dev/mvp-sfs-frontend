@@ -32,7 +32,7 @@ const displayRows = [
   "actions",
 ];
 
-const TeamTab = ({ project = {} }) => {
+const TeamTab = ({ project = {}, onTeamChange }) => {
   const [members,       setMembers]       = useState([]);
   const [loading,       setLoading]       = useState(false);
   const [error,         setError]         = useState("");
@@ -41,7 +41,6 @@ const TeamTab = ({ project = {} }) => {
   const [allEmployees,     setAllEmployees]      = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
-  // ── Add Member dialog ─────────────────────────────────────────────────────
   const [addOpen,    setAddOpen]    = useState(false);
   const [addLoading, setAddLoading] = useState(false);
   const [addError,   setAddError]   = useState("");
@@ -49,7 +48,6 @@ const TeamTab = ({ project = {} }) => {
 
   const confirmDialogRef = useRef();
 
-  // ── Fetch team ────────────────────────────────────────────────────────────
   const fetchTeam = async () => {
     if (!project.id) return;
     setLoading(true);
@@ -57,7 +55,9 @@ const TeamTab = ({ project = {} }) => {
     try {
       const res = await getProjectTeamApi(project.id);
       if (res?.status === 200 || res?.status === 201) {
-        setMembers(res.data.data.team || []);
+        const team = res.data.data.team || [];
+        setMembers(team);
+        onTeamChange?.(team);             // ← notify parent
       } else {
         setError(res?.data?.message || "Failed to fetch team.");
       }
@@ -68,7 +68,6 @@ const TeamTab = ({ project = {} }) => {
     }
   };
 
-  // ── Fetch all employees for filter bar ────────────────────────────────────
   useEffect(() => {
     getEmployeesApi({ limit: 1000 }).then((res) => {
       if (res?.status === 200 || res?.status === 201) {
@@ -79,14 +78,13 @@ const TeamTab = ({ project = {} }) => {
 
   useEffect(() => { fetchTeam(); }, [project.id]);
 
-  // ── Save handler passed to AddTeamMember ──────────────────────────────────
   const handleAddSave = async (selectedIds) => {
     setAddLoading(true);
     setAddError("");
     try {
       const res = await addTeamMembersApi(project.id, selectedIds);
       if (res?.status === 200 || res?.status === 201) {
-        await fetchTeam();
+        await fetchTeam();               // fetchTeam already calls onTeamChange
         setAddSuccess(true);
         setAddOpen(false);
       } else {
@@ -99,7 +97,6 @@ const TeamTab = ({ project = {} }) => {
     }
   };
 
-  // ── Filter locally ────────────────────────────────────────────────────────
   const filtered = members.filter((m) => {
     const matchesSearch = search.trim()
       ? m.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -118,7 +115,6 @@ const TeamTab = ({ project = {} }) => {
     completed: m.completed,
   }));
 
-  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = (row) => {
     confirmDialogRef.current?.open({
       title:       "Remove Team Member?",
@@ -129,7 +125,9 @@ const TeamTab = ({ project = {} }) => {
         try {
           const res = await removeTeamMemberApi(project.id, row.id);
           if (res?.status === 200 || res?.status === 201) {
-            setMembers((prev) => prev.filter((m) => m._id !== row.id));
+            const updated = members.filter((m) => m._id !== row.id);
+            setMembers(updated);
+            onTeamChange?.(updated);    // ← notify parent on removal too
             setDeleteSuccess(true);
           } else {
             setError(res?.data?.message || "Failed to remove member.");
@@ -143,13 +141,11 @@ const TeamTab = ({ project = {} }) => {
 
   return (
     <Box sx={{ mt: 2 }}>
-
-      {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <Box display="flex" alignItems="center" gap={2} mb={2}>
         <Box flex={1}>
           <Filter
             mode="team"
-            employees={allEmployees}
+            employees={members} 
             onFilterChange={(f) => {
               setSearch(f.search || "");
               setSelectedEmployee(f.employee || "");
@@ -182,7 +178,6 @@ const TeamTab = ({ project = {} }) => {
         />
       </Box>
 
-      {/* ── Add Team Member dialog ────────────────────────────────────────── */}
       <AddTeamMember
         open={addOpen}
         onClose={() => { setAddOpen(false); setAddError(""); }}
@@ -197,16 +192,13 @@ const TeamTab = ({ project = {} }) => {
         open={deleteSuccess}
         onClose={() => setDeleteSuccess(false)}
         message="Team member removed successfully."
-        autoClose
-        autoCloseDelay={2000}
+        autoClose autoCloseDelay={2000}
       />
-
       <SuccessPopup
         open={addSuccess}
         onClose={() => setAddSuccess(false)}
         message="Team members added successfully."
-        autoClose
-        autoCloseDelay={2000}
+        autoClose autoCloseDelay={2000}
       />
     </Box>
   );

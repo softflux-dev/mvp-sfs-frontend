@@ -18,6 +18,7 @@ const Filter = ({
   employees   = [],
   projects    = [],
   isPM        = false,
+  stages = [],
 }) => {
   const [values, setValues] = useState({});
 
@@ -86,7 +87,7 @@ const Filter = ({
 
     
     // ── Tasks ─────────────────────────────────────────────────────────────
-  tasks: ({ employees = [] }) => [
+ tasks: ({ employees = [], stages = [] }) => [
   {
     type: "search",
     key: "search",
@@ -99,11 +100,8 @@ const Filter = ({
     placeholder: "All Task Status",
     grid: { xs: 12, md: 3 },
     options: [
-      { v: "",             l: "All Task Status" },
-      { v: "new",          l: "New"             },
-      { v: "in_progress",  l: "In Progress"     },
-      { v: "under_review", l: "Under Review"    },
-      { v: "completed",    l: "Completed"        },
+      { v: "", l: "All Task Status" },
+      ...stages.map((s) => ({ v: s.id, l: s.label })),
     ],
   },
   {
@@ -113,7 +111,7 @@ const Filter = ({
     grid: { xs: 12, md: 3 },
     options: [
       { v: "", l: "All Assignees" },
-      ...employees.map((e) => ({ v: e._id, l: e.fullName })),
+      ...employees.map((e) => ({ v: e._id, l: e.fullName || e.name })),
     ],
   },
   {
@@ -136,17 +134,17 @@ team: ({ employees = [] }) => [
   {
     type: "search",
     key: "search",
-    placeholder: "Search Projects...",
+    placeholder: "Search team members...",
     grid: { xs: 12, md: 8 },
   },
   {
     type: "select",
     key: "employee",
-    placeholder: "Select Employee",
+    placeholder: "All Members",
     grid: { xs: 12, md: 4 },
     options: [
-      { v: "", l: "All Employee" },
-      ...employees.map((e) => ({ v: e._id, l: e.fullName })),  
+      { v: "", l: "All Members" },
+      ...employees.map((e) => ({ v: e._id, l: e.fullName || e.name })),
     ],
   },
 ],
@@ -583,15 +581,15 @@ pm_projects: [
     grid: { xs: 12, md: 3 },
     options: [
       { v: "",           l: "All Status"         },
-      { v: "planning",   l: "Planning"    },
+      { v: "new",   l: "New"    },
       { v: "in_progress",l: "In Progress" },
-      { v: "on_hold",    l: "On Hold"     },
+      { v: "paused",    l: "Paused"     },
       { v: "completed",  l: "Completed"   },
     ],
   },
 ],
 
-task_management: ({ projects = [], employees = [] }) => [
+task_management: ({ projects = [], employees = [], stages = [] }) => [
   {
     type: "search",
     key: "search",
@@ -601,10 +599,9 @@ task_management: ({ projects = [], employees = [] }) => [
   {
     type: "select",
     key: "project",
-    placeholder: "All Projects",
+    placeholder: "Select Project",
     grid: { xs: 12, md: 3 },
     options: [
-      { v: "", l: "All Projects" },
       ...projects.map((p) => ({ v: p._id, l: p.projectName })),
     ],
   },
@@ -615,7 +612,8 @@ task_management: ({ projects = [], employees = [] }) => [
     grid: { xs: 12, md: 2 },
     options: [
       { v: "", l: "All Assignees" },
-      ...employees.map((e) => ({ v: e._id, l: e.fullName })),    
+     ...employees.map((e) => ({ v: e._id, l: e.fullName || e.name || "" })),
+
     ],
   },
   {
@@ -633,17 +631,15 @@ task_management: ({ projects = [], employees = [] }) => [
   {
     type: "select",
     key: "status",
-    placeholder: "All Status",
+    placeholder: "All Task Status",
     grid: { xs: 12, md: 2 },
     options: [
-      { v: "",            l: "All"         },
-      { v: "new",    l: "New"    },
-      { v: "in_progress", l: "In Progress" },
-      { v: "on_hold",     l: "On Hold"     },
-      { v: "completed",   l: "Completed"   },
+      { v: "", l: "All Task Status" },
+      ...stages.map((s) => ({ v: s.id, l: s.label })),
     ],
   },
 ],
+
 team_performance: [
   {
     type: "select",
@@ -666,26 +662,33 @@ team_performance: [
   },
 ],
 
-emp_my_tasks: ({ projects = [] }) => [    
+emp_my_tasks: ({ projects = [], stages = [] }) => [    
   {
     type: "search",
     key: "search",
     placeholder: "Search tasks...",
     grid: { xs: 12, md: 3 },
   },
+   {
+    type: "select",
+    key: "project",
+    placeholder: "Select Project",
+    grid: { xs: 12, md: 3 },
+    options: [
+     
+      ...projects.map((p) => ({ v: p._id, l: p.projectName })),  // ← real API data
+    ],
+  },
  {
-  type: "select",
-  key: "status",
-  placeholder: "All Status",
-  grid: { xs: 12, md: 3 },
-  options: [
-    { v: "",             l: "All Status"   },
-    { v: "new",          l: "New"          },
-    { v: "in_progress",  l: "In Progress"  },
-    { v: "under_review", l: "Under Review" },
-    { v: "completed",    l: "Completed"    },
-  ],
-},
+    type: "select",
+    key: "status",
+    placeholder: "All Task Status",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "", l: "All Task Status" },
+      ...stages.map((s) => ({ v: s.id, l: s.label })),
+    ],
+  },
   {
     type: "select",
     key: "priority",
@@ -698,16 +701,7 @@ emp_my_tasks: ({ projects = [] }) => [
       { v: "high",   l: "High"         },
     ],
   },
-  {
-    type: "select",
-    key: "project",
-    placeholder: "All Projects",
-    grid: { xs: 12, md: 3 },
-    options: [
-      { v: "", l: "All Projects" },
-      ...projects.map((p) => ({ v: p._id, l: p.projectName })),  // ← real API data
-    ],
-  },
+ 
 ],
 salary_history: [
   {
@@ -742,7 +736,7 @@ salary_history: [
 
   const fields =
     typeof configs[mode] === "function"
-      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM })
+      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM, stages })
       : configs[mode] || configs.full;
 
   return (

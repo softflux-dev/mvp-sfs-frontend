@@ -31,6 +31,9 @@ export const deleteTaskAttachmentApi = (projectId, taskId, attachmentId) =>
 export const downloadTaskAttachmentApi = (projectId, taskId, attachmentId) =>
   `${import.meta.env.VITE_API_BASE_URL || ""}/api/${ENDPOINTS.downloadTaskAttachment}/${projectId}/tasks/${taskId}/attachments/${attachmentId}/download`;
 
+export const uploadTaskAttachmentUrlApi = (projectId, taskId, payload) =>
+    api(`${ENDPOINTS.uploadTaskAttachment}/${projectId}/tasks/${taskId}/attachments/url`, payload, "post");
+
 // ── Shared: task detail (all roles) ──────────────────────────────────────────
 export const getTaskDetailApi = (taskId) =>
   api(`${ENDPOINTS.getTaskDetail}/${taskId}/detail`, null, "get");

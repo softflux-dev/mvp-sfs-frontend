@@ -13,7 +13,6 @@ const EMP_HEADERS = [
   { id: "priority",    label: "Priority"     },
   { id: "startDate",   label: "Start Date"   },
   { id: "endDate",     label: "End Date"     },
-  { id: "status",      label: "Status"       },
   { id: "taskStatus",  label: "Task Status"  },
   { id: "actions",     label: "Actions"      },
 ];
@@ -21,7 +20,7 @@ const EMP_HEADERS = [
 const EMP_DISPLAY = [
   "task", "projectName", "module", "task_assignees",
   "task_priority", "task_start_date", "task_end_date",
-  "project_status", "task_status", "perf_view",
+  "project_status", "perf_view",
 ];
 
 // PM/Admin columns (view + edit + delete)
@@ -33,7 +32,6 @@ const PM_HEADERS = [
   { id: "priority",    label: "Priority"     },
   { id: "startDate",   label: "Start Date"   },
   { id: "endDate",     label: "End Date"     },
-  { id: "status",      label: "Pipeline"     },
   { id: "taskStatus",  label: "Task Status"  },
   { id: "actions",     label: "Actions"      },
 ];
@@ -41,7 +39,7 @@ const PM_HEADERS = [
 const PM_DISPLAY = [
   "task", "projectName", "module", "task_assignees",
   "task_priority", "task_start_date", "task_end_date",
-  "project_status", "task_status", "actions_menu",
+  "project_status", "actions_menu",
 ];
 
 const PM_MENU = [
@@ -64,6 +62,7 @@ const TaskListView = ({
   role         = "employee",
   tasks        = [],
   loading      = false,
+   stages       = [],
   onViewClick,
   onMenuAction,
 }) => {
@@ -74,6 +73,7 @@ const TaskListView = ({
       <PaginatedTable
         tableHeader={isEmployee ? EMP_HEADERS : PM_HEADERS}
         tableData={tasks}
+        stages={stages}
         displayRows={isEmployee ? EMP_DISPLAY : PM_DISPLAY}
         isLoading={loading}
         // employee props

@@ -1,154 +1,117 @@
-// components/appBar/notifications.jsx
+// components/appBar/notifications.jsx  — FULL REPLACEMENT
+// UI is identical to the original. Only the data source is replaced:
+// mock array → useNotifications hook with 30s polling.
+
 import { useState } from "react";
 import {
   IconButton,
   Box,
   Typography,
   Popover,
-  Tabs,
-  Tab,
 } from "@mui/material";
 import { X } from "lucide-react";
-import notificationIcon from "../../assets/icons/notification-icon.svg";
-import documentIcon from "../../assets/icons/document-blue-icon.svg";
-import clockIcon from "../../assets/icons/time-icon-orange.svg";
-import calendarIcon from "../../assets/icons/calendar-icon-green.svg";
-import mobileIcon from "../../assets/icons/report-upload-icon-purple.svg";
-import messageIcon from "../../assets/icons/chat-icon-blue.svg";
+import { useNotifications } from "../../hooks/notification";
 
-const NOTIFICATIONS = [
-  {
-    id: 1,
-    icon: { src: documentIcon, alt: "Document" },
-    iconBg: "#EEF2FF",
-    message: "You have been assigned: API Integration Module",
-    time: "Yesterday",
-    unread: true,
-  },
-  {
-    id: 2,
-    icon: { src: clockIcon, alt: "Clock" },
-    iconBg: "#FFF7ED",
-    message: "Dashboard Redesign is due in 24 hours",
-    time: "Yesterday",
-    unread: true,
-  },
-  {
-    id: 3,
-    icon: { src: calendarIcon, alt: "Calendar" },
-    iconBg: "#ECFDF5",
-    message: "Elena Rodriguez submitted a leave request",
-    time: "2 Days Ago",
-    unread: false,
-  },
-  {
-    id: 4,
-    icon: { src: calendarIcon, alt: "Check" },
-    iconBg: "#ECFDF5",
-    message: "Your leave request has been approved",
-    time: "2 Days Ago",
-    unread: false,
-  },
-  {
-    id: 5,
-    icon: {src:documentIcon, alt: "Document"},
-    iconBg: "#EEF2FF",
-    message: "Marcus Johnson marked Code Review as Completed",
-    time: "2 Days Ago",
-    unread: false,
-  },
-  {
-    id: 6,
-    icon: { src: mobileIcon, alt: "Mobile" },
-    iconBg: "#F5F3FF",
-    message: "Mobile App v2 has been updated by James Wilson",
-    time: "2 Days Ago",
-    unread: false,
-  },
-  {
-    id: 7,
-    icon: { src: messageIcon, alt: "Message" },
-    iconBg: "#EFF6FF",
-    message: "Sarah Chen sent you a message",
-    time: "2 Days Ago",
-    unread: false,
-  },
-];
+import notificationIcon from "../../assets/icons/notification-icon.svg";
+import documentIcon     from "../../assets/icons/document-blue-icon.svg";
+import clockIcon        from "../../assets/icons/time-icon-orange.svg";
+import calendarIcon     from "../../assets/icons/calendar-icon-green.svg";
+import mobileIcon       from "../../assets/icons/report-upload-icon-purple.svg";
+import messageIcon      from "../../assets/icons/chat-icon-blue.svg";
+
+// ── Map notification type → icon ─────────────────────────────────────────────
+const TYPE_ICON = {
+  newTaskAssignment:        { src: documentIcon,  alt: "Document", bg: "#EEF2FF" },
+  projectDeadlineReminder:  { src: clockIcon,     alt: "Clock",    bg: "#FFF7ED" },
+  projectDeadlineChanged:   { src: clockIcon,     alt: "Clock",    bg: "#FFF7ED" },
+  leaveRequestSubmitted:    { src: calendarIcon,  alt: "Calendar", bg: "#ECFDF5" },
+  leaveApprovedRejected:    { src: calendarIcon,  alt: "Calendar", bg: "#ECFDF5" },
+  taskStatusUpdate:         { src: documentIcon,  alt: "Document", bg: "#EEF2FF" },
+  projectTeamUpdated:       { src: mobileIcon,    alt: "Team",     bg: "#F5F3FF" },
+  projectModuleUpdated:     { src: mobileIcon,    alt: "Module",   bg: "#F5F3FF" },
+  newMessageReceived:       { src: messageIcon,   alt: "Message",  bg: "#EFF6FF" },
+  bugStatusUpdated:         { src: documentIcon,  alt: "Bug",      bg: "#FFF7ED" },
+};
+
+const DEFAULT_ICON = { src: documentIcon, alt: "Notification", bg: "#EEF2FF" };
+
+// ── Relative time helper ─────────────────────────────────────────────────────
+function relativeTime(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1)   return "Just now";
+  if (mins < 60)  return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs  < 24)  return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7)   return `${days} days ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
 
 const Notifications = () => {
-  const [anchorEl,     setAnchorEl]     = useState(null);
-  const [tab,          setTab]          = useState(0);
-  const [notifications, setNotifications] = useState(NOTIFICATIONS);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [tab,      setTab]      = useState(0);
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const {
+    notifications,
+    unreadCount,
+    markRead,
+    markAllRead,
+  } = useNotifications();
 
   const displayed = tab === 0
     ? notifications
-    : notifications.filter((n) => n.unread);
+    : notifications.filter((n) => !n.isRead);
 
-  const markAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  const handleOpen  = (e) => { setAnchorEl(e.currentTarget); setTab(0); };
+  const handleClose = ()  => setAnchorEl(null);
+
+  const handleMarkAll = async () => {
+    await markAllRead();
+  };
+
+  const handleClickNotif = async (n) => {
+    if (!n.isRead) await markRead(n._id);
   };
 
   return (
     <>
       {/* Bell button */}
-        
-    <IconButton
-        onClick={(e) => setAnchorEl(e.currentTarget)}
-        sx={{ p: 0, position: "relative" }}
-        >
-        {/* Circle background */}
+      <IconButton onClick={handleOpen} sx={{ p: 0, position: "relative" }}>
         <Box
-            sx={{
-            width:           40,
-            height:          40,
-            borderRadius:    "50%",
+          sx={{
+            width: 40, height: 40, borderRadius: "50%",
             backgroundColor: "#F5F5F5",
-            display:         "flex",
-            alignItems:      "center",
-            justifyContent:  "center",
-            "&:hover":       { backgroundColor: "#EBEBEB" },
-            }}
+            display: "flex", alignItems: "center", justifyContent: "center",
+            "&:hover": { backgroundColor: "#EBEBEB" },
+          }}
         >
-            <img
-            src={notificationIcon}
-            alt="Notifications"
-            style={{ width: 22, height: 22 }}
-            />
+          <img src={notificationIcon} alt="Notifications" style={{ width: 22, height: 22 }} />
         </Box>
 
-        {/* Unread dot badge */}
         {unreadCount > 0 && (
-            <Box
+          <Box
             sx={{
-                position:        "absolute",
-                top:             2,
-                right:           2,
-                width:           10,
-                height:          10,
-                borderRadius:    "50%",
-                backgroundColor: "#AA2493",
-                border:          "2px solid #fff",
+              position: "absolute", top: 2, right: 2,
+              width: 10, height: 10, borderRadius: "50%",
+              backgroundColor: "#AA2493", border: "2px solid #fff",
             }}
-            />
+          />
         )}
-        </IconButton>
+      </IconButton>
 
       {/* Popover panel */}
       <Popover
         open={Boolean(anchorEl)}
         anchorEl={anchorEl}
-        onClose={() => setAnchorEl(null)}
+        onClose={handleClose}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         PaperProps={{
           sx: {
-            borderRadius: "20px",
-            width:        380,
-            mt:           1,
-            boxShadow:    "0 8px 32px rgba(0,0,0,0.12)",
-            overflow:     "hidden",
+            borderRadius: "20px", width: 380, mt: 1,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)", overflow: "hidden",
           },
         }}
       >
@@ -161,27 +124,22 @@ const Notifications = () => {
             </Typography>
             <Box display="flex" alignItems="center" gap={1}>
               <Typography
-                fontSize="13px"
-                fontWeight={500}
-                onClick={markAllRead}
+                fontSize="13px" fontWeight={500}
+                onClick={handleMarkAll}
                 sx={{
-                  background:            "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-                  WebkitBackgroundClip:  "text",
-                  WebkitTextFillColor:   "transparent",
-                  cursor:                "pointer",
+                  background:           "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor:  "transparent",
+                  cursor:               "pointer",
                 }}
               >
                 Mark All as Read
               </Typography>
               <IconButton
-                size="small"
-                onClick={() => setAnchorEl(null)}
+                size="small" onClick={handleClose}
                 sx={{
                   background:   "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-                  color:        "#fff",
-                  width:        28,
-                  height:       28,
-                  borderRadius: "8px",
+                  color:        "#fff", width: 28, height: 28, borderRadius: "8px",
                   "&:hover":    { opacity: 0.85 },
                 }}
               >
@@ -193,12 +151,8 @@ const Notifications = () => {
           {/* All / Unread tabs */}
           <Box
             sx={{
-              backgroundColor: "#F5F5F5",
-              borderRadius:    "12px",
-              p:               "4px",
-              display:         "inline-flex",
-              gap:             0.5,
-              mb:              2,
+              backgroundColor: "#F5F5F5", borderRadius: "12px",
+              p: "4px", display: "inline-flex", gap: 0.5, mb: 2,
             }}
           >
             {["All", "Unread"].map((label, i) => (
@@ -206,22 +160,18 @@ const Notifications = () => {
                 key={label}
                 onClick={() => setTab(i)}
                 sx={{
-                  px:           2.5,
-                  py:           0.75,
-                  borderRadius: "10px",
-                  cursor:       "pointer",
-                  background:   tab === i
+                  px: 2.5, py: 0.75, borderRadius: "10px", cursor: "pointer",
+                  background: tab === i
                     ? "linear-gradient(90deg, #AA2493 0%, #022179 100%)"
                     : "transparent",
-                  transition:   "background 0.2s",
+                  transition: "background 0.2s",
                 }}
               >
                 <Typography
-                  fontSize="13px"
-                  fontWeight={500}
+                  fontSize="13px" fontWeight={500}
                   sx={{ color: tab === i ? "#fff" : "#67768B" }}
                 >
-                  {label}
+                  {label}{i === 1 && unreadCount > 0 ? ` (${unreadCount})` : ""}
                 </Typography>
               </Box>
             ))}
@@ -230,100 +180,74 @@ const Notifications = () => {
           {/* Notification list */}
           <Box
             sx={{
-              display:   "flex",
-              flexDirection: "column",
-              gap:       1,
-              maxHeight: 380,
-              overflowY: "auto",
-              pr:        0.5,
-              "&::-webkit-scrollbar": { width: 4 },
+              display: "flex", flexDirection: "column", gap: 1,
+              maxHeight: 380, overflowY: "auto", pr: 0.5,
+              "&::-webkit-scrollbar":       { width: 4 },
               "&::-webkit-scrollbar-track": { background: "transparent" },
-              "&::-webkit-scrollbar-thumb": {
-                background:   "#E0E0E0",
-                borderRadius: 4,
-              },
+              "&::-webkit-scrollbar-thumb": { background: "#E0E0E0", borderRadius: 4 },
             }}
           >
             {displayed.length === 0 ? (
-              <Typography
-                fontSize="13px"
-                color="text.secondary"
-                textAlign="center"
-                py={3}
-              >
+              <Typography fontSize="13px" color="text.secondary" textAlign="center" py={3}>
                 No notifications
               </Typography>
             ) : (
-              displayed.map((n) => (
-                <Box
-                  key={n.id}
-                  sx={{
-                    display:         "flex",
-                    alignItems:      "flex-start",
-                    gap:             1.5,
-                    backgroundColor: "#F5F5F5",
-                    borderRadius:    "12px",
-                    p:               1.5,
-                    cursor:          "pointer",
-                    "&:hover":       { backgroundColor: "#EFEFEF" },
-                  }}
-                >
-                  {/* Icon */}
+              displayed.map((n) => {
+                const iconCfg = TYPE_ICON[n.type] || DEFAULT_ICON;
+                const isUnread = !n.isRead;
+                return (
                   <Box
+                    key={n._id}
+                    onClick={() => handleClickNotif(n)}
                     sx={{
-                      width:           36,
-                      height:          36,
-                      borderRadius:    "10px",
-                      backgroundColor: n.iconBg,
-                      display:         "flex",
-                      alignItems:      "center",
-                      justifyContent:  "center",
-                      fontSize:        "16px",
-                      flexShrink:      0,
+                      display: "flex", alignItems: "flex-start", gap: 1.5,
+                      backgroundColor: "#F5F5F5", borderRadius: "12px", p: 1.5,
+                      cursor: "pointer",
+                      "&:hover": { backgroundColor: "#EFEFEF" },
                     }}
                   >
-                    <img
-                    src={n.icon.src}
-                    alt={n.icon.alt}
-                    style={{ width: 20, height: 20 }}
-                />
-                  </Box>
-
-                  {/* Text */}
-                  <Box flex={1} minWidth={0}>
-                    <Typography
-                      fontSize="13px"
-                      fontWeight={n.unread ? 600 : 400}
-                      color="text.primary"
-                      sx={{
-                        overflow:     "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace:   "normal",
-                        lineHeight:   1.4,
-                      }}
-                    >
-                      {n.message}
-                    </Typography>
-                    <Typography fontSize="11px" color="text.secondary" mt={0.25}>
-                      {n.time}
-                    </Typography>
-                  </Box>
-
-                  {/* Unread dot */}
-                  {n.unread && (
+                    {/* Icon */}
                     <Box
                       sx={{
-                        width:           8,
-                        height:          8,
-                        borderRadius:    "50%",
-                        backgroundColor: "#AA2493",
-                        flexShrink:      0,
-                        mt:              0.5,
+                        width: 36, height: 36, borderRadius: "10px",
+                        backgroundColor: iconCfg.bg,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0,
                       }}
-                    />
-                  )}
-                </Box>
-              ))
+                    >
+                      <img src={iconCfg.src} alt={iconCfg.alt} style={{ width: 20, height: 20 }} />
+                    </Box>
+
+                    {/* Text */}
+                    <Box flex={1} minWidth={0}>
+                      <Typography
+                        fontSize="13px"
+                        fontWeight={isUnread ? 600 : 400}
+                        color="text.primary"
+                        sx={{
+                          overflow: "hidden", textOverflow: "ellipsis",
+                          whiteSpace: "normal", lineHeight: 1.4,
+                        }}
+                      >
+                        {n.message}
+                      </Typography>
+                      <Typography fontSize="11px" color="text.secondary" mt={0.25}>
+                        {relativeTime(n.createdAt)}
+                      </Typography>
+                    </Box>
+
+                    {/* Unread dot */}
+                    {isUnread && (
+                      <Box
+                        sx={{
+                          width: 8, height: 8, borderRadius: "50%",
+                          backgroundColor: "#AA2493", flexShrink: 0, mt: 0.5,
+                        }}
+                      />
+                    )}
+                  </Box>
+                );
+              })
             )}
           </Box>
         </Box>

@@ -1,3 +1,4 @@
+// src/app/empPortal/myTasks/empTaskSidebar.jsx
 import { useState, useEffect } from "react";
 import { Box, Typography, MenuItem } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -15,43 +16,15 @@ const STATUS_OPTIONS = [
   { value: "completed",    label: "Completed"    },
 ];
 
-/**
- * EmpTaskSidebar
- *
- * Props:
- *   task            — the task object (must include _id or id)
- *   onStatusUpdate  — async fn(status) → { success, message }
- *                     called after optimistic UI; should call updateTaskStatusApi
- */
 const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
   const navigate = useNavigate();
+
   const [selectedStatus, setSelectedStatus] = useState(task.taskStatus || "");
-  const [statusLoading,  setStatusLoading]  = useState(false);
   const [statusSuccess,  setStatusSuccess]  = useState(false);
-  const [statusError,    setStatusError]    = useState("");
 
-
-   useEffect(() => {
+  useEffect(() => {
     setSelectedStatus(task.taskStatus || "");
   }, [task.taskStatus]);
-
-  const handleStatusUpdate = async () => {
-    if (!selectedStatus) return;
-    setStatusLoading(true);
-    setStatusError("");
-    try {
-      const result = await onStatusUpdate?.(selectedStatus);
-      if (result?.success !== false) {
-        setStatusSuccess(true);
-      } else {
-        setStatusError(result?.message || "Failed to update status.");
-      }
-    } catch {
-      setStatusError("Something went wrong.");
-    } finally {
-      setStatusLoading(false);
-    }
-  };
 
   const taskId = task?._id || task?.id;
 
@@ -59,34 +32,70 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
     <>
       <Box display="flex" flexDirection="column" gap={3}>
 
-        {/* Update Status */}
-        <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3 }}>
-          <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
-            Update Status
-          </Typography>
-          <CustomSelect
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            fullWidth
-            height="45px"
-            inputBgColor="#F5F5F5"
-            displayEmpty
-            sx={{ mb: 2 }}
+        {/* ── Update Status — disabled overlay for ALL roles ─────────────── */}
+        <Box sx={{ position: "relative" }}>
+
+          {/* Content underneath overlay */}
+          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3 }}>
+            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={2}>
+              Update Status
+            </Typography>
+            <CustomSelect
+              value={selectedStatus}
+              onChange={() => {}}
+              fullWidth
+              height="45px"
+              inputBgColor="#F5F5F5"
+              displayEmpty
+              disabled
+              sx={{ mb: 2 }}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
+              ))}
+            </CustomSelect>
+            <CustomButton
+              btnLabel="Update Status"
+              variant="gradient"
+              handlePressBtn={() => {}}
+              disabled
+              sx={{ height: "46px", fontSize: "14px", fontWeight: 600, width: "100%" }}
+            />
+          </Box>
+
+          {/* Overlay — always visible for every role */}
+          <Box
+            sx={{
+              position:        "absolute",
+              inset:           0,
+              borderRadius:    "16px",
+              backgroundColor: "rgba(255,255,255,0.72)",
+              backdropFilter:  "blur(3px)",
+              display:         "flex",
+              alignItems:      "center",
+              justifyContent:  "center",
+              cursor:          "not-allowed",
+              zIndex:          2,
+            }}
           >
-            {STATUS_OPTIONS.map((s) => (
-              <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
-            ))}
-          </CustomSelect>
-          {statusError && (
-            <Typography fontSize="12px" color="error" mb={1}>{statusError}</Typography>
-          )}
-          <CustomButton
-            btnLabel={statusLoading ? "Updating..." : "Update Status"}
-            variant="gradient"
-            handlePressBtn={handleStatusUpdate}
-            disabled={statusLoading || !selectedStatus}
-            sx={{ height: "46px", fontSize: "14px", fontWeight: 600, width: "100%" }}
-          />
+            <Typography
+              fontSize="12px"
+              fontWeight={600}
+              textAlign="center"
+              sx={{
+                color:           "#AA2493",
+                backgroundColor: "#F3E8FB",
+                px:              2,
+                py:              0.75,
+                borderRadius:    "20px",
+                border:          "1px solid #E8C8F5",
+                userSelect:      "none",
+                mx:              2,
+              }}
+            >
+              Use the pipeline to update task status
+            </Typography>
+          </Box>
         </Box>
 
         {/* Submit Work + All Work */}
@@ -102,8 +111,8 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
                 taskId:       taskId,
                 taskTitle:    task?.title    || "My Task",
                 taskStatus:   task?.status   || "In Progress",
-                projectName: task?.project?.projectName || task?.project || "Project Alpha",
-                moduleName: task?.module?.title || task?.module?.moduleName || task?.module || "",
+                projectName:  task?.project?.projectName || task?.project || "",
+                moduleName:   task?.module?.title || task?.module?.moduleName || task?.module || "",
                 taskPriority: task?.priority || "Medium",
               },
             })

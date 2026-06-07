@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Box, IconButton, Typography, Avatar, Grid, CircularProgress } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Send } from "lucide-react";
@@ -9,53 +9,174 @@ import AttachmentCard      from "../../components/cards/attachmentCard";
 import SuccessPopup        from "../../components/popups/confirmationDialog";
 import EmpTaskDetailHeader from "../../app/empPortal/myTasks/empTaskDetailHeader";
 import EmpTaskSidebar      from "../../app/empPortal/myTasks/empTaskSidebar";
-import AddTask       from "../../app/admin/projects/projectDetailTabs/addTask";
-import AddTaskDialog from "../../app/projectManagerPortal/taskManagement/addTaskDialog";
+import AddTask             from "../../app/admin/projects/projectDetailTabs/addTask";
+import AddTaskDialog       from "../../app/projectManagerPortal/taskManagement/addTaskDialog";
 import { useTaskDetail }   from "../../hooks/task";
+import { useModule }       from "../../hooks/module";
+import { useDepartment }   from "../../hooks/department";
+import { updateTaskApi }   from "../../api/modules/task";
+import { getProjectTeamApi, getProjectByIdApi, getPMProjectsApi } from "../../api/modules/project";
 import { downloadTaskAttachmentApi } from "../../api/modules/task";
 
 import backIcon from "../../assets/icons/downlaod-back-btn.svg";
 import editIcon from "../../assets/icons/edit-icon.svg";
 
-/**
- * UnifiedTaskDetail
- *
- * Props injected via React Router location.state:
- *   task      — the task object (must include _id or id)
- *   canEdit   — boolean: show Edit Task button (admin/PM only)
- *   EditDialog — optional component: the Add/Edit dialog (admin/PM only)
- *   backLabel — optional string: back button label
- */
+const DEFAULT_STAGES = [
+  { id: "stage_1", label: "Stage 1" },
+  { id: "stage_2", label: "Stage 2" },
+  { id: "stage_3", label: "Stage 3" },
+  { id: "stage_4", label: "Stage 4" },
+  { id: "stage_5", label: "Stage 5" },
+];
+
 const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
   const navigate = useNavigate();
   const location = useLocation();
+
   const task     = location.state?.task    || {};
   const canEdit  = location.state?.canEdit ?? false;
-  const role = location.state?.role || "admin"; // "admin" | "pm"
-  const EditDialog = role === "pm" ? AddTaskDialog : AddTask;
+  const role     = location.state?.role    || "admin";
+  const isAdmin = role === "admin";
+  const isPM = role === "pm";
+  
 
+  const taskId   = task?._id || task?.id;
+  // projectId can live on task.project (populated object or raw id string)
+  const projectId = 
+  task?.projectId ||           // ← from Fix 1 (TasksTab row)
+  task?.project?._id ||        // ← from populated task detail
+  task?.project ||             // ← raw string id
+  "";
 
-  const taskId = task?._id || task?.id;
-
+  // ── fetch task detail ────────────────────────────────────────────────────
   const {
-    task:        taskDetail,
-    comments,
-    activityLogs,
-    submissions,
-    loading,
-    commentLoading,
-    statusLoading,
-    submitLoading,
-    error,
-    sendComment,
-    updateStatus,
-    submitWork,
-    fetchDetail,
+    task: taskDetail, comments, activityLogs, submissions,
+    loading, commentLoading, error,
+    sendComment, updateStatus, submitWork, fetchDetail,
   } = useTaskDetail(taskId);
 
- const displayTask = {
-  ...(task || {}),       
-  ...(taskDetail || {}), 
+
+  // ── fetch supporting data needed by the edit dialog ──────────────────────
+  const { modules, loading: modulesLoading } = useModule(projectId);
+  const { departments, fetchDepartments } = useDepartment();
+  const [stages,       setStages]        = useState(DEFAULT_STAGES);
+  const [teamMembers,  setTeamMembers]   = useState([]);
+  const [pmProjects,   setPmProjects]    = useState([]);
+  const [editLoading,  setEditLoading]   = useState(false);
+  const [apiError,     setApiError]      = useState("");
+
+useEffect(() => {
+  if (!projectId) return;
+  
+  Promise.all([
+    getProjectTeamApi(projectId),
+    getProjectByIdApi(projectId),
+    fetchDepartments({ limit: 100 }),
+  ]).then(([teamRes, projectRes]) => {
+    if (teamRes?.status === 200 || teamRes?.status === 201) {
+      setTeamMembers(teamRes.data.data.team || []);
+    }
+    if (projectRes?.status === 200 || projectRes?.status === 201) {
+      const saved = projectRes.data.data.project?.stages;
+      // Always set stages — use saved if available, otherwise keep DEFAULT
+      if (saved?.length) setStages(saved);
+    }
+  });
+}, [projectId]);
+
+// ── Load PM projects when role is pm so AddTask gets the list ─────────────
+useEffect(() => {
+  if (!isPM) return;
+  getPMProjectsApi({ limit: 100 }).then((res) => {
+    if (res?.status === 200 || res?.status === 201) {
+      setPmProjects(res.data.data.projects || []);
+    }
+  });
+}, [isPM]);
+
+  // ── derive dept + employee options from team (same as TasksTab) ──────────
+ const teamEmployees = (Array.isArray(teamMembers) ? teamMembers : []).map((m) => ({
+    _id:          m._id,
+    fullName:     m.fullName || m.name,
+    avatar:       m.avatar        || "",
+    designation:  m.designation   || m.role || "",
+    departmentId: m.departmentId  || "",
+  }));
+
+  const teamDeptIds  = [...new Set(teamMembers.map((m) => m.departmentId).filter(Boolean))];
+  const teamDepts    = departments.filter((d) => teamDeptIds.includes(d._id));
+  const createdLog = Array.isArray(activityLogs)
+  ? activityLogs.find((l) => l.action?.toLowerCase().includes("task created"))
+  : null;
+
+  // ── displayTask ──────────────────────────────────────────────────────────
+  const displayTask = {
+    ...(task       || {}),
+    ...(taskDetail || {}),
+    module:      taskDetail?.module?.title       || taskDetail?.module || task?.module || "—",
+    projectName: taskDetail?.project?.projectName || task?.projectName || "—",
+    startDate:   taskDetail?.startDate
+      ? new Date(taskDetail.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : task?.startDate || "—",
+    endDate:     taskDetail?.endDate
+      ? new Date(taskDetail.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : task?.endDate || "—",
+    deadline:    taskDetail?.endDate
+      ? new Date(taskDetail.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : task?.deadline || task?.endDate || "—",
+    // keep raw dates for the edit form
+    startDateRaw: taskDetail?.startDate || task?.startDate || null,
+    endDateRaw:   taskDetail?.endDate   || task?.endDate   || null,
+    // keep raw ids for the edit form
+    moduleId:     taskDetail?.module?._id    || task?.moduleId    || "",
+    projectId:    taskDetail?.project?._id   || task?.projectId   || projectId,
+    assigneeIds:    (Array.isArray(taskDetail?.assignees) ? taskDetail.assignees : Array.isArray(task?.assignees) ? task.assignees : []).map((a) => a._id || a),
+    assigneeNames:  (Array.isArray(taskDetail?.assignees) ? taskDetail.assignees : Array.isArray(task?.assignees) ? task.assignees : []).map((a) => a.fullName || a.name || ""),
+    assigneeAvatars:(Array.isArray(taskDetail?.assignees) ? taskDetail.assignees : Array.isArray(task?.assignees) ? task.assignees : []).map((a) => a.avatar || ""),
+    departmentId: taskDetail?.department?._id || task?.departmentId || "",
+    createdBy:
+    taskDetail?.createdBy ||
+    task?.createdBy ||
+    (createdLog?.performedByName && createdLog.performedByName !== "System"
+      ? { fullName: createdLog.performedByName }
+      : null),
+  };
+
+  // ── actual save handler — calls the real API ─────────────────────────────
+  const handleEditSave = async (formData) => {
+    setEditLoading(true);
+    setApiError("");
+    try {
+      const payload = {
+        title:       formData.title,
+        module:      formData.module      || null,
+        department:  formData.department  || null,
+        assignees:   formData.assigneeIds || [],
+        priority:    formData.priority    || "medium",
+        status:      formData.status      || stages[0]?.id || "stage_1",
+        startDate:   formData.startDate   || null,
+        endDate:     formData.endDate     || null,
+        description: formData.description || "",
+        link:        formData.link        || "",
+      };
+
+      const res = await updateTaskApi(projectId, taskId, payload);
+      if (res?.status === 200 || res?.status === 201) {
+        setSaveSuccess(true);
+        setEditOpen(false);
+        fetchDetail();   // refresh displayed data
+      } else {
+        setApiError(res?.data?.message || "Failed to update task.");
+      }
+    } catch {
+      setApiError("Something went wrong.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+  const handleOpenEdit = () => {
+  if (modulesLoading) return;
+  setEditOpen(true);
 };
 
   const [editOpen,    setEditOpen]    = useState(false);
@@ -85,22 +206,22 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
         </IconButton>
         <Typography
           fontSize="14px" fontWeight={500} color="text.secondary"
-          sx={{ cursor: "pointer" }}
-          onClick={() => navigate(-1)}
+          sx={{ cursor: "pointer" }} onClick={() => navigate(-1)}
         >
           {backLabel}
         </Typography>
       </Box>
 
-      {/* Header + optional Edit button */}
+      {/* Header + Edit button */}
       <Box sx={{ position: "relative" }}>
         <EmpTaskDetailHeader task={displayTask} />
         {canEdit && (
           <Box sx={{ position: "absolute", top: 20, right: 24 }}>
-            <CustomButton
+           <CustomButton
               btnLabel="Edit Task"
               variant="gradientText"
               handlePressBtn={() => setEditOpen(true)}
+              disabled={false}
               startIcon={<img src={editIcon} alt="edit" style={{ width: 15, height: 15 }} />}
             />
           </Box>
@@ -116,72 +237,65 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
             <Typography fontSize="16px" fontWeight={700} mb={2}>Description</Typography>
             <Box sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", p: 2 }}>
               <Typography fontSize="13px" color="text.secondary" lineHeight={1.7}>
-                {displayTask.description ||
-                  "Create a responsive product listing page with filters, sorting, and pagination. Must support grid and list views."}
+                {displayTask.description || "No description provided."}
               </Typography>
             </Box>
           </Box>
 
-        
-          {/* 2. Attachments */}
-         {/* Attachments */}
-        <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
-          <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>
-            Attachments
-          </Typography>
-
-          {!displayTask.attachments?.length ? (
-            <Typography fontSize="13px" color="text.secondary">
-              No attachments yet.
+          {/* Attachments */}
+          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
+            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>
+              Attachments
             </Typography>
-          ) : (
-            <Box display="flex" flexDirection="column" gap={1.5}>
-              {displayTask.attachments.map((att) => {
-                const uploaderName =
-                  att.uploadedBy?.fullName ||
-                  att.uploadedBy?.name     ||
-                  "Unknown";
+            {!displayTask.attachments?.length ? (
+              <Typography fontSize="13px" color="text.secondary">No attachments yet.</Typography>
+            ) : (
+              <Box display="flex" flexDirection="column" gap={1.5}>
+                {displayTask.attachments.map((att) => {
+                  const uploaderName = 
+                    att.uploadedBy?.fullName || 
+                    att.uploadedBy?.name || 
+                    displayTask.createdBy?.fullName ||   // ← fallback to task creator
+                    displayTask.createdBy?.name ||
+                    "Unknown";
 
-                const uploaderRole = att.uploadedBy?.role
-                  ? ` (${att.uploadedBy.role.replace(/_/g, " ")})`
-                  : "";
-
-                const uploadedAt = att.uploadedAt
-                  ? new Date(att.uploadedAt).toLocaleDateString("en-US", {
-                      month: "short", day: "numeric", year: "numeric",
-                    })
-                  : "";
-
-                return (
-                  <Box
-                    key={att._id || att.id}
-                    sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", p: 1.5 }}
-                  >
-                    <AttachmentCard
-                      fileName={att.fileName || att.name}
-                      fileSize={att.fileSize || att.size}
-                      onDownload={() => {
-                        const url = downloadTaskAttachmentApi(
-                          displayTask.projectId || displayTask.project,
-                          taskId,
-                          att._id || att.id
-                        );
-                        window.open(url, "_blank");
-                      }}
-                    />
-                    <Typography fontSize="11px" color="text.secondary" mt={0.5} ml={0.5}>
-                      Uploaded by{" "}
-                      <Typography component="span" fontSize="11px" fontWeight={600} color="text.primary">
-                        {uploaderName}{uploaderRole}
+                  const uploaderRole = att.uploadedBy?.role ? ` (${att.uploadedBy.role.replace(/_/g, " ")})` : "";
+                  const uploadedAt   = att.uploadedAt
+                    ? new Date(att.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                    : "";
+                  return (
+                    <Box key={att._id || att.id} sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", p: 1.5 }}>
+                      <AttachmentCard
+                        fileName={att.fileName || att.name}
+                        fileSize={att.fileSize || att.size}
+                        onDownload={() => {
+                          // Cloudinary attachment — open URL directly
+                          if (att.url) {
+                            window.open(att.url, "_blank");
+                            return;
+                          }
+                          // Disk-based attachment — use download API
+                          const url = downloadTaskAttachmentApi(
+                            displayTask.projectId || displayTask.project,
+                            taskId,
+                            att._id || att.id
+                          );
+                          window.open(url, "_blank");
+                        }}
+                      />
+                      <Typography fontSize="11px" color="text.secondary" mt={0.5} ml={0.5}>
+                        Uploaded by{" "}
+                        <Typography component="span" fontSize="11px" fontWeight={600} color="text.primary">
+                          {uploaderName}{uploaderRole}
+                        </Typography>
+                        {uploadedAt && ` · ${uploadedAt}`}
                       </Typography>
-                      {uploadedAt && ` · ${uploadedAt}`}
-                    </Typography>
-                  </Box>
-                );
-              })}
-            </Box>
-          )}
-        </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+          </Box>
 
           {/* Comments */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
@@ -190,62 +304,36 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
               {comments.length === 0 && (
                 <Typography fontSize="13px" color="text.secondary">No comments yet.</Typography>
               )}
-            
-            {comments.map((c, idx) => (
-              <Box
-                key={c._id || c.id || idx}
-                sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}
-              >
-                <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Avatar
-                      src={c.authorAvatar || c.author?.avatar || ""}
-                      sx={{
-                        width: 32, height: 32,
-                        background: "linear-gradient(135deg, #AA2493, #022179)",
-                        fontSize: "13px", fontWeight: 600,
-                      }}
-                    >
-                      {(c.authorName || c.author?.name || "?").charAt(0).toUpperCase()}
-                    </Avatar>
-                    <Typography fontSize="13px" fontWeight={600} color="text.primary">
-                      {c.authorName || c.author?.name || c.author}
+              {comments.map((c, idx) => (
+                <Box key={c._id || c.id || idx} sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}>
+                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Avatar src={c.authorAvatar || c.author?.avatar || ""}
+                        sx={{ width: 32, height: 32, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600 }}
+                      >
+                        {(c.authorName || c.author?.name || "?").charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+                        {c.authorName || c.author?.name || c.author}
+                      </Typography>
+                    </Box>
+                    <Typography fontSize="11px" color="text.secondary">
+                      {c.createdAt ? new Date(c.createdAt).toLocaleString() : c.date}
                     </Typography>
                   </Box>
-                  <Typography fontSize="11px" color="text.secondary">
-                    {c.createdAt
-                      ? new Date(c.createdAt).toLocaleString()
-                      : c.date}
-                  </Typography>
+                  <Typography fontSize="12px" color="text.secondary" ml={5}>{c.text}</Typography>
                 </Box>
-                <Typography fontSize="12px" color="text.secondary" ml={5}>
-                  {c.text}
-                </Typography>
-              </Box>
-            ))}
+              ))}
             </Box>
             <TextInput
-              placeholder="Write a comment..."
-              value={comment}
+              placeholder="Write a comment..." value={comment}
               onChange={(e) => setComment(e.target.value)}
-              inputBgColor="#F5F5F5"
-              fullWidth
-              multiline
-              rows={3}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendComment();
-                }
-              }}
+              inputBgColor="#F5F5F5" fullWidth multiline rows={3}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
             />
             <Box display="flex" justifyContent="flex-end" mt={1}>
-              <CustomButton
-                btnLabel={commentLoading ? "Sending..." : "Send"}
-                variant="gradient"
-                handlePressBtn={handleSendComment}
-                disabled={commentLoading}
-                startIcon={<Send size={14} />}
+              <CustomButton btnLabel={commentLoading ? "Sending..." : "Send"} variant="gradient"
+                handlePressBtn={handleSendComment} disabled={commentLoading} startIcon={<Send size={14} />}
               />
             </Box>
           </Box>
@@ -258,25 +346,14 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
             )}
             <Box display="flex" flexDirection="column" gap={1}>
               {activityLogs.map((item, idx) => (
-                <Box
-                  key={item._id || item.id || idx}
-                  sx={{
-                    backgroundColor: "#F5F5F5", borderRadius: "12px",
-                    px: 2, py: 1.5, display: "flex",
-                    alignItems: "flex-start", justifyContent: "space-between", gap: 2,
-                  }}
+                <Box key={item._id || item.id || idx}
+                  sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}
                 >
                   <Box display="flex" alignItems="flex-start" gap={1.5}>
-                    <Box sx={{
-                      width: 10, height: 10, borderRadius: "50%",
-                      background: "linear-gradient(135deg, #AA2493, #022179)",
-                      flexShrink: 0, mt: 0.5,
-                    }} />
+                    <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "linear-gradient(135deg, #AA2493, #022179)", flexShrink: 0, mt: 0.5 }} />
                     <Box>
                       <Typography fontSize="13px" fontWeight={500}>{item.text || item.action}</Typography>
-                      <Typography fontSize="11px" color="text.secondary">
-                        {item.by || item.user?.name || "System"}
-                      </Typography>
+                      <Typography fontSize="11px" color="text.secondary">{item.by || item.user?.name || "System"}</Typography>
                     </Box>
                   </Box>
                   <Typography fontSize="11px" color="text.secondary" whiteSpace="nowrap">
@@ -290,30 +367,27 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
-          <EmpTaskSidebar
-            task={displayTask}
-            onStatusUpdate={updateStatus}
-          />
+          <EmpTaskSidebar task={displayTask} onStatusUpdate={updateStatus} role={role}/>
         </Grid>
       </Grid>
 
-      {canEdit && EditDialog && (
-        <EditDialog
-          open={editOpen}
-          onClose={() => setEditOpen(false)}
-          onSave={(data) => {
-            setSaveSuccess(true);
-            setEditOpen(false);
-            fetchDetail();
-          }}
-          editingTask={displayTask}
-          // PM dialog fetches projects internally; admin dialog needs these:
-          moduleOptions={[]}
-          departmentOptions={[]}
-          deptEmployees={[]}
-          allEmployees={[]}
-        />
-      )}
+      {canEdit && (
+  <AddTask
+    open={editOpen}
+    onClose={() => { setEditOpen(false); setApiError(""); }}
+    onSave={handleEditSave}
+    editingTask={displayTask}
+    loading={editLoading}
+    apiError={apiError}
+    role={role}
+    projectId={isAdmin ? projectId : undefined}
+    moduleOptions={modules}
+    departmentOptions={teamDepts}
+    teamEmployees={teamEmployees}
+    stages={stages}
+    projects={isPM ? pmProjects : undefined}
+  />
+)}
 
       <SuccessPopup
         open={saveSuccess}

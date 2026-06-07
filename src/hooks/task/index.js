@@ -25,7 +25,7 @@ export const useTask = (projectId) => {
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
-  const [filters,       setFilters]       = useState({ search: "", taskStatus: "", priority: "", module: "" });
+  const [filters,       setFilters]       = useState({ search: "", status: "", priority: "", module: "" });
   const [deptEmployees,  setDeptEmployees]  = useState([]);
   const [deptEmpLoading, setDeptEmpLoading] = useState(false);
 
@@ -36,7 +36,7 @@ export const useTask = (projectId) => {
     try {
       const params = {
         search:   customParams.search   ?? filters.search,
-        taskStatus: customParams.taskStatus ?? filters.taskStatus,
+        status:   customParams.status   ?? filters.status, 
         priority: customParams.priority ?? filters.priority,
         module:   customParams.module   ?? filters.module,
       };
@@ -67,16 +67,29 @@ export const useTask = (projectId) => {
     finally   { setDeptEmpLoading(false); }
   }, [projectId]);
 
-  const createTask = useCallback(async (payload) => {
-    setActionLoading(true);
-    try {
-      const res = await createTaskApi(projectId, payload);
-      if (res?.status === 200 || res?.status === 201) { await fetchTasks(); return { success: true, message: "Task created successfully." }; }
-      const msg = res?.data?.message || "Failed to create task.";
-      setError(msg); return { success: false, message: msg };
-    } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
-    finally   { setActionLoading(false); }
-  }, [projectId, fetchTasks]);
+  // In useTask hook, createTask callback:
+const createTask = useCallback(async (payload) => {
+  setActionLoading(true);
+  try {
+    const res = await createTaskApi(projectId, payload);
+    if (res?.status === 200 || res?.status === 201) {
+      await fetchTasks();
+      return {
+        success: true,
+        message: "Task created successfully.",
+        data: res.data.data,      
+      };
+    }
+    const msg = res?.data?.message || "Failed to create task.";
+    setError(msg);
+    return { success: false, message: msg };
+  } catch {
+    setError("Something went wrong.");
+    return { success: false, message: "Something went wrong." };
+  } finally {
+    setActionLoading(false);
+  }
+}, [projectId, fetchTasks]);
 
   const updateTask = useCallback(async (taskId, payload) => {
     setActionLoading(true);
@@ -142,7 +155,7 @@ export const usePMTasks = () => {
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
-  const [filters,       setFilters]       = useState({ search: "", taskStatus: "", priority: "", project: "" });
+  const [filters,       setFilters]       = useState({ search: "", status: "", priority: "", project: "" });
 
   const fetchTasks = useCallback(async (customParams = {}) => {
   setLoading(true);
@@ -158,6 +171,7 @@ export const usePMTasks = () => {
    const normalized = raw.map((t) => ({
   ...t,
   id:          t._id,
+  title: t.title,
   task:        t.title,
   projectName: t.project?.projectName || t.project || "—",
   projectId:   t.project?._id         || t.project || "",
@@ -166,12 +180,13 @@ export const usePMTasks = () => {
   assignees:     t.assignees || [],                                    
   assigneeIds:   (t.assignees || []).map((a) => a._id),
   assigneeNames: (t.assignees || []).map((a) => a.fullName || ""),
+  assigneeAvatars: (t.assignees || []).map((a) => a.avatar || ""),
   priority:    t.priority ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1) : "—",
   startDate:   t.startDate ? new Date(t.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
   endDate:     t.endDate   ? new Date(t.endDate).toLocaleDateString("en-US",   { month: "short", day: "numeric", year: "numeric" }) : "—",
   startDateRaw: t.startDate || null,     
   endDateRaw:   t.endDate   || null,   
-  status:      t.status    ? t.status.charAt(0).toUpperCase() + t.status.slice(1) : "—",
+ status: t.status || "", 
   taskStatus:  t.taskStatus
     ? t.taskStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
     : "—",                               
@@ -205,7 +220,9 @@ export const usePMTasks = () => {
     setActionLoading(true);
     try {
       const res = await pmUpdateTaskApi(projectId, taskId, payload);
-      if (res?.status === 200 || res?.status === 201) { await fetchTasks(); return { success: true, message: "Task updated successfully." }; }
+      if (res?.status === 200 || res?.status === 201) { 
+        await fetchTasks(); 
+        return { success: true, message: "Task updated successfully." }; }
       const msg = res?.data?.message || "Failed to update task.";
       setError(msg); return { success: false, message: msg };
     } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
@@ -237,7 +254,9 @@ export const useMyTasks = () => {
   const [tasks,   setTasks]   = useState([]);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
-  const [filters, setFilters] = useState({ search: "", status: "", priority: "", project: "" });
+ const [filters, setFilters] = useState({ search: "", status: "", priority: "", project: "" });
+ const [projectStagesMap, setProjectStagesMap] = useState({});
+
 
 
   const fetchTasks = useCallback(async (customParams = {}) => {
@@ -246,14 +265,15 @@ export const useMyTasks = () => {
     try {
       const params = {
         search:   customParams.search   ?? filters.search,
-        taskStatus:   customParams.taskStatus   ?? filters.taskStatus,
+        status:   customParams.status   ?? filters.status,
         priority: customParams.priority ?? filters.priority,
         project:  customParams.project  ?? filters.project,
       };
       Object.keys(params).forEach((k) => { if (!params[k]) delete params[k]; });
       const res = await empGetMyTasksApi(params);
-      if (res?.status === 200 || res?.status === 201) {
+     if (res?.status === 200 || res?.status === 201) {
         const raw = Array.isArray(res.data.data.tasks) ? res.data.data.tasks : [];
+        const stagesMap = res.data.data.projectStagesMap || {};
       // In useMyTasks fetchTasks, update the normalized map:
       const normalized = raw.map((t) => ({
         ...t,
@@ -261,9 +281,13 @@ export const useMyTasks = () => {
         title:        t.title,
         task:         t.title,
         projectName:  t.project?.projectName || t.project || "—",
+        projectId:      t.project?._id         || t.project || "", 
         project:      t.project?.projectName || t.project || "—",
         module:       t.module?.title        || t.module  || "—",
         assignees:    t.assignees            || [],
+        assigneeIds:    (t.assignees || []).map((a) => a._id    || a),      
+        assigneeNames:  (t.assignees || []).map((a) => a.fullName || ""),   
+        assigneeAvatars:(t.assignees || []).map((a) => a.avatar  || ""),   
         assigneeName: t.assignees?.[0]?.fullName || "",
         assigneeAvatar: t.assignees?.[0]?.avatar || "",
         priority:     t.priority
@@ -278,7 +302,7 @@ export const useMyTasks = () => {
         endDate:      t.endDate
           ? new Date(t.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
           : "—",
-        status:       t.status || "",          // raw — kanban uses this for column matching
+         status:         t.status    || "",        // raw — kanban uses this for column matching
         taskStatus:   t.taskStatus
           ? t.taskStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
           : "—",                               // formatted — list view displays this
@@ -286,6 +310,7 @@ export const useMyTasks = () => {
           attachments: t.attachments?.length || 0,
       }));
       setTasks(normalized);
+      setProjectStagesMap(stagesMap);
         return { success: true };
       }
       const msg = res?.data?.message || "Failed to fetch tasks.";
@@ -300,7 +325,7 @@ export const useMyTasks = () => {
 
   useEffect(() => { fetchTasks(); }, [filters]);
 
-  return { tasks, loading, error, fetchTasks, handleFilterChange };
+  return { tasks, loading, error, fetchTasks, handleFilterChange, projectStagesMap  };
 };
 
 // ── Hook: unified task detail (comments, attachments, activity, submissions) ───

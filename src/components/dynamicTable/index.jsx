@@ -142,7 +142,8 @@ export default function PaginatedTable({
   onSelectAll,
   projectTypes = [],
   onApproveClick,
-  onRejectClick
+  onRejectClick,
+  stages = [],
 }) {
   const [internalPage, setInternalPage] = useState(0);
   const [internalRowsPerPage, setInternalRowsPerPage] = useState(10);
@@ -258,25 +259,23 @@ export default function PaginatedTable({
 
       // ── Status chip (generic + project) ──────────────────────────────────
       case "status_chip":
-      case "project_status": {
-        const cfg = STATUS_CONFIG[row.status] || { bg: "#F5F5F5", color: "#757575" };
-        return (
-          <TableCell key={val}>
-            <Chip
-              label={row.status}
-              sx={{
-                height: "26px",
-                fontSize: "12px",
-                fontWeight: 500,
-                px: 1.5,
-                borderRadius: "12px",
-                backgroundColor: cfg.bg,
-                color: cfg.color,
-              }}
-            />
-          </TableCell>
-        );
-      }
+case "project_status": {
+  const stageLabel = stages?.find((s) => s.id === row.status)?.label
+    || row.status || "—";
+  const cfg = STATUS_CONFIG[stageLabel] || { bg: "#EDE9F6", color: "#7C3AED" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={stageLabel}
+        sx={{
+          height: "26px", fontSize: "12px", fontWeight: 500,
+          px: 1.5, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
 
         case "task_status": {
         const cfg = STATUS_CONFIG[row.taskStatus] || { bg: "#F5F5F5", color: "#757575" };

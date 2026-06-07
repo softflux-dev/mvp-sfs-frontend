@@ -1,63 +1,100 @@
-import { useState, useEffect } from "react";
-import { Box, Typography, Avatar, AvatarGroup, Chip } from "@mui/material";
-import { useNavigate }   from "react-router-dom";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import EditOutlinedIcon  from "@mui/icons-material/EditOutlined";
-import PipelineCard      from "../../../../components/cards/pipelineCard";
-import { useTask }       from "../../../../hooks/task";         // ← same hook as TasksTab
+import { useState, useEffect }                    from "react";
+import { Box, Typography, TextField, IconButton } from "@mui/material";
+import { useNavigate }                            from "react-router-dom";
+import { DragDropContext, Droppable, Draggable }  from "@hello-pangea/dnd";
+import CheckIcon  from "@mui/icons-material/Check";
+import CloseIcon  from "@mui/icons-material/Close";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 
-const COLUMNS = [
-  { id: "planning",    label: "Planning"    },
-  { id: "development", label: "Development" },
-  { id: "testing",     label: "Testing"     },
-  { id: "review",      label: "Review"      },
-  { id: "completed",   label: "Completed"   },
+import PipelineCard              from "../../../../components/cards/pipelineCard";
+import { useTask }               from "../../../../hooks/task";
+import { updateProjectStagesApi } from "../../../../api/modules/project";
+
+const DEFAULT_STAGES = [
+  { id: "stage_1", label: "Stage 1" },
+  { id: "stage_2", label: "Stage 2" },
+  { id: "stage_3", label: "Stage 3" },
+  { id: "stage_4", label: "Stage 4" },
+  { id: "stage_5", label: "Stage 5" },
 ];
 
-const PipelineTab = ({ project = {} }) => {
+const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) => {
   const navigate = useNavigate();
-
   const { tasks, loading, updateTask } = useTask(project.id);
 
-  // ── Build columns from real tasks ─────────────────────────────────────────
-  const [columns, setColumns] = useState(
-    COLUMNS.map((col) => ({ ...col, tasks: [] }))
-  );
-
-  const [editingColId, setEditingColId] = useState(null);
+  const [columns,      setColumns]      = useState([]);
+  const [editingId,    setEditingId]    = useState(null);
   const [editingLabel, setEditingLabel] = useState("");
+  const [savingStages, setSavingStages] = useState(false);
 
-  // sync columns whenever tasks change
-  useEffect(() => {
-    setColumns(
-      COLUMNS.map((col) => ({
-        ...col,
-        tasks: tasks
-          .filter((t) => t.status === col.id)
-          .map((t) => ({
-            id:           t._id,
-            title:        t.title,
-            priority:     t.priority
-              ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
-              : "Medium",
-            deadline:     t.endDate
-              ? new Date(t.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-              : "",
-            assignees:    t.assignees || [],
-            assigneeName: t.assignees?.[0]?.fullName || "",
-            assigneeAvatar: t.assignees?.[0]?.avatar || "",
-            module:       t.module?.title || "",
-            description:  t.description  || "",
-            project:      project.projectName || "",
-            status:       t.status,
-            comments:    t.commentCount        || 0,
-            attachments: t.attachments?.length || 0,
-          })),
-      }))
+  // ── Build columns from stages + tasks ────────────────────────────────────
+ useEffect(() => {
+  const knownStageIds = new Set(stages.map((s) => s.id));
+
+  setColumns(
+    stages.map((stage, index) => ({
+      ...stage,
+      tasks: tasks
+        .filter((t) => {
+          if (t.status === stage.id) return true;
+          if (index === 0 && !knownStageIds.has(t.status)) return true;
+          return false;
+        })
+        .map((t) => ({
+          id:             t._id,
+          title:          t.title,
+          priority:       t.priority
+            ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
+            : "Medium",
+          deadline:       t.endDate
+            ? new Date(t.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+            : "",
+          assignees:      t.assignees      || [],
+          assigneeName:   t.assignees?.[0]?.fullName || "",
+          assigneeAvatar: t.assignees?.[0]?.avatar   || "",
+          module:         t.module?.title  || "",
+          description:    t.description   || "",
+          project:        project.projectName || "",
+          status:         t.status,
+          comments:       t.commentCount        || 0,
+          attachments:    t.attachments?.length || 0,
+        })),
+    }))
+  );
+}, [tasks, stages, project.projectName]);
+
+  // ── Start editing a stage label ───────────────────────────────────────────
+  const startEdit = (stage) => {
+    setEditingId(stage.id);
+    setEditingLabel(stage.label);
+  };
+
+  // ── Confirm stage label edit and save to backend ──────────────────────────
+  const confirmEdit = async () => {
+    if (!editingLabel.trim()) { cancelEdit(); return; }
+
+    const updated = stages.map((s) =>
+      s.id === editingId ? { ...s, label: editingLabel.trim() } : s
     );
-  }, [tasks, project.projectName]);
 
-  // ── Drag end — update task status via API ─────────────────────────────────
+    setSavingStages(true);
+    try {
+      const res = await updateProjectStagesApi(project.id, updated);
+      if (res?.status === 200 || res?.status === 201) {
+        onStagesChange?.(updated);
+      }
+    } catch {
+      // silently keep local update even if save fails
+      onStagesChange?.(updated);
+    } finally {
+      setSavingStages(false);
+      setEditingId(null);
+    }
+  };
+
+  const cancelEdit = () => setEditingId(null);
+
+  // ── Drag end ──────────────────────────────────────────────────────────────
   const onDragEnd = async (result) => {
     const { source, destination, draggableId } = result;
     if (!destination) return;
@@ -72,7 +109,6 @@ const PipelineTab = ({ project = {} }) => {
     const sourceTasks = [...sourceCol.tasks];
     const [movedTask] = sourceTasks.splice(source.index, 1);
 
-    // ── Optimistic update ───────────────────────────────────────────────
     if (source.droppableId === destination.droppableId) {
       sourceTasks.splice(destination.index, 0, movedTask);
       setColumns((prev) =>
@@ -81,7 +117,7 @@ const PipelineTab = ({ project = {} }) => {
         )
       );
     } else {
-      const destTasks = [...destCol.tasks];
+      const destTasks   = [...destCol.tasks];
       const updatedTask = { ...movedTask, status: destination.droppableId };
       destTasks.splice(destination.index, 0, updatedTask);
       setColumns((prev) =>
@@ -91,8 +127,6 @@ const PipelineTab = ({ project = {} }) => {
           return c;
         })
       );
-
-      // ── Persist new status to backend ───────────────────────────────
       await updateTask(draggableId, { status: destination.droppableId });
     }
   };
@@ -101,12 +135,8 @@ const PipelineTab = ({ project = {} }) => {
     <DragDropContext onDragEnd={onDragEnd}>
       <Box
         sx={{
-          mt: 2,
-          display: "flex",
-          alignItems: "stretch",
-          gap: 2,
-          overflowX: "auto",
-          pb: 2,
+          mt: 2, display: "flex", alignItems: "stretch",
+          gap: 2, overflowX: "auto", pb: 2,
           "&::-webkit-scrollbar": { height: "6px" },
           "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
           "&::-webkit-scrollbar-thumb": { backgroundColor: "#E0E0E0", borderRadius: "3px" },
@@ -119,72 +149,71 @@ const PipelineTab = ({ project = {} }) => {
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 sx={{
-                  minWidth: "220px",
-                  flex: "1 0 220px",
+                  minWidth: "220px", flex: "1 0 220px",
                   backgroundColor: snapshot.isDraggingOver ? "#EDE9F6" : "#F5F5F5",
-                  borderRadius: "16px",
-                  p: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.5,
-                  transition: "background-color 0.2s ease",
-                  alignSelf: "stretch",
+                  borderRadius: "16px", p: 2,
+                  display: "flex", flexDirection: "column", gap: 1.5,
+                  transition: "background-color 0.2s ease", alignSelf: "stretch",
                 }}
               >
-                {/* Column header */}
-                {editingColId === col.id ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                    <input
-                      autoFocus
-                      value={editingLabel}
-                      onChange={(e) => setEditingLabel(e.target.value)}
-                      onBlur={() => {
-                        setColumns((prev) =>
-                          prev.map((c) =>
-                            c.id === col.id
-                              ? { ...c, label: editingLabel || c.label }
-                              : c
-                          )
-                        );
-                        setEditingColId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter")  e.target.blur();
-                        if (e.key === "Escape") setEditingColId(null);
-                      }}
-                      style={{
-                        fontSize: "13px", fontWeight: 600,
-                        border: "none", borderBottom: "1.5px solid #7C3AED",
-                        outline: "none", background: "transparent",
-                        width: "100%", padding: "1px 2px", color: "#000",
-                      }}
-                    />
-                  </Box>
-                ) : (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                    <Typography fontSize="13px" fontWeight={600} color="text.primary">
-                      {col.label}{" "}
-                      <Typography component="span" fontSize="12px" fontWeight={500} color="text.secondary">
-                        ({col.tasks.length})
+                {/* ── Column header ─────────────────────────────────────── */}
+                <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+                  {editingId === col.id ? (
+                    <>
+                      <TextField
+                        autoFocus
+                        value={editingLabel}
+                        onChange={(e) => setEditingLabel(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter")  confirmEdit();
+                          if (e.key === "Escape") cancelEdit();
+                        }}
+                        size="small"
+                        variant="standard"
+                        sx={{
+                          flex: 1,
+                          "& .MuiInput-root": { fontSize: "13px", fontWeight: 600 },
+                          "& .MuiInput-underline:after": { borderBottomColor: "#AA2493" },
+                        }}
+                      />
+                      <IconButton
+                        size="small" onClick={confirmEdit} disabled={savingStages}
+                        sx={{ p: 0.3, color: "#059669" }}
+                      >
+                        <CheckIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                      <IconButton
+                        size="small" onClick={cancelEdit}
+                        sx={{ p: 0.3, color: "#DC2626" }}
+                      >
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <>
+                      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+                        {col.label}{" "}
+                        <Typography component="span" fontSize="12px" fontWeight={500} color="text.secondary">
+                          ({col.tasks.length})
+                        </Typography>
                       </Typography>
-                    </Typography>
-                    <Box
-                      onClick={() => { setEditingColId(col.id); setEditingLabel(col.label); }}
-                      sx={{ ml: 0.5, cursor: "pointer", display: "flex", alignItems: "center" }}
-                    >
-                      <EditOutlinedIcon sx={{ fontSize: "14px" }} />
-                    </Box>
-                  </Box>
-                )}
+                      <Box
+                        onClick={() => startEdit(col)}
+                        sx={{ ml: 0.5, cursor: "pointer", display: "flex", alignItems: "center" }}
+                      >
+                        <EditOutlinedIcon sx={{ fontSize: "14px" }} />
+                      </Box>
+                    </>
+                  )}
+                </Box>
 
-                {/* Loading state */}
+                {/* ── Task cards ────────────────────────────────────────── */}
                 {loading && col.tasks.length === 0 && (
                   <Typography fontSize="12px" color="text.secondary" textAlign="center" py={2}>
                     Loading...
                   </Typography>
                 )}
 
-                {/* Task cards */}
                 {col.tasks.map((task, index) => (
                   <Draggable draggableId={task.id} index={index} key={task.id}>
                     {(dragProvided, dragSnapshot) => (
@@ -207,7 +236,6 @@ const PipelineTab = ({ project = {} }) => {
                           project={task.project}
                           comments={task.comments}
                           attachments={task.attachments}
-                          // extra: show all assignees stacked
                           assignees={task.assignees}
                           onClick={() =>
                             navigate(`/projects/tasks/${task.id}`, {
@@ -222,12 +250,10 @@ const PipelineTab = ({ project = {} }) => {
 
                 {provided.placeholder}
 
-                {/* Empty state */}
                 {!loading && col.tasks.length === 0 && (
                   <Typography
                     fontSize="12px" color="text.secondary"
-                    textAlign="center" py={2}
-                    sx={{ opacity: 0.6 }}
+                    textAlign="center" py={2} sx={{ opacity: 0.6 }}
                   >
                     No tasks
                   </Typography>

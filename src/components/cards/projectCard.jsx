@@ -8,11 +8,13 @@ import FileIcon from "../../assets/icons/task-icon-gray.svg";
 const STATUS_CONFIG = {
   "In Progress": { bg: "#FF972F1A", color: "#FF972F" },
   "Planning":    { bg: "#2B6EFF1A", color: "#2B6EFF" },
-  "On Hold":     { bg: "#9E9E9E1A", color: "#393535" },
+   "New":    { bg: "#2B6EFF1A", color: "#2B6EFF" },
+  "Paused":     { bg: "#9E9E9E1A", color: "#393535" },
   "Completed":   { bg: "#04C3731A", color: "#04C373" },
   "Development": { bg: "#AA24931A", color: "#AA2493" },
   "Testing":     { bg: "#FF972F1A", color: "#FF972F" },
   "Review":      { bg: "#2B6EFF1A", color: "#2B6EFF" },
+  
 };
 
 const ProjectCard = ({

@@ -1,83 +1,134 @@
-import { useState, useEffect } from "react";
-import { Box, Typography } from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import PipelineCard    from "../../../components/cards/pipelineCard";
-import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+// src/app/projectManagerPortal/taskManagement/kanbanView.jsx 
+import { useState, useEffect, useRef }            from "react";
+import { Box, Typography }                        from "@mui/material";
+import { useNavigate }                            from "react-router-dom";
+import { DragDropContext, Droppable, Draggable }  from "@hello-pangea/dnd";
 
-const DEFAULT_COLUMNS = [
-  { id: "planning", label: "Planning", tasks: [] },
-  { id: "development", label: "Development", tasks: [] },
-  { id: "testing", label: "Testing", tasks: [] },
-  { id: "review", label: "Review", tasks: [] },
-  { id: "completed", label: "Completed", tasks: [] },
-];
+import PipelineCard       from "../../../components/cards/pipelineCard";
+import ConfirmationDialog from "../../../components/popups/confirmation";
+import SubmitWorkDialog   from "../../empPortal/myTasks/submitWorkDialog";
+import { updateTaskApi, submitWorkApi } from "../../../api/modules/task";
 
-const KanbanView = ({ tasks = [] }) => {
-   const navigate = useNavigate();
-  const [columns, setColumns] = useState(DEFAULT_COLUMNS);
-  const [selectedCard,setSelectedCard]= useState(null);
-  const [selectedCol, setSelectedCol] = useState("");
-  const [editingColId,  setEditingColId]  = useState(null);
-  const [editingLabel,  setEditingLabel]  = useState("");
+const KanbanView = ({ tasks = [], stages = [], onTaskStatusUpdated }) => {
+  const navigate = useNavigate();
+
+  const [columns,      setColumns]      = useState([]);
+  const [pendingDrag,  setPendingDrag]  = useState(null);
+  const [submitOpen,   setSubmitOpen]   = useState(false);
+  const [submitLoading,setSubmitLoading]= useState(false);
+  const confirmRef = useRef();
 
   useEffect(() => {
-    const updatedColumns = DEFAULT_COLUMNS.map((column) => ({
-      ...column,
-      tasks: tasks.filter(
-        (task) =>
-          task.status?.toLowerCase() === column.id.toLowerCase()
-      ),
-    }));
+    if (!stages.length) return;
+    setColumns(
+      stages.map((stage) => ({
+        ...stage,
+        tasks: tasks.filter((t) => t.status === stage.id),
+      }))
+    );
+  }, [tasks, stages]);
 
-    setColumns(updatedColumns);
-  }, [tasks]);
+  const stageLabel = (id) => stages.find((s) => s.id === id)?.label || id;
+
+  const applyMove = async (drag) => {
+  try {
+    // drag.projectId needs to be set when creating pendingDrag
+    await updateTaskApi(drag.projectId, drag.taskId, { status: drag.destId });
+    onTaskStatusUpdated?.();
+  } catch (err) {
+    console.error("Status update failed:", err.message);
+    setColumns(KANBAN_COLUMNS.map((col) => ({ ...col, tasks: tasks.filter((t) => t.status === col.id) })));
+  }
+};
 
   const onDragEnd = (result) => {
-    const { source, destination } = result;
+    const { source, destination, draggableId } = result;
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const sourceCol = columns.find((c) => c.id === source.droppableId);
-    const destCol   = columns.find((c) => c.id === destination.droppableId);
-
-    const sourceTasks = [...sourceCol.tasks];
-    const [movedTask] = sourceTasks.splice(source.index, 1);
-
     if (source.droppableId === destination.droppableId) {
-      sourceTasks.splice(destination.index, 0, movedTask);
-      setColumns((prev) =>
-        prev.map((c) => c.id === source.droppableId ? { ...c, tasks: sourceTasks } : c)
-      );
-    } else {
-      const destTasks = [...destCol.tasks];
-      destTasks.splice(destination.index, 0, movedTask);
-      setColumns((prev) =>
-        prev.map((c) => {
-          if (c.id === source.droppableId)      return { ...c, tasks: sourceTasks };
-          if (c.id === destination.droppableId) return { ...c, tasks: destTasks   };
-          return c;
-        })
-      );
+      const col      = columns.find((c) => c.id === source.droppableId);
+      const colTasks = [...col.tasks];
+      const [moved]  = colTasks.splice(source.index, 1);
+      colTasks.splice(destination.index, 0, moved);
+      setColumns((prev) => prev.map((c) => c.id === source.droppableId ? { ...c, tasks: colTasks } : c));
+      return;
+    }
+
+    const srcCol    = columns.find((c) => c.id === source.droppableId);
+    const destCol   = columns.find((c) => c.id === destination.droppableId);
+    const movedTask = srcCol.tasks[source.index];
+
+    const srcTasks  = [...srcCol.tasks];
+    srcTasks.splice(source.index, 1);
+    const destTasks = [...destCol.tasks];
+    destTasks.splice(destination.index, 0, { ...movedTask, status: destination.droppableId });
+    setColumns((prev) => prev.map((c) => {
+      if (c.id === source.droppableId)      return { ...c, tasks: srcTasks };
+      if (c.id === destination.droppableId) return { ...c, tasks: destTasks };
+      return c;
+    }));
+
+   const drag = {
+  taskId:    String(draggableId || movedTask._id || movedTask.id),
+  taskTitle: movedTask.title || movedTask.task || "",
+  projectId: movedTask.projectId || movedTask.project?._id || movedTask.project || "",  // ← add
+  srcId:     source.droppableId,
+  destId:    destination.droppableId,
+};
+    setPendingDrag(drag);
+
+    confirmRef.current?.open({
+      title:       "Submit Work?",
+      description: `Moving "${drag.taskTitle}" from ${stageLabel(drag.srcId)} → ${stageLabel(drag.destId)}. Do you want to submit work first?`,
+      confirmText: "Yes, Submit Work",
+      cancelText:  "No, Just Move",
+      onConfirm: () => setSubmitOpen(true),
+      onCancel:  async () => {
+        await applyMove(drag);
+        setPendingDrag(null);
+      },
+    });
+  };
+
+  const handleWorkSubmit = async (formData) => {
+    if (!pendingDrag) return;
+    setSubmitLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("title",       formData.title       || "");
+      fd.append("description", formData.description || "");
+      fd.append("link",        formData.link        || "");
+      if (formData.attachments) fd.append("file", formData.attachments);
+      await submitWorkApi(pendingDrag.taskId, fd);
+    } catch (err) {
+      console.error("Submit work failed:", err.message);
+    } finally {
+      setSubmitLoading(false);
+      setSubmitOpen(false);
+      await applyMove(pendingDrag);
+      setPendingDrag(null);
+    }
+  };
+
+  const handleSubmitClose = async () => {
+    setSubmitOpen(false);
+    if (pendingDrag) {
+      await applyMove(pendingDrag);
+      setPendingDrag(null);
     }
   };
 
   return (
     <>
       <DragDropContext onDragEnd={onDragEnd}>
-        <Box
-          sx={{
-            mt: 2,
-            display: "flex",
-            alignItems: "stretch",
-            gap: 2,
-            overflowX: "auto",
-            pb: 2,
-            "&::-webkit-scrollbar": { height: "6px" },
-            "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
-            "&::-webkit-scrollbar-thumb": { backgroundColor: "#E0E0E0", borderRadius: "3px" },
-          }}
-        >
+        <Box sx={{
+          mt: 2, display: "flex", alignItems: "stretch",
+          gap: 2, overflowX: "auto", pb: 2,
+          "&::-webkit-scrollbar": { height: "6px" },
+          "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
+          "&::-webkit-scrollbar-thumb": { backgroundColor: "#E0E0E0", borderRadius: "3px" },
+        }}>
           {columns.map((col) => (
             <Droppable droppableId={col.id} key={col.id}>
               {(provided, snapshot) => (
@@ -85,43 +136,13 @@ const KanbanView = ({ tasks = [] }) => {
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                   sx={{
-                    minWidth: "220px",
-                    flex: "1 0 220px",
+                    minWidth: "220px", flex: "1 0 220px",
                     backgroundColor: snapshot.isDraggingOver ? "#EDE9F6" : "#F5F5F5",
-                    borderRadius: "16px",
-                    p: 2,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1.5,
-                    transition: "background-color 0.2s ease",
-                    alignSelf: "stretch",
+                    borderRadius: "16px", p: 2,
+                    display: "flex", flexDirection: "column", gap: 1.5,
+                    transition: "background-color 0.2s ease", alignSelf: "stretch",
                   }}
                 >
-                 {editingColId === col.id ? (
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                    <input
-                      autoFocus
-                      value={editingLabel}
-                      onChange={(e) => setEditingLabel(e.target.value)}
-                      onBlur={() => {
-                        setColumns((prev) =>
-                          prev.map((c) => c.id === col.id ? { ...c, label: editingLabel || c.label } : c)
-                        );
-                        setEditingColId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") e.target.blur();
-                        if (e.key === "Escape") setEditingColId(null);
-                      }}
-                      style={{
-                        fontSize: "13px", fontWeight: 600, border: "none",
-                        borderBottom: "1.5px solid #7C3AED", outline: "none",
-                        background: "transparent", width: "100%", padding: "1px 2px",
-                        color: "#000",
-                      }}
-                    />
-                  </Box>
-                ) : (
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
                     <Typography fontSize="13px" fontWeight={600} color="text.primary">
                       {col.label}{" "}
@@ -129,41 +150,26 @@ const KanbanView = ({ tasks = [] }) => {
                         ({col.tasks.length})
                       </Typography>
                     </Typography>
-                    <Box
-                      onClick={() => { setEditingColId(col.id); setEditingLabel(col.label); }}
-                      sx={{
-                        ml: 0.5, cursor: "pointer", display: "flex", alignItems: "center",
-                         
-                      }}
-                    >
-                      <EditOutlinedIcon sx={{ fontSize: "14px" }} />
-                    </Box>
                   </Box>
-                )}
 
                   {col.tasks.map((task, index) => (
-                    <Draggable draggableId={task.id} index={index} key={task.id}>
+                    <Draggable draggableId={String(task.id || task._id)} index={index} key={String(task.id || task._id)}>
                       {(dragProvided, dragSnapshot) => (
                         <Box
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
                           {...dragProvided.dragHandleProps}
-                          sx={{
-                            opacity:   dragSnapshot.isDragging ? 0.85 : 1,
-                            transform: dragSnapshot.isDragging ? "rotate(2deg)" : "none",
-                            transition: "transform 0.1s ease",
-                          }}
+                          sx={{ opacity: dragSnapshot.isDragging ? 0.85 : 1, transform: dragSnapshot.isDragging ? "rotate(2deg)" : "none", transition: "transform 0.1s ease" }}
                         >
                           <PipelineCard
-                          title={task.title}
-                          priority={task.priority}
-                          deadline={task.endDate}
-                          comments={task.comments}           
-                          attachments={task.attachments}
-                          assignees={task.assignees}
-                          project={task.projectName || task.project?.projectName || task.project || ""}  
-                          onClick={() => navigate(`/pm-tasks/${task.id || task._id}`, { state: { task, canEdit: true, role: "pm" } })}
-                        />
+                            title={task.task || task.title} priority={task.priority}
+                            deadline={task.endDate} comments={task.comments}
+                            attachments={task.attachments} assignees={task.assignees}
+                            project={task.projectName || task.project?.projectName || task.project || ""}
+                            onClick={() => navigate(`/pm-tasks/${task.id || task._id}`, {
+                              state: { task, canEdit: true, role: "pm" },
+                            })}
+                          />
                         </Box>
                       )}
                     </Draggable>
@@ -176,7 +182,15 @@ const KanbanView = ({ tasks = [] }) => {
         </Box>
       </DragDropContext>
 
-  
+      <ConfirmationDialog ref={confirmRef} />
+
+      <SubmitWorkDialog
+        open={submitOpen}
+        onClose={handleSubmitClose}
+        onSave={handleWorkSubmit}
+        loading={submitLoading}
+        taskTitle={pendingDrag?.taskTitle || ""}
+      />
     </>
   );
 };

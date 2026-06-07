@@ -52,6 +52,7 @@ employeeResetPassword:  "employee/auth/reset-password",
   updateProject:      "admin/projects",
   deleteProject:      "admin/projects",
   getProjectManagers: "admin/projects",
+  updateProjectStages: "admin/projects",
   
 
   // Modules
@@ -116,6 +117,15 @@ employeeResetPassword:  "employee/auth/reset-password",
   uploadSharedDocument:  "documents",
   deleteSharedDocument:  "documents",
   downloadSharedDocument:"documents",
+
+  // Notification Preferences
+  getNotificationPreferences:    "admin/settings/notifications",
+  updateNotificationPreferences: "admin/settings/notifications",
+
+  getNotifications:         "notifications",
+  markNotificationRead:     "notifications",
+  markAllNotificationsRead: "notifications",
+
 };
 
 
