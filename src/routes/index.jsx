@@ -36,6 +36,8 @@ import TeamPerformance from "../app/projectManagerPortal/teamPerformance";
 import EmpDashboard from "../app/empPortal/dashboard";
 import MyTasks from "../app/empPortal/myTasks";
 import EmpTaskDetail from "../app/empPortal/myTasks/empTaskDetail";
+import UnifiedTaskDetail from "../shared/taskDetail/UnifiedTaskDetail";
+
 //import TimeTracking from "../app/empPortal/timeTracking";
 import EmpAttendance from "../app/empPortal/myAttendance";
 import Profile from "../app/empPortal/profile";
@@ -537,7 +539,7 @@ const EMP_ROUTES = [
     {
       id: 3,
       nameKey: "Task Detail",
-      component: <EmpTaskDetail />,
+      component: <UnifiedTaskDetail backLabel="Back to My Tasks" />,
       exact: "exact",
       path: "/emp/tasks/:id",
       isHideMenu: true,

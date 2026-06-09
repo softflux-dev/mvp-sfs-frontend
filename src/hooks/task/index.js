@@ -334,12 +334,13 @@ export const useTaskDetail = (taskId) => {
   const [comments,      setComments]      = useState([]);
   const [activityLogs,  setActivityLogs]  = useState([]);
   const [submissions,   setSubmissions]   = useState([]);
+  const [stages,        setStages]        = useState([]);   // ← NEW
   const [loading,       setLoading]       = useState(false);
   const [commentLoading,setCommentLoading]= useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error,         setError]         = useState("");
-
+ 
   const fetchDetail = useCallback(async () => {
     if (!taskId) return;
     setLoading(true);
@@ -350,10 +351,11 @@ export const useTaskDetail = (taskId) => {
         getSubmissionsApi(taskId),
       ]);
       if (detailRes?.status === 200 || detailRes?.status === 201) {
-        const { task: t, comments: c, activityLogs: a } = detailRes.data.data;
+        const { task: t, comments: c, activityLogs: a, stages: s } = detailRes.data.data;
         setTask(t || null);
         setComments(Array.isArray(c) ? c : []);
         setActivityLogs(Array.isArray(a) ? a : []);
+        setStages(Array.isArray(s) ? s : []);   // ← NEW
       } else {
         setError(detailRes?.data?.message || "Failed to fetch task detail.");
       }
@@ -363,7 +365,7 @@ export const useTaskDetail = (taskId) => {
     } catch { setError("Something went wrong."); }
     finally   { setLoading(false); }
   }, [taskId]);
-
+ 
   const sendComment = useCallback(async (text) => {
     if (!text?.trim() || !taskId) return { success: false };
     setCommentLoading(true);
@@ -377,7 +379,7 @@ export const useTaskDetail = (taskId) => {
     } catch { return { success: false, message: "Something went wrong." }; }
     finally   { setCommentLoading(false); }
   }, [taskId]);
-
+ 
   const updateStatus = useCallback(async (status) => {
     if (!taskId) return { success: false };
     setStatusLoading(true);
@@ -391,7 +393,7 @@ export const useTaskDetail = (taskId) => {
     } catch { return { success: false, message: "Something went wrong." }; }
     finally   { setStatusLoading(false); }
   }, [taskId]);
-
+ 
   const submitWork = useCallback(async (formData) => {
     if (!taskId) return { success: false };
     setSubmitLoading(true);
@@ -405,11 +407,11 @@ export const useTaskDetail = (taskId) => {
     } catch { return { success: false, message: "Something went wrong." }; }
     finally   { setSubmitLoading(false); }
   }, [taskId]);
-
+ 
   useEffect(() => { fetchDetail(); }, [taskId]);
-
+ 
   return {
-    task, comments, activityLogs, submissions,
+    task, comments, activityLogs, submissions, stages,   // ← stages added
     loading, commentLoading, statusLoading, submitLoading, error,
     fetchDetail, sendComment, updateStatus, submitWork,
   };

@@ -39,3 +39,6 @@ export const addTeamMembersApi = (projectId, employeeIds) =>
 
 export const updateProjectStagesApi = (projectId, stages) =>
   api(`${ENDPOINTS.updateProjectStages}/${projectId}/stages`, { stages }, "patch");
+
+export const getEmpProjectByIdApi = (id) =>
+  api(`${ENDPOINTS.empGetProjectById}/${id}`, null, "get");

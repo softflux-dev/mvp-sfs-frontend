@@ -16,7 +16,7 @@ const STATUS_OPTIONS = [
   { value: "completed",    label: "Completed"    },
 ];
 
-const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
+const EmpTaskSidebar = ({ task = {}, onStatusUpdate , stages = []}) => {
   const navigate = useNavigate();
 
   const [selectedStatus, setSelectedStatus] = useState(task.taskStatus || "");
@@ -27,6 +27,8 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
   }, [task.taskStatus]);
 
   const taskId = task?._id || task?.id;
+  const currentStageLabel = stages.find((s) => s.id === task.status)?.label || task.status || "";
+
 
   return (
     <>
@@ -110,7 +112,7 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate }) => {
               state: {
                 taskId:       taskId,
                 taskTitle:    task?.title    || "My Task",
-                taskStatus:   task?.status   || "In Progress",
+                taskStatus:    currentStageLabel,  
                 projectName:  task?.project?.projectName || task?.project || "",
                 moduleName:   task?.module?.title || task?.module?.moduleName || task?.module || "",
                 taskPriority: task?.priority || "Medium",

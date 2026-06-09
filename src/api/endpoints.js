@@ -53,6 +53,7 @@ employeeResetPassword:  "employee/auth/reset-password",
   deleteProject:      "admin/projects",
   getProjectManagers: "admin/projects",
   updateProjectStages: "admin/projects",
+  empGetProjectById: "employee/projects",
   
 
   // Modules

@@ -1,3 +1,4 @@
+// src/shared/taskDetail/UnifiedTaskDetail.jsx — FULL REPLACEMENT
 import { useState, useEffect } from "react";
 import { Box, IconButton, Typography, Avatar, Grid, CircularProgress } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -10,7 +11,6 @@ import SuccessPopup        from "../../components/popups/confirmationDialog";
 import EmpTaskDetailHeader from "../../app/empPortal/myTasks/empTaskDetailHeader";
 import EmpTaskSidebar      from "../../app/empPortal/myTasks/empTaskSidebar";
 import AddTask             from "../../app/admin/projects/projectDetailTabs/addTask";
-import AddTaskDialog       from "../../app/projectManagerPortal/taskManagement/addTaskDialog";
 import { useTaskDetail }   from "../../hooks/task";
 import { useModule }       from "../../hooks/module";
 import { useDepartment }   from "../../hooks/department";
@@ -33,88 +33,89 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const task     = location.state?.task    || {};
-  const canEdit  = location.state?.canEdit ?? false;
-  const role     = location.state?.role    || "admin";
+  const task    = location.state?.task    || {};
+  const canEdit = location.state?.canEdit ?? false;
+  const role    = location.state?.role    || "admin";
   const isAdmin = role === "admin";
-  const isPM = role === "pm";
-  
+  const isPM    = role === "pm";
 
-  const taskId   = task?._id || task?.id;
-  // projectId can live on task.project (populated object or raw id string)
-  const projectId = 
-  task?.projectId ||           // ← from Fix 1 (TasksTab row)
-  task?.project?._id ||        // ← from populated task detail
-  task?.project ||             // ← raw string id
-  "";
+  const taskId    = task?._id || task?.id;
+  const projectId =
+    task?.projectId      ||
+    task?.project?._id   ||
+    task?.project        ||
+    "";
 
-  // ── fetch task detail ────────────────────────────────────────────────────
+  // ── fetch task detail (stages come from backend now) ─────────────────────
   const {
     task: taskDetail, comments, activityLogs, submissions,
+    stages: taskStages,                    // ← stages from getTaskDetail response
     loading, commentLoading, error,
     sendComment, updateStatus, submitWork, fetchDetail,
   } = useTaskDetail(taskId);
 
-
-  // ── fetch supporting data needed by the edit dialog ──────────────────────
+  // ── fetch supporting data for the edit dialog (admin/PM only) ────────────
   const { modules, loading: modulesLoading } = useModule(projectId);
-  const { departments, fetchDepartments } = useDepartment();
-  const [stages,       setStages]        = useState(DEFAULT_STAGES);
-  const [teamMembers,  setTeamMembers]   = useState([]);
-  const [pmProjects,   setPmProjects]    = useState([]);
-  const [editLoading,  setEditLoading]   = useState(false);
-  const [apiError,     setApiError]      = useState("");
+  const { departments, fetchDepartments }    = useDepartment();
+  const [teamMembers, setTeamMembers]        = useState([]);
+  const [pmProjects,  setPmProjects]         = useState([]);
+  const [editLoading, setEditLoading]        = useState(false);
+  const [apiError,    setApiError]           = useState("");
 
-useEffect(() => {
-  if (!projectId) return;
-  
-  Promise.all([
-    getProjectTeamApi(projectId),
-    getProjectByIdApi(projectId),
-    fetchDepartments({ limit: 100 }),
-  ]).then(([teamRes, projectRes]) => {
-    if (teamRes?.status === 200 || teamRes?.status === 201) {
-      setTeamMembers(teamRes.data.data.team || []);
-    }
-    if (projectRes?.status === 200 || projectRes?.status === 201) {
-      const saved = projectRes.data.data.project?.stages;
-      // Always set stages — use saved if available, otherwise keep DEFAULT
-      if (saved?.length) setStages(saved);
-    }
-  });
-}, [projectId]);
+  // Fallback stages for the edit dialog (admin/PM need these from project API)
+  const [editStages, setEditStages] = useState(DEFAULT_STAGES);
 
-// ── Load PM projects when role is pm so AddTask gets the list ─────────────
-useEffect(() => {
-  if (!isPM) return;
-  getPMProjectsApi({ limit: 100 }).then((res) => {
-    if (res?.status === 200 || res?.status === 201) {
-      setPmProjects(res.data.data.projects || []);
-    }
-  });
-}, [isPM]);
+  // ── Active stages — from task detail response (works for all roles) ───────
+  const activeStages = taskStages?.length ? taskStages : editStages;
 
-  // ── derive dept + employee options from team (same as TasksTab) ──────────
- const teamEmployees = (Array.isArray(teamMembers) ? teamMembers : []).map((m) => ({
+  useEffect(() => {
+    if (!projectId || role === "employee") return;
+    // Admin/PM: fetch team + project stages for the edit dialog
+    Promise.all([
+      getProjectTeamApi(projectId),
+      getProjectByIdApi(projectId),
+      fetchDepartments({ limit: 100 }),
+    ]).then(([teamRes, projectRes]) => {
+      if (teamRes?.status === 200 || teamRes?.status === 201) {
+        setTeamMembers(teamRes.data.data.team || []);
+      }
+      if (projectRes?.status === 200 || projectRes?.status === 201) {
+        const saved = projectRes.data.data.project?.stages;
+        if (saved?.length) setEditStages(saved);
+      }
+    }).catch(() => {});
+  }, [projectId, role]);
+
+  useEffect(() => {
+    if (!isPM) return;
+    getPMProjectsApi({ limit: 100 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setPmProjects(res.data.data.projects || []);
+      }
+    });
+  }, [isPM]);
+
+  const teamEmployees = (Array.isArray(teamMembers) ? teamMembers : []).map((m) => ({
     _id:          m._id,
     fullName:     m.fullName || m.name,
-    avatar:       m.avatar        || "",
-    designation:  m.designation   || m.role || "",
-    departmentId: m.departmentId  || "",
+    avatar:       m.avatar       || "",
+    designation:  m.designation  || m.role || "",
+    departmentId: m.departmentId || "",
   }));
 
-  const teamDeptIds  = [...new Set(teamMembers.map((m) => m.departmentId).filter(Boolean))];
-  const teamDepts    = departments.filter((d) => teamDeptIds.includes(d._id));
+  const teamDeptIds = [...new Set(teamMembers.map((m) => m.departmentId).filter(Boolean))];
+  const teamDepts   = departments.filter((d) => teamDeptIds.includes(d._id));
+
   const createdLog = Array.isArray(activityLogs)
-  ? activityLogs.find((l) => l.action?.toLowerCase().includes("task created"))
-  : null;
+    ? activityLogs.find((l) => l.action?.toLowerCase().includes("task created"))
+    : null;
 
   // ── displayTask ──────────────────────────────────────────────────────────
   const displayTask = {
     ...(task       || {}),
     ...(taskDetail || {}),
-    module:      taskDetail?.module?.title       || taskDetail?.module || task?.module || "—",
-    projectName: taskDetail?.project?.projectName || task?.projectName || "—",
+    module:      taskDetail?.module?.title        || taskDetail?.module || task?.module || "—",
+    projectName: taskDetail?.project?.projectName || task?.projectName  || "—",
     startDate:   taskDetail?.startDate
       ? new Date(taskDetail.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       : task?.startDate || "—",
@@ -124,25 +125,22 @@ useEffect(() => {
     deadline:    taskDetail?.endDate
       ? new Date(taskDetail.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
       : task?.deadline || task?.endDate || "—",
-    // keep raw dates for the edit form
     startDateRaw: taskDetail?.startDate || task?.startDate || null,
     endDateRaw:   taskDetail?.endDate   || task?.endDate   || null,
-    // keep raw ids for the edit form
-    moduleId:     taskDetail?.module?._id    || task?.moduleId    || "",
-    projectId:    taskDetail?.project?._id   || task?.projectId   || projectId,
+    moduleId:     taskDetail?.module?._id  || task?.moduleId  || "",
+    projectId:    taskDetail?.project?._id || task?.projectId || projectId,
     assigneeIds:    (Array.isArray(taskDetail?.assignees) ? taskDetail.assignees : Array.isArray(task?.assignees) ? task.assignees : []).map((a) => a._id || a),
     assigneeNames:  (Array.isArray(taskDetail?.assignees) ? taskDetail.assignees : Array.isArray(task?.assignees) ? task.assignees : []).map((a) => a.fullName || a.name || ""),
     assigneeAvatars:(Array.isArray(taskDetail?.assignees) ? taskDetail.assignees : Array.isArray(task?.assignees) ? task.assignees : []).map((a) => a.avatar || ""),
     departmentId: taskDetail?.department?._id || task?.departmentId || "",
     createdBy:
-    taskDetail?.createdBy ||
-    task?.createdBy ||
-    (createdLog?.performedByName && createdLog.performedByName !== "System"
-      ? { fullName: createdLog.performedByName }
-      : null),
+      taskDetail?.createdBy ||
+      task?.createdBy ||
+      (createdLog?.performedByName && createdLog.performedByName !== "System"
+        ? { fullName: createdLog.performedByName }
+        : null),
   };
 
-  // ── actual save handler — calls the real API ─────────────────────────────
   const handleEditSave = async (formData) => {
     setEditLoading(true);
     setApiError("");
@@ -153,18 +151,17 @@ useEffect(() => {
         department:  formData.department  || null,
         assignees:   formData.assigneeIds || [],
         priority:    formData.priority    || "medium",
-        status:      formData.status      || stages[0]?.id || "stage_1",
+        status:      formData.status      || activeStages[0]?.id || "stage_1",
         startDate:   formData.startDate   || null,
         endDate:     formData.endDate     || null,
         description: formData.description || "",
         link:        formData.link        || "",
       };
-
       const res = await updateTaskApi(projectId, taskId, payload);
       if (res?.status === 200 || res?.status === 201) {
         setSaveSuccess(true);
         setEditOpen(false);
-        fetchDetail();   // refresh displayed data
+        fetchDetail();
       } else {
         setApiError(res?.data?.message || "Failed to update task.");
       }
@@ -174,10 +171,6 @@ useEffect(() => {
       setEditLoading(false);
     }
   };
-  const handleOpenEdit = () => {
-  if (modulesLoading) return;
-  setEditOpen(true);
-};
 
   const [editOpen,    setEditOpen]    = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -204,20 +197,17 @@ useEffect(() => {
         <IconButton onClick={() => navigate(-1)} disableRipple>
           <img src={backIcon} alt="back" style={{ width: 40, height: 40 }} />
         </IconButton>
-        <Typography
-          fontSize="14px" fontWeight={500} color="text.secondary"
-          sx={{ cursor: "pointer" }} onClick={() => navigate(-1)}
-        >
+        <Typography fontSize="14px" fontWeight={500} color="text.secondary" sx={{ cursor: "pointer" }} onClick={() => navigate(-1)}>
           {backLabel}
         </Typography>
       </Box>
 
-      {/* Header + Edit button */}
+      {/* Header — passes activeStages so stage chip resolves correctly */}
       <Box sx={{ position: "relative" }}>
-        <EmpTaskDetailHeader task={displayTask} />
+        <EmpTaskDetailHeader task={displayTask} stages={activeStages} />
         {canEdit && (
           <Box sx={{ position: "absolute", top: 20, right: 24 }}>
-           <CustomButton
+            <CustomButton
               btnLabel="Edit Task"
               variant="gradientText"
               handlePressBtn={() => setEditOpen(true)}
@@ -244,21 +234,18 @@ useEffect(() => {
 
           {/* Attachments */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
-            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>
-              Attachments
-            </Typography>
+            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>Attachments</Typography>
             {!displayTask.attachments?.length ? (
               <Typography fontSize="13px" color="text.secondary">No attachments yet.</Typography>
             ) : (
               <Box display="flex" flexDirection="column" gap={1.5}>
                 {displayTask.attachments.map((att) => {
-                  const uploaderName = 
-                    att.uploadedBy?.fullName || 
-                    att.uploadedBy?.name || 
-                    displayTask.createdBy?.fullName ||   // ← fallback to task creator
-                    displayTask.createdBy?.name ||
+                  const uploaderName =
+                    att.uploadedBy?.fullName ||
+                    att.uploadedBy?.name     ||
+                    displayTask.createdBy?.fullName ||
+                    displayTask.createdBy?.name     ||
                     "Unknown";
-
                   const uploaderRole = att.uploadedBy?.role ? ` (${att.uploadedBy.role.replace(/_/g, " ")})` : "";
                   const uploadedAt   = att.uploadedAt
                     ? new Date(att.uploadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -269,17 +256,8 @@ useEffect(() => {
                         fileName={att.fileName || att.name}
                         fileSize={att.fileSize || att.size}
                         onDownload={() => {
-                          // Cloudinary attachment — open URL directly
-                          if (att.url) {
-                            window.open(att.url, "_blank");
-                            return;
-                          }
-                          // Disk-based attachment — use download API
-                          const url = downloadTaskAttachmentApi(
-                            displayTask.projectId || displayTask.project,
-                            taskId,
-                            att._id || att.id
-                          );
+                          if (att.url) { window.open(att.url, "_blank"); return; }
+                          const url = downloadTaskAttachmentApi(displayTask.projectId || displayTask.project, taskId, att._id || att.id);
                           window.open(url, "_blank");
                         }}
                       />
@@ -353,7 +331,7 @@ useEffect(() => {
                     <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "linear-gradient(135deg, #AA2493, #022179)", flexShrink: 0, mt: 0.5 }} />
                     <Box>
                       <Typography fontSize="13px" fontWeight={500}>{item.text || item.action}</Typography>
-                      <Typography fontSize="11px" color="text.secondary">{item.by || item.user?.name || "System"}</Typography>
+                      <Typography fontSize="11px" color="text.secondary">{item.by || item.performedByName || "System"}</Typography>
                     </Box>
                   </Box>
                   <Typography fontSize="11px" color="text.secondary" whiteSpace="nowrap">
@@ -367,27 +345,33 @@ useEffect(() => {
         </Grid>
 
         <Grid size={{ xs: 12, md: 4 }}>
-          <EmpTaskSidebar task={displayTask} onStatusUpdate={updateStatus} role={role}/>
+          <EmpTaskSidebar
+            task={displayTask}
+            onStatusUpdate={updateStatus}
+            role={role}
+            stages={activeStages}
+            onSubmitSuccess={fetchDetail}
+          />
         </Grid>
       </Grid>
 
       {canEdit && (
-  <AddTask
-    open={editOpen}
-    onClose={() => { setEditOpen(false); setApiError(""); }}
-    onSave={handleEditSave}
-    editingTask={displayTask}
-    loading={editLoading}
-    apiError={apiError}
-    role={role}
-    projectId={isAdmin ? projectId : undefined}
-    moduleOptions={modules}
-    departmentOptions={teamDepts}
-    teamEmployees={teamEmployees}
-    stages={stages}
-    projects={isPM ? pmProjects : undefined}
-  />
-)}
+        <AddTask
+          open={editOpen}
+          onClose={() => { setEditOpen(false); setApiError(""); }}
+          onSave={handleEditSave}
+          editingTask={displayTask}
+          loading={editLoading}
+          apiError={apiError}
+          role={role}
+          projectId={isAdmin ? projectId : undefined}
+          moduleOptions={modules}
+          departmentOptions={teamDepts}
+          teamEmployees={teamEmployees}
+          stages={activeStages}
+          projects={isPM ? pmProjects : undefined}
+        />
+      )}
 
       <SuccessPopup
         open={saveSuccess}
