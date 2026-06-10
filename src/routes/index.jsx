@@ -6,7 +6,7 @@ import Employees from "../app/admin/employees";
 import EmployeeDetail from "../app/admin/employees/employeeDetail";
 import Performance from "../app/admin/performance";
 import Roles from "../app/admin/roles";   
-import Messages from "../app/admin/messages";
+import Messages from "../app/shared/messages";
 import Documents from "../app/admin/documents";
 import Reports from "../app/admin/reports";
 import Integrations from "../app/admin/integration";
