@@ -3,7 +3,7 @@ import { Box } from "@mui/material";
 import WeeklyMiniStats from "./weeklyMiniStats";
 import WeeklyBreakdown from "./weeklyBreakdown";
 import DailyHoursChart from "./dailyHoursChart";
-import MyLeaveRequests from "./myLeaveRequests";
+
 
 const mockWeeks = [
   {
@@ -49,7 +49,7 @@ const WeeklyAttendanceView = () => {
       />
       <WeeklyBreakdown breakdown={week.breakdown} />
       <DailyHoursChart breakdown={week.breakdown} />
-      <MyLeaveRequests />
+     
     </Box>
   );
 };

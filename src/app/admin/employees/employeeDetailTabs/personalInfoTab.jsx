@@ -32,7 +32,7 @@ const formatRole = (role = "") =>
     { label: "Email",              value: employee.email          },
     { label: "Phone",              value: employee.phone          },
     { label: "Department",         value: employee.department     },
-    { label: "Designation",        value: employee.designation    },
+    //{ label: "Designation",        value: employee.designation    },
     { label: "Role",               value: formatRole(employee.role)           },
     { label: "Employment Type",    value: formatEmploymentType(employee.type)           },
     { label: "Working Hours/Day",  value: employee.workingHours ? `${employee.workingHours} hours` : null },

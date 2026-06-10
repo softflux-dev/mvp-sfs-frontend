@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { IconButton } from "@mui/material";
 
 import AnnualSummaryCard from "./annualSummaryCard";
-import MyLeaveRequests   from "./myLeaveRequests";
 
 // ── Mock annual data ──────────────────────────────────────────────────────
 const ANNUAL_DATA = {
@@ -190,8 +189,7 @@ const AnnualAttendanceView = () => {
         ))}
       </Grid>
 
-      {/* ── Leave requests ───────────────────────────────────────────────── */}
-      <MyLeaveRequests />
+  
     </Box>
   );
 };

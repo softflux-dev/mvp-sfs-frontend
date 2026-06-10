@@ -1,68 +1,115 @@
-import { useState } from "react";
-import { Box, Typography } from "@mui/material";
+// src/app/admin/employees/employeeDetailTabs/tasksTab.jsx — FULL REPLACEMENT
+import { useState, useEffect, useMemo } from "react";
+import { Box, Typography }              from "@mui/material";
 
 import Filter         from "../../../../components/filterBar/filter";
 import PaginatedTable from "../../../../components/dynamicTable";
-import { useEmployeeTask } from "../../../../hooks/task";      // ← hook
+import { useEmployeeTask }   from "../../../../hooks/task";
+import { getProjectByIdApi } from "../../../../api/modules/project";
 
 const tableHeader = [
-  { id: "taskName", label: "Task"     },
-  { id: "project",  label: "Project"  },
-  { id: "module",   label: "Module"   },
-  { id: "priority", label: "Priority" },
-  { id: "status",   label: "Status"   },
+  { id: "task",      label: "Task"        },
+  { id: "project",   label: "Project"     },
+  { id: "module",    label: "Module"      },
+  { id: "priority",  label: "Priority"    },
+  { id: "status",    label: "Task Status" },
 ];
 
 const displayRows = [
-  "task_name",
-  "task_project",
-  "task_module",
+  "task",
+  "projectName",
+  "module",
   "task_priority",
-  "status_chip",
+  "project_status",
 ];
 
 const TasksTab = ({ employee = {} }) => {
-  const { tasks, loading, error, fetchTasks } = useEmployeeTask(employee.id);
-  const [filters, setFilters] = useState({});
+  const { tasks, loading, error } = useEmployeeTask(employee.id);
 
-  // client-side filter (no pagination needed for emp tasks)
-  const filteredTasks = tasks.filter((t) => {
-    const search = filters.search?.toLowerCase() || "";
-    const status = filters.status || "";
+  const [selectedProject, setSelectedProject] = useState("");
+  const [filters,         setFilters]         = useState({ search: "", status: "" });
 
-    const matchSearch =
-      !search ||
-      t.taskName?.toLowerCase().includes(search) ||
-      t.project?.toLowerCase().includes(search);
+  // ── per-project stages map: { projectId: stages[] } ──────────────────────
+  const [projectStages, setProjectStages] = useState({});
 
-    const matchStatus = !status ||
-      t.status?.toLowerCase().replace(/\s/g, "_") === status;
+  // ── Derive unique projects from tasks ─────────────────────────────────────
+  const projects = useMemo(() => Array.from(
+    new Map(
+      tasks
+        .filter((t) => t.project?._id || t.project)
+        .map((t) => [
+          t.project?._id || t.project,
+          {
+            _id:         t.project?._id  || t.project,
+            projectName: t.project?.projectName || t.project || "—",
+          },
+        ])
+    ).values()
+  ), [tasks]);
 
-    return matchSearch && matchStatus;
-  });
+  // ── Stable project ids string — only changes when projects list changes ───
+  const projectIds = projects.map((p) => p._id).join(",");
 
-  // map API shape → table row shape
+  // ── Fetch stages for ALL projects once they are known ─────────────────────
+  useEffect(() => {
+    if (!projectIds) return;
+    Promise.all(
+      projects.map((p) =>
+        getProjectByIdApi(p._id)
+          .then((res) => ({
+            id:     p._id,
+            stages: res?.data?.data?.project?.stages || [],
+          }))
+          .catch(() => ({ id: p._id, stages: [] }))
+      )
+    ).then((results) => {
+      const map = {};
+      results.forEach(({ id, stages }) => { map[id] = stages; });
+      setProjectStages(map);
+    });
+  }, [projectIds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Active stages ─────────────────────────────────────────────────────────
+  // Selected project → that project's stages
+  // No project selected → merge all stages from all projects (deduplicated by id)
+  const activeStages = useMemo(() => {
+    if (selectedProject) {
+      return projectStages[selectedProject] || [];
+    }
+    // Merge all stages, deduplicate by stage id
+    const merged = new Map();
+    Object.values(projectStages).forEach((stages) => {
+      stages.forEach((s) => { if (!merged.has(s.id)) merged.set(s.id, s); });
+    });
+    return Array.from(merged.values());
+  }, [selectedProject, projectStages]);
+
+  // ── Map tasks → table rows ────────────────────────────────────────────────
   const tableData = tasks
     .filter((t) => {
       const search = filters.search?.toLowerCase() || "";
       const status = filters.status || "";
+
+      const matchProject = !selectedProject ||
+        (t.project?._id || t.project) === selectedProject;
+
       const matchSearch = !search ||
         t.title?.toLowerCase().includes(search) ||
-        t.project?.projectName?.toLowerCase().includes(search);
+        (t.project?.projectName || "").toLowerCase().includes(search);
+
       const matchStatus = !status || t.status === status;
-      return matchSearch && matchStatus;
+
+      return matchProject && matchSearch && matchStatus;
     })
     .map((t) => ({
-      id:       t._id,
-      taskName: t.title,
-      project:  t.project?.projectName || "—",
-      module:   t.module?.title        || "—",
-      priority: t.priority
+      id:          t._id,
+      task:        t.title || "—",
+      projectName: t.project?.projectName || t.project || "—",
+      module:      t.module?.title        || t.module  || "—",
+      priority:    t.priority
         ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
         : "—",
-      status: t.status
-        ? t.status.charAt(0).toUpperCase() + t.status.slice(1)
-        : "—",
+      status:      t.status || "",   // raw stage id — project_status chip resolves via activeStages
     }));
 
   return (
@@ -76,7 +123,18 @@ const TasksTab = ({ employee = {} }) => {
         </Box>
       )}
 
-      <Filter mode="employee_tasks" onFilterChange={setFilters} />
+      <Filter
+        mode="employee_tasks"
+        projects={projects}
+        stages={activeStages}
+        onFilterChange={(f) => {
+          setSelectedProject(f.project || "");
+          setFilters({
+            search: f.search || "",
+            status: f.status || "",
+          });
+        }}
+      />
 
       <Box mt={2} bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable
@@ -84,6 +142,7 @@ const TasksTab = ({ employee = {} }) => {
           tableData={tableData}
           displayRows={displayRows}
           isLoading={loading}
+          stages={activeStages}
         />
       </Box>
 

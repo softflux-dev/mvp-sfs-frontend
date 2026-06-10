@@ -42,9 +42,9 @@ const EmployeeDetailHeader = ({ employee = {}, onEditClick }) => {
               />
             </Box>
 
-            {/* Designation · Department */}
+            {/* Role · Department */}
             <Typography fontSize="13px" color="text.secondary" mb={0.25}>
-              {[employee.designation, employee.department].filter(Boolean).join(" · ")}
+              {[employee.role, employee.department].filter(Boolean).join(" · ")}
             </Typography>
 
             {/* Emp ID */}

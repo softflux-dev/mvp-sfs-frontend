@@ -1,43 +1,18 @@
-import { Box, Typography, Chip, Button } from "@mui/material";
-import PaginatedTable from "../../../components/dynamicTable";
+// src/app/empPortal/myAttendance/myLeaveRequests.jsx — FULL REPLACEMENT
+import { useRef, useState } from "react";
+import { Box, Typography }  from "@mui/material";
 
-const mockLeaveRequests = [
-  {
-    id: "l1",
-    leaveType:   "Full Day Leave",
-    fromDate:    "2026-03-02",
-    toDate:      "2026-03-02",
-    totalDays:   1,
-    reason:      "Family event out of town...",
-    status:      "Approved",
-    submittedOn: "2026-02-20",
-  },
-  {
-    id: "l2",
-    leaveType:   "Sick Leave",
-    fromDate:    "2026-03-02",
-    toDate:      "2026-03-02",
-    totalDays:   1,
-    reason:      "Medical appointment and re...",
-    status:      "Pending",
-    submittedOn: "2026-02-20",
-  },
-  {
-    id: "l3",
-    leaveType:   "Short Leave",
-    fromDate:    "2026-03-02",
-    toDate:      "–",
-    totalDays:   "2 Hours",
-    reason:      "Bank work",
-    status:      "Reject",
-    submittedOn: "2026-02-20",
-  },
-];
+import PaginatedTable     from "../../../components/dynamicTable";
+import ConfirmationDialog from "../../../components/popups/confirmation";
+import SuccessPopup       from "../../../components/popups/confirmationDialog";
 
-const statusConfig = {
-  Approved: { bg: "#04C3731A", color: "#04C373" },
-  Pending:  { bg: "#AA24931A", color: "#AA2493" },
-  Reject:   { bg: "#FF00001A", color: "#FF0000" },
+const LEAVE_TYPE_LABELS = {
+  sick:      "Sick Leave",
+  casual:    "Casual Leave",
+  annual:    "Annual Leave",
+  maternity: "Maternity Leave",
+  half_day:  "Half Day",
+  emergency: "Emergency Leave",
 };
 
 const tableHeader = [
@@ -57,37 +32,87 @@ const displayRows = [
   "toDate",
   "totalDays",
   "reason",
-  "leave_status",   // custom chip
+  "leave_status",
   "submittedOn",
-  "leave_action",   // custom cancel btn
+  "leave_cancel",
 ];
 
-// ── Inline custom cell renderers (add to your dynamicTable cases) ──────────
-// case "leave_status":
-//   const cfg = statusConfig[row.status] || {};
-//   return <Chip label={row.status} size="small" sx={{ bgcolor: cfg.bg, color: cfg.color, fontWeight: 500, fontSize: 11 }} />;
-//
-// case "leave_action":
-//   return row.status === "Pending"
-//     ? <Button variant="gradient" size="small" sx={{ fontSize: 11, px: 2, py: 0.5, borderRadius: "8px" }}
-//         onClick={() => console.log("Cancel", row.id)}>Cancel</Button>
-//     : null;
+const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, cancelLeave }) => {
+  const confirmRef = useRef();
+  const [successMsg,  setSuccessMsg]  = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errorMsg,    setErrorMsg]    = useState("");
 
-const MyLeaveRequests = () => (
-  <Box mt={3}>
-    <Typography fontSize="14px" fontWeight={600} color="text.primary" mb={1.5}>
-      My Leave Requests
-    </Typography>
+  const handleCancel = (row) => {
+    confirmRef.current?.open({
+      title:       "Cancel Leave Request?",
+      description: "This will permanently remove your leave request.",
+      confirmText: "Yes, Cancel",
+      cancelText:  "Keep It",
+      onConfirm: async () => {
+        const result = await cancelLeave?.(row.id);
+        if (result?.success) {
+          setSuccessMsg(result.message);
+          setShowSuccess(true);
+          setErrorMsg("");
+        } else {
+          setErrorMsg(result?.message || "Failed to cancel.");
+        }
+      },
+    });
+  };
 
-    <Box bgcolor="#fff" borderRadius="16px">
-      <PaginatedTable
-        tableHeader={tableHeader}
-        tableData={mockLeaveRequests}
-        displayRows={displayRows}
-        isLoading={false}
+  const tableData = leaves.map((l) => ({
+    id:          l._id,
+    leaveType:   LEAVE_TYPE_LABELS[l.leaveType] || l.leaveType || "—",
+    fromDate:    l.fromDate
+      ? new Date(l.fromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "—",
+    toDate:      l.toDate
+      ? new Date(l.toDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "—",
+    totalDays:   l.totalDays ?? 1,
+    reason:      l.reason
+      ? l.reason.length > 40 ? l.reason.slice(0, 40) + "..." : l.reason
+      : "—",
+    status:      l.status || "pending",
+    submittedOn: l.createdAt
+      ? new Date(l.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "—",
+  }));
+
+  return (
+    <Box>
+      {errorMsg && (
+        <Box mb={2} px={2} py={1.5}
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
+        >
+          <Typography fontSize={13} color="error">{errorMsg}</Typography>
+        </Box>
+      )}
+
+      <Box bgcolor="#fff" borderRadius="25px" p={1}>
+        <PaginatedTable
+          tableHeader={tableHeader}
+          tableData={tableData}
+          displayRows={displayRows}
+          isLoading={loading}
+          onCancelClick={handleCancel}
+          actionLoading={actionLoading}
+        />
+      </Box>
+
+      <ConfirmationDialog ref={confirmRef} />
+
+      <SuccessPopup
+        open={showSuccess}
+        onClose={() => setShowSuccess(false)}
+        message={successMsg}
+        autoClose
+        autoCloseDelay={2000}
       />
     </Box>
-  </Box>
-);
+  );
+};
 
 export default MyLeaveRequests;

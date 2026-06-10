@@ -238,25 +238,46 @@ employees: ({ departments = [], roles = [] }) => [
   },
 ],
 
-   employee_tasks: [
-     {
-       type: "search",
-       key: "search",
-       placeholder: "Search Projects...",
-       grid: { xs: 12, md: 8 },
-     },
-     {
-       type: "select",
-       key: "status",
-       placeholder: "All Status",
-       grid: { xs: 12, md: 4 },
-       options: [
-         { v: "",            l: "All Status"   },
-         { v: "in_progress", l: "In Progress"  },
-         { v: "completed",   l: "Completed"    },
-       ],
-     },
-   ],
+employee_tasks: ({ projects = [], stages = [] }) => [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search tasks...",
+    grid: { xs: 12, md: 3 },
+  },
+  {
+    type: "select",
+    key: "project",
+    placeholder: "All Projects",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "", l: "All Projects" },
+      ...projects.map((p) => ({ v: p._id, l: p.projectName })),
+    ],
+  },
+  {
+    type: "select",
+    key: "status",
+    placeholder: "All Task Status",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "", l: "All Task Status" },
+      ...stages.map((s) => ({ v: s.id, l: s.label })),
+    ],
+  },
+  {
+    type: "select",
+    key: "priority",
+    placeholder: "All Priority",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "",       l: "All Priority" },
+      { v: "high",   l: "High"         },
+      { v: "medium", l: "Medium"       },
+      { v: "low",    l: "Low"          },
+    ],
+  },
+],
 
    performance: [
      {
@@ -487,27 +508,27 @@ leave_management: [
   },
   {
     type: "select",
-    key: "type",
-  
+    key: "leaveType",     // ← matches backend query param
     grid: { xs: 12, md: 3 },
     options: [
-      { v: "",               l: "All Types"            },
-      { v: "full_day",       l: "Full Day"        },
-      { v: "short_leave",    l: "Short Leave"     },
-      { v: "sick_leave",     l: "Sick Leave"      },
-      { v: "emergency_leave",l: "Emergency Leave" },
+      { v: "",          l: "All Types"       },
+      { v: "sick",      l: "Sick Leave"      },
+      { v: "casual",    l: "Casual Leave"    },
+      { v: "annual",    l: "Annual Leave"    },
+      { v: "maternity", l: "Maternity Leave" },
+      { v: "half_day",  l: "Half Day"        },
+      { v: "emergency", l: "Emergency Leave" },
     ],
   },
   {
     type: "select",
     key: "status",
-    
     grid: { xs: 12, md: 3 },
     options: [
-      { v: "",         l: "All Status"      },
-      { v: "approved", l: "Approved" },
-      { v: "rejected", l: "Rejected" },
-      { v: "pending",  l: "Pending"  },
+      { v: "",         l: "All Status" },
+      { v: "pending",  l: "Pending"    },
+      { v: "approved", l: "Approved"   },
+      { v: "rejected", l: "Rejected"   },
     ],
   },
   {

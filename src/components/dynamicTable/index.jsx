@@ -144,6 +144,8 @@ export default function PaginatedTable({
   onApproveClick,
   onRejectClick,
   stages = [],
+  onCancelClick,     
+  actionLoading = false, 
 }) {
   const [internalPage, setInternalPage] = useState(0);
   const [internalRowsPerPage, setInternalRowsPerPage] = useState(10);
@@ -296,7 +298,50 @@ case "project_status": {
           </TableCell>
         );
       }
-
+// ── leave_status — used in employee MyLeaveRequests ───────────────────────────
+case "leave_status": {
+  const STATUS_CFG = {
+    pending:  { label: "Pending",  bg: "#AA24931A", color: "#AA2493" },
+    approved: { label: "Approved", bg: "#04C3731A", color: "#04C373" },
+    rejected: { label: "Rejected", bg: "#FF00001A", color: "#FF0000" },
+  };
+  const cfg = STATUS_CFG[row.status?.toLowerCase()] || { label: row.status || "—", bg: "#F5F5F5", color: "#757575" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={cfg.label}
+        size="small"
+        sx={{
+          height: "26px", fontSize: "12px", fontWeight: 500,
+          px: 1.5, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+ 
+// ── leave_cancel — Cancel button for pending leave (employee portal) ──────────
+case "leave_cancel": {
+  if (row.status !== "pending") return <TableCell key={val} />;
+  return (
+    <TableCell key={val}>
+      <Button
+        size="small"
+        onClick={() => onCancelClick?.(row)}
+        disabled={actionLoading}
+        sx={{
+          fontSize: "12px", px: 2, py: 0.5, borderRadius: "8px",
+          backgroundColor: "#FF00001A", color: "#FF0000",
+          "&:hover": { backgroundColor: "#FF00002A" },
+          textTransform: "none", fontWeight: 500,
+        }}
+      >
+        Cancel
+      </Button>
+    </TableCell>
+  );
+}
       // ── Project progress bar ──────────────────────────────────────────────
      case "project_progress":
       return (

@@ -127,6 +127,11 @@ employeeResetPassword:  "employee/auth/reset-password",
   markNotificationRead:     "notifications",
   markAllNotificationsRead: "notifications",
 
+   // ── Leave Management ──────────────────────────────────────────────────────
+  empGetMyLeaves:     "employee/leaves",   // GET / POST / DELETE /:id
+  hrGetLeaves:        "hr/leaves",         // GET /
+  hrReviewLeave:      "hr/leaves",         // PATCH /:id
+
 };
 
 
