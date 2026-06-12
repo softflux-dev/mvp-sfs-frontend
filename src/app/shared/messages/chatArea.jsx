@@ -1,7 +1,7 @@
-// src/shared/messages/chatArea.jsx — FULL REPLACEMENT
+// src/app/shared/messages/chatArea.jsx — FULL REPLACEMENT
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Box, Typography, Avatar, IconButton, CircularProgress } from "@mui/material";
-import { Users }    from "lucide-react";
+import { Box, Typography, Avatar, IconButton, CircularProgress, Menu, MenuItem } from "@mui/material";
+import { Users, MoreVertical, Trash2, X } from "lucide-react";
 import { v4 as uuid } from "uuid";
 
 import ChatIcon   from "../../../assets/icons/chat.svg";
@@ -10,21 +10,19 @@ import AttachIcon from "../../../assets/icons/attach.svg";
 import SendIcon   from "../../../assets/icons/send.svg";
 import TextInput  from "../../../components/textInput";
 import ChatBubble from "./chatBubble";
-import { useMessages } from "../../../hooks/messages";
-import { getSocket }   from "../../../utils/socketManager";
+import GroupInfoPanel from "./groupInfoPanel";
+import ConfirmationDialog from "../../../components/popups/confirmation";
+import { useMessages, useConversationActions } from "../../../hooks/messages";
+import { getSocket } from "../../../utils/socketManager";
 
-// ── Date divider ──────────────────────────────────────────────────────────────
 const DateDivider = ({ label }) => (
   <Box display="flex" alignItems="center" gap={2} my={2}>
     <Box sx={{ flex: 1, height: "1px", backgroundColor: "#F0F0F0" }} />
-    <Typography fontSize="11px" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-      {label}
-    </Typography>
+    <Typography fontSize="11px" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>{label}</Typography>
     <Box sx={{ flex: 1, height: "1px", backgroundColor: "#F0F0F0" }} />
   </Box>
 );
 
-// ── Empty state ───────────────────────────────────────────────────────────────
 const EmptyState = () => (
   <Box sx={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2 }}>
     <Box sx={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, #AA249320, #02217920)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -37,119 +35,157 @@ const EmptyState = () => (
   </Box>
 );
 
-// ── Group messages by date ────────────────────────────────────────────────────
 const getDateLabel = (dateStr) => {
-  const d     = new Date(dateStr);
-  const today = new Date();
-  const diff  = Math.floor((today - d) / (1000 * 60 * 60 * 24));
+  const d = new Date(dateStr); const today = new Date();
+  const dOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const tOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const diff  = Math.round((tOnly - dOnly) / (1000 * 60 * 60 * 24));
   if (diff === 0) return "Today";
   if (diff === 1) return "Yesterday";
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 };
 
-const ChatArea = ({ conversation, currentUser, onlineUsers = new Set(), onMessageSent }) => {
-  const [input,      setInput]      = useState("");
-  const [typingUsers, setTypingUsers] = useState([]);
+const ChatArea = ({
+  conversation,
+  currentUser,
+  onlineUsers = new Set(),
+  onMessageSent,
+  onDeleteConversation,
+}) => {
+  const [input,          setInput]          = useState("");
+  const [typingUsers,    setTypingUsers]    = useState([]);   // [{userId, userName}]
+  const [groupPanelOpen, setGroupPanelOpen] = useState(false);
+  const [menuAnchor,     setMenuAnchor]     = useState(null);
+  const [pendingFiles,   setPendingFiles]   = useState([]);
+
   const bottomRef   = useRef(null);
-  const typingTimer = useRef(null);
   const topRef      = useRef(null);
+  const typingTimer = useRef(null);
+  const confirmRef  = useRef();
+  const fileInputRef = useRef(null);
 
   const {
     messages, loading, sending, hasMore,
-    loadMore, fetchMissed, sendMessage, addIncomingMessage,
-  } = useMessages(conversation?._id);
+    loadMore, fetchMissed, sendMessage, sendWithAttachments,
+    editMessage, deleteMessage,
+    addIncomingMessage, applyMessageEdit, applyMessageDelete,
+  } = useMessages(conversation?._id, currentUser?._id);
 
-  // ── Scroll to bottom on new messages ──────────────────────────────────────
+  const { renameGroup, deleteConversation, kickMember } = useConversationActions();
+
+  // Clear transient state when switching conversation — fixes typing leak
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+    setTypingUsers([]);
+    setInput("");
+    setPendingFiles([]);
+  }, [conversation?._id]);
 
-  // ── Socket event listeners for this conversation ──────────────────────────
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
+
+  // ── Socket listeners — scoped to this conversation ───────────────────────
   useEffect(() => {
     if (!conversation?._id) return;
     const socket = getSocket();
     if (!socket) return;
+    const convId = String(conversation._id);
 
-    const handleNewMessage = ({ conversationId, message }) => {
-      if (conversationId !== conversation._id) return;
-      addIncomingMessage(message);
-    };
+    const handleNew     = ({ conversationId, message }) => { if (String(conversationId) === convId) addIncomingMessage(message); };
+    const handleEdited  = ({ conversationId, message }) => { if (String(conversationId) === convId) applyMessageEdit({ message }); };
+    const handleDeleted = ({ conversationId, messageId }) => { if (String(conversationId) === convId) applyMessageDelete({ messageId }); };
 
     const handleTypingStart = ({ conversationId, userId, userName }) => {
-      if (conversationId !== conversation._id) return;
-      if (userId === currentUser?._id) return;
-      setTypingUsers((prev) => prev.includes(userName) ? prev : [...prev, userName]);
+      if (String(conversationId) !== convId) return;
+      if (String(userId) === String(currentUser?._id)) return;
+      setTypingUsers((prev) => prev.some((u) => u.userId === userId) ? prev : [...prev, { userId, userName }]);
     };
-
     const handleTypingStop = ({ conversationId, userId }) => {
-      if (conversationId !== conversation._id) return;
-      setTypingUsers((prev) => prev.filter((_, i) => i !== 0)); // simple: remove first
+      if (String(conversationId) !== convId) return;
+      setTypingUsers((prev) => prev.filter((u) => u.userId !== userId));
     };
 
-    // Fetch any messages missed while this conversation wasn't open
     fetchMissed();
-
-    socket.on("new_message",         handleNewMessage);
+    socket.on("new_message",         handleNew);
+    socket.on("message_edited",      handleEdited);
+    socket.on("message_deleted",     handleDeleted);
     socket.on("user_typing",         handleTypingStart);
     socket.on("user_stopped_typing", handleTypingStop);
 
     return () => {
-      socket.off("new_message",         handleNewMessage);
+      socket.off("new_message",         handleNew);
+      socket.off("message_edited",      handleEdited);
+      socket.off("message_deleted",     handleDeleted);
       socket.off("user_typing",         handleTypingStart);
       socket.off("user_stopped_typing", handleTypingStop);
     };
   }, [conversation?._id, currentUser?._id]);
 
-  // ── Send message ──────────────────────────────────────────────────────────
+  // Infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(([e]) => { if (e.isIntersecting && hasMore) loadMore(); }, { threshold: 1 });
+    if (topRef.current) observer.observe(topRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadMore]);
+
+  // ── Send ──────────────────────────────────────────────────────────────────
   const handleSend = useCallback(async () => {
-    if (!input.trim() || !conversation?._id) return;
+    if ((!input.trim() && !pendingFiles.length) || !conversation?._id || sending) return;
     const text   = input.trim();
+    const files  = pendingFiles;
     const tempId = uuid();
     setInput("");
-
-    // Stop typing indicator
+    setPendingFiles([]);
     clearTimeout(typingTimer.current);
     getSocket()?.emit("typing_stop", { conversationId: conversation._id });
 
-    const result = await sendMessage(text, tempId);
+    const result = files.length
+      ? await sendWithAttachments(files, text, tempId)
+      : await sendMessage(text, tempId);
+
     if (result?.success) {
       onMessageSent?.(conversation._id, {
-        text,
-        sender: currentUser?.fullName || currentUser?.name || "",
+        text: text || (files.length ? `📎 ${files[0].name}` : ""),
+        sender: currentUser?.name || "",
         sentAt: new Date().toISOString(),
       });
     }
-  }, [input, conversation?._id, sendMessage, onMessageSent, currentUser]);
+  }, [input, pendingFiles, conversation?._id, sending, sendMessage, sendWithAttachments, onMessageSent, currentUser]);
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  const handleKeyDown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
-  // ── Typing indicator ──────────────────────────────────────────────────────
   const handleInputChange = (e) => {
     setInput(e.target.value);
     if (!conversation?._id) return;
     const socket = getSocket();
-    if (!socket) return;
+    if (!socket?.connected) return;
     socket.emit("typing_start", { conversationId: conversation._id });
     clearTimeout(typingTimer.current);
-    typingTimer.current = setTimeout(() => {
-      socket.emit("typing_stop", { conversationId: conversation._id });
-    }, 2000);
+    typingTimer.current = setTimeout(() => socket.emit("typing_stop", { conversationId: conversation._id }), 2000);
   };
 
-  // ── Infinite scroll (load older messages) ────────────────────────────────
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting && hasMore) loadMore(); },
-      { threshold: 1 }
-    );
-    if (topRef.current) observer.observe(topRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, loadMore]);
+  // ── File selection ────────────────────────────────────────────────────────
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []).slice(0, 5);
+    setPendingFiles((prev) => [...prev, ...files].slice(0, 5));
+    e.target.value = "";
+  };
+
+  // ── Delete conversation ───────────────────────────────────────────────────
+  const handleDeleteConversation = () => {
+    setMenuAnchor(null);
+    const isGroupChat = conversation?.type === "project";
+    confirmRef.current?.open({
+      title:       isGroupChat ? "Delete Group Chat?" : "Delete Chat?",
+      description: isGroupChat
+        ? "This will permanently delete the group and all messages."
+        : "This chat will be removed from your view.",
+      confirmText: "Yes, Delete",
+      cancelText:  "Cancel",
+      onConfirm: async () => {
+        const result = await deleteConversation(conversation._id);
+        if (result.success) onDeleteConversation?.(conversation._id);
+      },
+    });
+  };
 
   if (!conversation) {
     return (
@@ -159,16 +195,16 @@ const ChatArea = ({ conversation, currentUser, onlineUsers = new Set(), onMessag
     );
   }
 
-  // Get conversation display name — for direct chats, show other person's name
-  const otherParticipant = conversation.participants?.find(
-    (p) => p.user?._id !== currentUser?._id && p.user !== currentUser?._id
-  );
-  const displayName = conversation.name || otherParticipant?.name || "Unknown";
+  const isGroup   = conversation.type === "project";
+  const isCreator = String(conversation.createdBy) === String(currentUser?._id);
+  const otherParticipant = !isGroup
+    ? conversation.participants?.find((p) => String(p.user?._id || p.user) !== String(currentUser?._id))
+    : null;
+  const displayName   = isGroup ? (conversation.name || "Project Chat") : (otherParticipant?.name || "Unknown");
   const displayAvatar = otherParticipant?.avatar || "";
   const otherUserId   = otherParticipant?.user?._id || otherParticipant?.user || "";
-  const isOnline      = onlineUsers.has(otherUserId?.toString());
+  const isOnline      = !isGroup && onlineUsers.has(String(otherUserId));
 
-  // ── Add date labels to messages ───────────────────────────────────────────
   let lastDateLabel = null;
   const messagesWithDates = messages.map((msg) => {
     const label = getDateLabel(msg.createdAt);
@@ -178,93 +214,143 @@ const ChatArea = ({ conversation, currentUser, onlineUsers = new Set(), onMessag
   });
 
   return (
-    <Box sx={{ flex: 1, backgroundColor: "#fff", borderRadius: "20px", display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #F0F0F0" }}>
+    <>
+      <Box sx={{ flex: 1, backgroundColor: "#fff", borderRadius: "20px", display: "flex", flexDirection: "column", overflow: "hidden", border: "1px solid #F0F0F0" }}>
 
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 2, borderBottom: "1px solid #F5F5F5", flexShrink: 0 }}>
-        <Box display="flex" alignItems="center" gap={1.5}>
-          <Box sx={{ position: "relative" }}>
-            <Avatar src={displayAvatar} sx={{ width: 40, height: 40, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "15px", fontWeight: 600 }}>
-              {displayName?.charAt(0)}
-            </Avatar>
-            {!conversation.isGroup && (
-              <Box sx={{ position: "absolute", bottom: 1, right: 1, width: 10, height: 10, borderRadius: "50%", backgroundColor: isOnline ? "#04C373" : "#D1D5DB", border: "2px solid #fff" }} />
+        {/* Header */}
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 2, borderBottom: "1px solid #F5F5F5", flexShrink: 0 }}>
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <Box sx={{ position: "relative" }}>
+              <Avatar src={displayAvatar} sx={{ width: 40, height: 40, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "15px", fontWeight: 600 }}>
+                {displayName?.charAt(0)}
+              </Avatar>
+              {!isGroup && (
+                <Box sx={{ position: "absolute", bottom: 1, right: 1, width: 10, height: 10, borderRadius: "50%", backgroundColor: isOnline ? "#04C373" : "#D1D5DB", border: "2px solid #fff" }} />
+              )}
+            </Box>
+            <Box>
+              <Typography fontSize="15px" fontWeight={600} color="text.primary">{displayName}</Typography>
+              <Typography fontSize="12px" color={isOnline ? "#04C373" : "text.secondary"}>
+                {isGroup ? `${conversation.participants?.length || 0} members` : isOnline ? "Online" : "Offline"}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box display="flex" alignItems="center" gap={0.5}>
+            {isGroup && (
+              <IconButton onClick={() => setGroupPanelOpen(true)} sx={{ width: 36, height: 36, backgroundColor: "#F5F5F5", borderRadius: "10px" }}>
+                <Users size={18} color="#67768B" />
+              </IconButton>
+            )}
+            {(conversation.type === "direct" || isCreator) && (
+              <>
+                <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)} sx={{ width: 36, height: 36, backgroundColor: "#F5F5F5", borderRadius: "10px" }}>
+                  <MoreVertical size={18} color="#67768B" />
+                </IconButton>
+                <Menu
+                  anchorEl={menuAnchor}
+                  open={Boolean(menuAnchor)}
+                  onClose={() => setMenuAnchor(null)}
+                  PaperProps={{ sx: { borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", minWidth: 180 } }}
+                >
+                  {isGroup && isCreator && (
+                    <MenuItem onClick={() => { setMenuAnchor(null); setGroupPanelOpen(true); }} sx={{ fontSize: "13px", gap: 1.5, py: 1 }}>
+                      <Users size={14} color="#67768B" /> Manage Group
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={handleDeleteConversation} sx={{ fontSize: "13px", gap: 1.5, py: 1, color: "#FF3B30" }}>
+                    <Trash2 size={14} /> {isGroup ? "Delete Group" : "Delete Chat"}
+                  </MenuItem>
+                </Menu>
+              </>
             )}
           </Box>
-          <Box>
-            <Typography fontSize="15px" fontWeight={600} color="text.primary">{displayName}</Typography>
-            <Typography fontSize="12px" color={isOnline ? "#04C373" : "text.secondary"}>
-              {conversation.isGroup ? conversation.subtitle : isOnline ? "Online" : "Offline"}
+        </Box>
+
+        {/* Messages */}
+        <Box sx={{ flex: 1, overflowY: "auto", px: 2.5, py: 2, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: "linear-gradient(#AA2493, #022179)", borderRadius: "4px" } }}>
+          <div ref={topRef} />
+          {loading && <Box display="flex" justifyContent="center" py={3}><CircularProgress size={24} sx={{ color: "#AA2493" }} /></Box>}
+
+          {messagesWithDates.map((msg) => (
+            <Box key={msg._id || msg.tempId}>
+              {msg.showDateLabel && <DateDivider label={msg.dateLabel} />}
+              <ChatBubble
+                message={msg}
+                isOwn={msg.isOwn}
+                isGroup={isGroup}
+                onEdit={editMessage}
+                onDelete={deleteMessage}
+              />
+            </Box>
+          ))}
+
+          {typingUsers.length > 0 && (
+            <Typography fontSize="12px" color="text.secondary" fontStyle="italic" mb={1}>
+              {typingUsers.map((u) => u.userName).join(", ")} {typingUsers.length === 1 ? "is" : "are"} typing...
             </Typography>
-          </Box>
+          )}
+          <div ref={bottomRef} />
         </Box>
-        {conversation.isGroup && (
-          <IconButton sx={{ width: 36, height: 36, backgroundColor: "#F5F5F5", borderRadius: "10px" }}>
-            <Users size={18} color="#67768B" />
-          </IconButton>
-        )}
-      </Box>
 
-      {/* ── Messages ─────────────────────────────────────────────────────── */}
-      <Box sx={{ flex: 1, overflowY: "auto", px: 2.5, py: 2, "&::-webkit-scrollbar": { width: "4px" }, "&::-webkit-scrollbar-thumb": { background: "linear-gradient(#AA2493, #022179)", borderRadius: "4px" } }}>
-
-        {/* Sentinel for infinite scroll */}
-        <div ref={topRef} />
-
-        {loading && (
-          <Box display="flex" justifyContent="center" py={3}>
-            <CircularProgress size={24} sx={{ color: "#AA2493" }} />
+        {/* Pending files preview */}
+        {pendingFiles.length > 0 && (
+          <Box sx={{ px: 2, py: 1, borderTop: "1px solid #F5F5F5", display: "flex", gap: 1, flexWrap: "wrap" }}>
+            {pendingFiles.map((f, i) => (
+              <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 0.75, backgroundColor: "#F5F5F5", borderRadius: "8px", px: 1.5, py: 0.5 }}>
+                <Typography fontSize="12px" color="text.primary" noWrap sx={{ maxWidth: 160 }}>{f.name}</Typography>
+                <IconButton size="small" onClick={() => setPendingFiles((prev) => prev.filter((_, idx) => idx !== i))} sx={{ p: 0.25 }}>
+                  <X size={12} />
+                </IconButton>
+              </Box>
+            ))}
           </Box>
         )}
 
-        {messagesWithDates.map((msg) => (
-          <Box key={msg._id || msg.tempId}>
-            {msg.showDateLabel && <DateDivider label={msg.dateLabel} />}
-            <ChatBubble
-              message={msg}
-              isOwn={msg.isOwn || msg.sender?.toString() === currentUser?._id?.toString() || msg.sender === currentUser?._id}
-            />
+        {/* Input Bar */}
+        <Box sx={{ px: 2, py: 1.5, borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+          <Box sx={{ width: 44, height: 44, borderRadius: "14px", backgroundColor: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, "&:hover": { backgroundColor: "#EBEBEB" } }}>
+            <Box component="img" src={EmojiIcon} alt="emoji" sx={{ width: 20, height: 20 }} />
           </Box>
-        ))}
 
-        {/* Typing indicator */}
-        {typingUsers.length > 0 && (
-          <Box display="flex" alignItems="center" gap={1} mb={1}>
-            <Typography fontSize="12px" color="text.secondary" fontStyle="italic">
-              {typingUsers.join(", ")} {typingUsers.length === 1 ? "is" : "are"} typing...
-            </Typography>
+          {/* Attach — opens file picker */}
+          <Box
+            onClick={() => fileInputRef.current?.click()}
+            sx={{ width: 44, height: 44, borderRadius: "14px", backgroundColor: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, "&:hover": { backgroundColor: "#EBEBEB" } }}
+          >
+            <Box component="img" src={AttachIcon} alt="attach" sx={{ width: 20, height: 20 }} />
           </Box>
-        )}
+          <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelect} />
 
-        <div ref={bottomRef} />
+          <Box flex={1}>
+            <TextInput placeholder="Type a message..." value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} inputBgColor="#F5F5F5" fullWidth />
+          </Box>
+
+          <Box
+            onClick={(input.trim() || pendingFiles.length) && !sending ? handleSend : undefined}
+            sx={{ width: 44, height: 44, borderRadius: "14px", background: "linear-gradient(135deg, #AA2493, #022179)", display: "flex", alignItems: "center", justifyContent: "center", cursor: (input.trim() || pendingFiles.length) && !sending ? "pointer" : "default", flexShrink: 0, opacity: (input.trim() || pendingFiles.length) && !sending ? 1 : 0.5, transition: "all 0.2s ease" }}
+          >
+            {sending
+              ? <CircularProgress size={16} sx={{ color: "#fff" }} />
+              : <Box component="img" src={SendIcon} alt="send" sx={{ width: 18, height: 18, filter: "brightness(0) invert(1)" }} />}
+          </Box>
+        </Box>
       </Box>
 
-      {/* ── Input Bar ─────────────────────────────────────────────────────── */}
-      <Box sx={{ px: 2, py: 1.5, borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
-        <Box sx={{ width: 44, height: 44, borderRadius: "14px", backgroundColor: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, "&:hover": { backgroundColor: "#EBEBEB" } }}>
-          <Box component="img" src={EmojiIcon} alt="emoji" sx={{ width: 20, height: 20 }} />
-        </Box>
-        <Box sx={{ width: 44, height: 44, borderRadius: "14px", backgroundColor: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, "&:hover": { backgroundColor: "#EBEBEB" } }}>
-          <Box component="img" src={AttachIcon} alt="attach" sx={{ width: 20, height: 20 }} />
-        </Box>
-        <Box flex={1}>
-          <TextInput
-            placeholder="Type a message..."
-            value={input}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            inputBgColor="#F5F5F5"
-            fullWidth
-          />
-        </Box>
-        <Box
-          onClick={input.trim() ? handleSend : undefined}
-          sx={{ width: 44, height: 44, borderRadius: "14px", background: "linear-gradient(135deg, #AA2493, #022179)", display: "flex", alignItems: "center", justifyContent: "center", cursor: input.trim() ? "pointer" : "default", flexShrink: 0, opacity: input.trim() ? 1 : 0.5, transition: "all 0.2s ease", "&:hover": { background: input.trim() ? "linear-gradient(135deg, #022179, #AA2493)" : undefined } }}
-        >
-          <Box component="img" src={SendIcon} alt="send" sx={{ width: 18, height: 18, filter: "brightness(0) invert(1)" }} />
-        </Box>
-      </Box>
-    </Box>
+      {isGroup && (
+        <GroupInfoPanel
+          open={groupPanelOpen}
+          onClose={() => setGroupPanelOpen(false)}
+          conversation={conversation}
+          currentUserId={currentUser?._id}
+          onRename={async (name) => await renameGroup(conversation._id, name)}
+          onDelete={async () => { await deleteConversation(conversation._id); onDeleteConversation?.(conversation._id); }}
+          onKickMember={async (memberId) => await kickMember(conversation._id, memberId)}
+        />
+      )}
+
+      <ConfirmationDialog ref={confirmRef} />
+    </>
   );
 };
 

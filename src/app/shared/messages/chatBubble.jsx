@@ -1,92 +1,168 @@
-// src/shared/messages/chatBubble.jsx
-import { Box, Typography, Avatar } from "@mui/material";
-import { Check, CheckCheck, Clock, AlertCircle } from "lucide-react";
-import paperclipIcon from "../../../assets/icons/img.svg";
+// src/app/shared/messages/chatBubble.jsx — FULL REPLACEMENT
+import { useState } from "react";
+import { Box, Typography, Avatar, Menu, MenuItem, TextField, IconButton } from "@mui/material";
+import { MoreVertical, Edit2, Trash2, Check, X, Paperclip } from "lucide-react";
 
-const FileAttachment = ({ fileName }) => (
-  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: "8px", px: 1.5, py: 0.75 }}>
-    <Box component="img" src={paperclipIcon} alt="file" sx={{ width: 14, height: 14, filter: "brightness(0) invert(1)", flexShrink: 0 }} />
-    <Typography fontSize="12px" color="#fff" noWrap>{fileName}</Typography>
-  </Box>
-);
+const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-// ── Delivery status icon ──────────────────────────────────────────────────────
-const StatusIcon = ({ pending, failed }) => {
-  if (failed)  return <AlertCircle size={12} color="#FF3B30" />;
-  if (pending) return <Clock size={12} color="rgba(255,255,255,0.6)" />;
-  return <CheckCheck size={12} color="rgba(255,255,255,0.8)" />;
+const FileAttachment = ({ attachment, isOwn }) => {
+  const fileName = attachment?.fileName || String(attachment);
+  const url      = attachment?.url ? `${SERVER_URL}${attachment.url}` : null;
+  return (
+    <Box
+      component={url ? "a" : "div"}
+      href={url || undefined}
+      target="_blank"
+      rel="noopener noreferrer"
+      sx={{
+        display: "flex", alignItems: "center", gap: 1, mt: 1,
+        backgroundColor: isOwn ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.05)",
+        borderRadius: "8px", px: 1.5, py: 0.75,
+        textDecoration: "none", cursor: url ? "pointer" : "default",
+        "&:hover": { backgroundColor: isOwn ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.08)" },
+      }}
+    >
+      <Paperclip size={13} color={isOwn ? "#fff" : "#67768B"} />
+      <Typography fontSize="12px" color={isOwn ? "#fff" : "text.primary"} noWrap sx={{ maxWidth: 200 }}>
+        {fileName}
+      </Typography>
+      {attachment?.fileSize && (
+        <Typography fontSize="10px" color={isOwn ? "rgba(255,255,255,0.7)" : "text.secondary"}>
+          {attachment.fileSize}
+        </Typography>
+      )}
+    </Box>
+  );
 };
 
-const ChatBubble = ({ message, isOwn }) => {
-  const { text, createdAt, senderName, senderAvatar, attachments = [], pending, failed } = message;
+const StatusLabel = ({ pending, failed }) => {
+  if (failed)  return <Typography fontSize="10px" color="#FF3B30">Failed</Typography>;
+  if (pending) return <Typography fontSize="10px" color="text.secondary">Sending...</Typography>;
+  return null;
+};
+
+const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
+  const { text, createdAt, senderName, senderAvatar, attachments = [], pending, failed, isEdited, isDeleted } = message;
+
+  const [hovered,    setHovered]    = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [editing,    setEditing]    = useState(false);
+  const [editText,   setEditText]   = useState(text || "");
 
   const timeStr = createdAt
     ? new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
 
+  const handleEditSave = async () => {
+    if (editText.trim() && editText.trim() !== text) {
+      const result = await onEdit?.(message._id, editText.trim());
+      if (!result?.success) setEditText(text || "");  // revert on failure
+    }
+    setEditing(false);
+  };
+
+  if (isDeleted) {
+    return (
+      <Box sx={{ display: "flex", flexDirection: isOwn ? "row-reverse" : "row", alignItems: "flex-end", gap: 1, mb: 1.5 }}>
+        {!isOwn && <Box sx={{ width: 34 }} />}
+        <Box sx={{ px: 2, py: 1, borderRadius: "12px", backgroundColor: "#F5F5F5", border: "1px dashed #D1D5DB" }}>
+          <Typography fontSize="12px" color="text.secondary" fontStyle="italic">Message deleted</Typography>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
     <Box
-      sx={{
-        display:       "flex",
-        flexDirection: isOwn ? "row-reverse" : "row",
-        alignItems:    "flex-end",
-        gap:           1,
-        mb:            1.5,
-        opacity:       pending ? 0.75 : 1,
-        transition:    "opacity 0.2s ease",
-      }}
+      sx={{ display: "flex", flexDirection: isOwn ? "row-reverse" : "row", alignItems: "flex-end", gap: 1, mb: 1.5, opacity: pending ? 0.75 : 1 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* Avatar — only for received messages */}
       {!isOwn && (
-        <Avatar
-          src={senderAvatar}
-          sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600, flexShrink: 0 }}
-        >
+        <Avatar src={senderAvatar} sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600, flexShrink: 0 }}>
           {senderName?.charAt(0)}
         </Avatar>
       )}
 
+      {/* Edit/delete menu — own messages only */}
+      {isOwn && !pending && !editing && (
+        <Box sx={{ opacity: hovered ? 1 : 0, transition: "opacity 0.15s", alignSelf: "center" }}>
+          <IconButton size="small" onClick={(e) => { e.stopPropagation(); setMenuAnchor(e.currentTarget); }} sx={{ p: 0.5, color: "#9CA3AF", "&:hover": { color: "#AA2493" } }}>
+            <MoreVertical size={14} />
+          </IconButton>
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={() => setMenuAnchor(null)}
+            anchorOrigin={{ vertical: "top", horizontal: "left" }}
+            transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+            PaperProps={{ sx: { borderRadius: "10px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", minWidth: 120 } }}
+          >
+            {text && (
+              <MenuItem onClick={() => { setEditText(text || ""); setEditing(true); setMenuAnchor(null); }} sx={{ fontSize: "13px", gap: 1.5, py: 1 }}>
+                <Edit2 size={14} color="#67768B" /> Edit
+              </MenuItem>
+            )}
+            <MenuItem onClick={() => { setMenuAnchor(null); onDelete?.(message._id); }} sx={{ fontSize: "13px", gap: 1.5, py: 1, color: "#FF3B30" }}>
+              <Trash2 size={14} /> Delete
+            </MenuItem>
+          </Menu>
+        </Box>
+      )}
+
       <Box sx={{ display: "flex", flexDirection: "column", alignItems: isOwn ? "flex-end" : "flex-start", maxWidth: "62%" }}>
 
-        {/* Sender name — only for received messages in group chats */}
-        {!isOwn && senderName && (
-          <Typography fontSize="11px" color="text.secondary" mb={0.4} ml={0.5}>
-            {senderName}
-          </Typography>
+        {/* Sender name — group chats, received only */}
+        {!isOwn && isGroup && senderName && (
+          <Typography fontSize="11px" color="text.secondary" mb={0.4} ml={0.5}>{senderName}</Typography>
         )}
 
-        {/* Bubble */}
-        <Box
-          sx={{
-            px: 2, py: 1.25,
-            borderRadius: isOwn ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-            background: isOwn
-              ? failed
-                ? "linear-gradient(135deg, #FF3B30, #CC2A22)"
-                : "linear-gradient(135deg, #AA2493 0%, #022179 100%)"
-              : "#F5F5F5",
-            boxShadow: isOwn
-              ? "0 4px 15px rgba(170, 36, 147, 0.25)"
-              : "0 2px 8px rgba(0,0,0,0.06)",
-          }}
-        >
-          <Typography fontSize="13px" lineHeight={1.6} color={isOwn ? "#fff" : "text.primary"}>
-            {text}
-          </Typography>
-
-          {/* File attachments */}
-          {attachments?.map((att, i) => (
-            <FileAttachment key={i} fileName={att.fileName || att} />
-          ))}
+        <Box sx={{
+          px: editing ? 1 : 2, py: editing ? 1 : 1.25,
+          borderRadius: isOwn ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+          background: isOwn
+            ? failed ? "linear-gradient(135deg, #FF3B30, #CC2A22)" : "linear-gradient(135deg, #AA2493 0%, #022179 100%)"
+            : "#F5F5F5",
+          boxShadow: isOwn ? "0 4px 15px rgba(170, 36, 147, 0.25)" : "0 2px 8px rgba(0,0,0,0.06)",
+          minWidth: editing ? "220px" : "auto",
+        }}>
+          {editing ? (
+            <Box>
+              <TextField
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleEditSave(); }
+                  if (e.key === "Escape") { setEditText(text || ""); setEditing(false); }
+                }}
+                multiline autoFocus fullWidth size="small" variant="standard"
+                InputProps={{ disableUnderline: true, sx: { color: "#fff", fontSize: "13px" } }}
+              />
+              <Box display="flex" justifyContent="flex-end" gap={0.5} mt={1}>
+                <IconButton size="small" onClick={() => { setEditText(text || ""); setEditing(false); }} sx={{ p: 0.5, color: "rgba(255,255,255,0.7)" }}>
+                  <X size={14} />
+                </IconButton>
+                <IconButton size="small" onClick={handleEditSave} sx={{ p: 0.5, color: "rgba(255,255,255,0.9)" }}>
+                  <Check size={14} />
+                </IconButton>
+              </Box>
+            </Box>
+          ) : (
+            <>
+              {text && (
+                <Typography fontSize="13px" lineHeight={1.6} color={isOwn ? "#fff" : "text.primary"}>
+                  {text}
+                </Typography>
+              )}
+              {attachments?.map((att, i) => <FileAttachment key={i} attachment={att} isOwn={isOwn} />)}
+            </>
+          )}
         </Box>
 
-        {/* Time + status */}
-        <Box display="flex" alignItems="center" gap={0.5} mt={0.5} sx={{ flexDirection: isOwn ? "row-reverse" : "row" }}>
+        <Box display="flex" alignItems="center" gap={0.75} mt={0.5} sx={{ flexDirection: isOwn ? "row-reverse" : "row" }}>
           <Typography fontSize="11px" color="text.secondary">{timeStr}</Typography>
-          {isOwn && <StatusIcon pending={pending} failed={failed} />}
-          {failed && (
-            <Typography fontSize="11px" color="#FF3B30">Failed — tap to retry</Typography>
-          )}
+          {isEdited && <Typography fontSize="10px" color="text.secondary">(edited)</Typography>}
+          {isOwn && <StatusLabel pending={pending} failed={failed} />}
         </Box>
       </Box>
     </Box>

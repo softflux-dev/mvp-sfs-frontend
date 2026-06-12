@@ -1,6 +1,6 @@
-// src/app/shared/messages/index.jsx
+// src/app/shared/messages/index.jsx — FULL REPLACEMENT
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Box }                                        from "@mui/material";
+import { Box } from "@mui/material";
 
 import ConversationList     from "./conversationList";
 import ChatArea             from "./chatArea";
@@ -9,17 +9,21 @@ import { useConversations } from "../../../hooks/messages";
 import { connectSocket, getSocket } from "../../../utils/socketManager";
 import { createConversationApi, markAsReadApi } from "../../../api/modules/messages";
 
-// ── Get current user from JWT stored in localStorage ─────────────────────────
+// ── base64url-safe JWT decode ────────────────────────────────────────────────
+// JWTs use base64url ('-' and '_'); plain atob() throws on them.
+// This was why employees couldn't edit/delete — currentUser came back null.
 const getCurrentUser = () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) return null;
-    const payload = JSON.parse(atob(token.split(".")[1]));
+    let b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    const payload = JSON.parse(atob(b64));
     return {
-      _id:   payload.id   || payload._id,
+      _id:   payload.id || payload._id,
       email: payload.email,
       role:  payload.role,
-      name:  payload.name  || payload.fullName || "",
+      name:  payload.name || payload.fullName || "",
     };
   } catch {
     return null;
@@ -36,53 +40,58 @@ const Messages = () => {
   const [onlineUsers,        setOnlineUsers]        = useState(new Set());
 
   const {
-    conversations,
-    loading: convsLoading,
-    fetchConversations,
-    bumpConversationToTop,
-    incrementUnread,
-    resetUnread,
+    conversations, loading: convsLoading,
+    fetchConversations, bumpConversationToTop,
+    incrementUnread, resetUnread, removeConversation,
+    updateConversation,
   } = useConversations();
 
-  // ── Connect socket on mount ───────────────────────────────────────────────
   useEffect(() => {
     if (!token) return;
-
     const socket = connectSocket(token);
 
-    socket.on("connect", () => {
-      fetchConversations();
-    });
+    const onConnect = () => fetchConversations();
 
-    socket.on("new_message", ({ conversationId, message }) => {
+    const onNewMessage = ({ conversationId, message }) => {
       setActiveConversation((prev) => {
-        if (prev?._id === conversationId) return prev;
+        if (prev?._id === conversationId) {
+          // Active chat — mark read immediately so unread doesn't accumulate
+          markAsReadApi(conversationId).catch(() => {});
+          return prev;
+        }
         incrementUnread(conversationId);
         return prev;
       });
       bumpConversationToTop(conversationId, {
-        text:   message.text,
+        text:   message.text || (message.attachments?.length ? `📎 ${message.attachments[0].fileName}` : ""),
         sender: message.senderName,
         sentAt: message.createdAt,
       });
-    });
+    };
 
-    socket.on("user_online",  ({ userId }) => {
-      setOnlineUsers((prev) => new Set([...prev, userId]));
-    });
-    socket.on("user_offline", ({ userId }) => {
-      setOnlineUsers((prev) => { const s = new Set(prev); s.delete(userId); return s; });
-    });
+    // Keep sidebar preview in sync (covers edits of last message too)
+    const onConvUpdated = ({ conversationId, lastMessage }) => {
+      bumpConversationToTop(conversationId, lastMessage);
+    };
+
+    const onUserOnline  = ({ userId }) => setOnlineUsers((prev) => new Set([...prev, userId]));
+    const onUserOffline = ({ userId }) => setOnlineUsers((prev) => { const s = new Set(prev); s.delete(userId); return s; });
+
+    socket.on("connect",              onConnect);
+    socket.on("new_message",          onNewMessage);
+    socket.on("conversation_updated", onConvUpdated);
+    socket.on("user_online",          onUserOnline);
+    socket.on("user_offline",         onUserOffline);
 
     return () => {
-      socket.off("new_message");
-      socket.off("user_online");
-      socket.off("user_offline");
-      socket.off("connect");
+      socket.off("connect",              onConnect);
+      socket.off("new_message",          onNewMessage);
+      socket.off("conversation_updated", onConvUpdated);
+      socket.off("user_online",          onUserOnline);
+      socket.off("user_offline",         onUserOffline);
     };
   }, [token]);
 
-  // ── Select a conversation ─────────────────────────────────────────────────
   const handleSelectConversation = useCallback((conv) => {
     setActiveConversation(conv);
     resetUnread(conv._id);
@@ -90,7 +99,6 @@ const Messages = () => {
     markAsReadApi(conv._id).catch(() => {});
   }, [resetUnread]);
 
-  // ── Start new conversation ────────────────────────────────────────────────
   const handleStartConversation = useCallback(async (participant) => {
     try {
       const res = await createConversationApi({
@@ -101,19 +109,24 @@ const Messages = () => {
         const conv = res.data.data.conversation;
         await fetchConversations();
         setModalOpen(false);
+        // join the new room immediately so messages flow both ways
+        getSocket()?.emit("join_conversation", { conversationId: conv._id });
         handleSelectConversation(conv);
       }
-    } catch (err) {
-      console.error("Create conversation error:", err);
-    }
+    } catch (err) { console.error("Create conversation error:", err); }
   }, [fetchConversations, handleSelectConversation]);
 
-  // ── Filter + split ────────────────────────────────────────────────────────
+  // ── Delete chat — clears active chat + removes from sidebar ───────────────
+  const handleConversationDeleted = useCallback((conversationId) => {
+    removeConversation(conversationId);
+    setActiveConversation((prev) => (prev?._id === conversationId ? null : prev));
+  }, [removeConversation]);
+
   const filtered = useMemo(() => {
     if (!search) return conversations;
     return conversations.filter((c) => {
       const other = c.participants?.find(
-        (p) => (p.user?._id || p.user)?.toString() !== currentUser?._id?.toString()
+        (p) => String(p.user?._id || p.user) !== String(currentUser?._id)
       );
       const name = c.name || other?.name || "";
       return name.toLowerCase().includes(search.toLowerCase());
@@ -137,12 +150,14 @@ const Messages = () => {
           loading={convsLoading}
           currentUserId={currentUser?._id}
           onlineUsers={onlineUsers}
+          onConversationDeleted={handleConversationDeleted}
         />
         <ChatArea
           conversation={activeConversation}
           currentUser={currentUser}
           onlineUsers={onlineUsers}
           onMessageSent={(convId, lastMsg) => bumpConversationToTop(convId, lastMsg)}
+          onDeleteConversation={handleConversationDeleted}
         />
       </Box>
 

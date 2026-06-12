@@ -1,7 +1,7 @@
 // src/utils/socketManager.js
 // Singleton Socket.IO client — shared across all portals
 // Handles: connect, reconnect, missed message recovery
-
+// src/utils/socketManager.js — FULL REPLACEMENT
 import { io } from "socket.io-client";
 
 const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -12,20 +12,20 @@ export const getSocket = () => socket;
 
 export const connectSocket = (token) => {
   if (socket?.connected) return socket;
+  if (socket) { socket.disconnect(); socket = null; }
 
   socket = io(SERVER_URL, {
-    auth:                { token },
-    reconnection:        true,
-    reconnectionDelay:   1000,
+    auth:                 { token },
+    reconnection:         true,
+    reconnectionDelay:    1000,
     reconnectionAttempts: Infinity,
-    // At-least-once delivery — retry up to 3 times if no ACK
-    retries:    3,
-    ackTimeout: 10000,
+    // IMPORTANT: do NOT set global `retries` / `ackTimeout` here.
+    // With `retries` set, EVERY emit (typing, joins) requires an ACK and
+    // blocks the packet queue — this was making messages extremely slow.
+    transports: ["websocket", "polling"],   // prefer websocket (faster on tunnels)
   });
 
   socket.on("connect", () => {
-    console.log("🔌 Socket connected:", socket.id);
-    // Join all conversation rooms on connect/reconnect
     socket.emit("join_conversations");
   });
 
@@ -33,27 +33,18 @@ export const connectSocket = (token) => {
     console.warn("Socket connect error:", err.message);
   });
 
-  socket.on("disconnect", (reason) => {
-    console.log("🔌 Socket disconnected:", reason);
-  });
-
   return socket;
 };
 
 export const disconnectSocket = () => {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
+  if (socket) { socket.disconnect(); socket = null; }
 };
 
-export const emitWithAck = (event, data) => {
+// Manual ACK with timeout — used ONLY for events the server actually ACKs
+export const emitWithAck = (event, data, timeoutMs = 8000) => {
   return new Promise((resolve, reject) => {
-    if (!socket?.connected) {
-      reject(new Error("Socket not connected"));
-      return;
-    }
-    socket.timeout(10000).emit(event, data, (err, response) => {
+    if (!socket?.connected) return reject(new Error("Socket not connected"));
+    socket.timeout(timeoutMs).emit(event, data, (err, response) => {
       if (err) reject(err);
       else resolve(response);
     });

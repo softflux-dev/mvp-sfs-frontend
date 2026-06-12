@@ -3,29 +3,31 @@ import api from "../index";
 
 const BASE = "conversations";
 
-// ── Conversations ─────────────────────────────────────────────────────────────
-export const getConversationsApi = () =>
-  api(BASE, null, "get");
+// Conversations
+export const getConversationsApi     = ()            => api(BASE, null, "get");
+export const createConversationApi   = (payload)     => api(BASE, payload, "post");
+export const markAsReadApi           = (id)          => api(`${BASE}/${id}/read`, null, "patch");
+export const getConversationUsersApi = (search = "") => api(`${BASE}/users${search ? `?search=${search}` : ""}`, null, "get");
+export const updateConversationApi   = (id, payload) => api(`${BASE}/${id}`, payload, "patch");
+export const deleteConversationApi   = (id)          => api(`${BASE}/${id}`, null, "delete");
 
-export const createConversationApi = (payload) =>
-  api(BASE, payload, "post");
+// Members
+export const addMembersApi   = (id, payload)  => api(`${BASE}/${id}/members`, payload, "post");
+export const removeMemberApi = (id, memberId) => api(`${BASE}/${id}/members/${memberId}`, null, "delete");
 
-export const markAsReadApi = (conversationId) =>
-  api(`${BASE}/${conversationId}/read`, null, "patch");
-
-export const getConversationUsersApi = (search = "") =>
-  api(`${BASE}/users${search ? `?search=${search}` : ""}`, null, "get");
-
-// ── Messages ──────────────────────────────────────────────────────────────────
+// Messages
 export const getMessagesApi = (conversationId, params = {}) => {
-  const query = new URLSearchParams();
-  if (params.before) query.set("before", params.before);
-  if (params.after)  query.set("after",  params.after);
-  if (params.limit)  query.set("limit",  params.limit);
-  const qs = query.toString();
+  const q = new URLSearchParams();
+  if (params.before) q.set("before", params.before);
+  if (params.after)  q.set("after",  params.after);
+  if (params.limit)  q.set("limit",  params.limit);
+  const qs = q.toString();
   return api(`${BASE}/${conversationId}/messages${qs ? `?${qs}` : ""}`, null, "get");
 };
+export const sendMessageRestApi   = (id, payload)        => api(`${BASE}/${id}/messages`, payload, "post");
+export const editMessageRestApi   = (id, msgId, payload) => api(`${BASE}/${id}/messages/${msgId}`, payload, "patch");
+export const deleteMessageRestApi = (id, msgId)          => api(`${BASE}/${id}/messages/${msgId}`, null, "delete");
 
-// REST fallback — used when socket is unavailable
-export const sendMessageRestApi = (conversationId, payload) =>
-  api(`${BASE}/${conversationId}/messages`, payload, "post");
+// Attachments — multipart upload (4th arg true = FormData)
+export const uploadAttachmentsApi = (id, formData) =>
+  api(`${BASE}/${id}/attachments`, formData, "post", true);
