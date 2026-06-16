@@ -132,6 +132,21 @@ employeeResetPassword:  "employee/auth/reset-password",
   hrGetLeaves:        "hr/leaves",         // GET /
   hrReviewLeave:      "hr/leaves",         // PATCH /:id
 
+  // ── Attendance (HR) ───────────────────────────────────────────────────────
+getAttendanceSummary:   "hr/attendance/summary",
+getAttendanceDetail:    "hr/attendance/detail",
+updateAttendanceRecord: "hr/attendance",
+importAttendance:       "hr/attendance/import",
+getAttendanceImports:   "hr/attendance/imports",
+getAttendancePartial:   "hr/attendance/partial",
+
+// ── Attendance (Employee) ─────────────────
+empAttendanceDefaultMonth: "employee/attendance/default-month",
+empAttendanceStats:        "employee/attendance/stats",
+empAttendanceMonthly:      "employee/attendance/monthly",
+empAttendanceWeek:         "employee/attendance/week",
+empAttendanceAnnual:       "employee/attendance/annual",
+
 };
 
 

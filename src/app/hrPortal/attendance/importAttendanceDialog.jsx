@@ -1,0 +1,271 @@
+// hrPortal/attendance/importAttendanceDialog.jsx — NEW FILE
+import { useState, useRef } from "react";
+import { Box, Typography, MenuItem } from "@mui/material";
+import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
+import * as XLSX from "xlsx";
+
+import { DialogContainer, DialogHeader, DialogBody, CustomSelect } from "../../../components";
+import CustomInputLabel    from "../../../components/customInputLabel";
+import DialogActionButtons from "../../../components/dialog/dialogAction";
+import GlobalStyle         from "../../../style/style";
+
+// ── Required columns in the uploaded sheet ────────────────────────────────────
+// Accept common header variations (case-insensitive)
+const REQUIRED_COLUMNS = [
+  { key: "empId",    labels: ["id"] },
+  { key: "name",     labels: ["name"] },
+  { key: "date",     labels: ["date"] },
+  { key: "checkIn",  labels: ["check-in time", "check in time", "checkin", "check-in", "check in"] },
+  { key: "checkOut", labels: ["check-out time", "check out time", "checkout", "check-out", "check out"] },
+  { key: "duration", labels: ["duration", "hours", "working hours", "working hrs"] },
+];
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const normalize = (str) => String(str || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
+  const [month,    setMonth]    = useState(new Date().getMonth());
+  const [yearDate, setYearDate] = useState(dayjs());
+  const [file,     setFile]     = useState(null);
+  const [error,    setError]    = useState("");
+  const [parsing,  setParsing]  = useState(false);
+  const fileInputRef = useRef(null);
+
+  const resetState = () => {
+    setFile(null);
+    setError("");
+    setParsing(false);
+  };
+
+  const handleClose = () => {
+    resetState();
+    setMonth(new Date().getMonth());
+    setYearDate(dayjs());
+    onClose?.();
+  };
+
+  // ── Validate headers against required columns ───────────────────────────────
+  const validateHeaders = (headerRow) => {
+    const normalizedHeaders = headerRow.map(normalize);
+    const missing = [];
+    const mapping = {};
+
+    REQUIRED_COLUMNS.forEach(({ key, labels }) => {
+      const idx = normalizedHeaders.findIndex((h) => labels.includes(h));
+      if (idx === -1) missing.push(key);
+      else mapping[key] = idx;
+    });
+
+    return { missing, mapping };
+  };
+
+  const handleFileSelect = (e) => {
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    setError("");
+
+    const validExt = /\.(xlsx|xls|csv)$/i.test(selected.name);
+    if (!validExt) {
+      setError("Invalid file format. Please upload an Excel (.xlsx, .xls) or CSV file.");
+      setFile(null);
+      return;
+    }
+
+    setFile(selected);
+  };
+
+  const handleImport = async () => {
+    if (!file) {
+      setError("Please select a file to import.");
+      return;
+    }
+
+    setParsing(true);
+    setError("");
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+      if (!rows.length) {
+        setError("The uploaded file is empty.");
+        setParsing(false);
+        return;
+      }
+
+      // ── Find the actual header row — skip blank/metadata rows at the top ──
+      // The real header row is the first row that contains at least 2 of our
+      // expected column keywords (case-insensitive).
+      const knownKeywords = ["name", "id", "date", "check", "duration", "time"];
+      let headerRowIndex = -1;
+
+      for (let i = 0; i < Math.min(rows.length, 15); i++) {
+        const rowNorm = rows[i].map(normalize);
+        const hits = rowNorm.filter((cell) =>
+          knownKeywords.some((kw) => cell.includes(kw))
+        ).length;
+        if (hits >= 2) { headerRowIndex = i; break; }
+      }
+
+      if (headerRowIndex === -1) {
+        setError("Could not find the header row in this file. Make sure the sheet contains columns: Name, ID, Date, Check-In Time, Check-Out Time, Duration.");
+        setParsing(false);
+        return;
+      }
+
+      const headerRow = rows[headerRowIndex];
+      const { missing, mapping } = validateHeaders(headerRow);
+
+      if (missing.length > 0) {
+        const labels = missing.map((key) => REQUIRED_COLUMNS.find((c) => c.key === key)?.labels[0] || key);
+        setError(
+          `Missing required column(s): ${labels.join(", ")}. ` +
+          `Required: Name, ID, Date, Check-In Time, Check-Out Time, Duration.`
+        );
+        setParsing(false);
+        return;
+      }
+
+      // Data rows start right after the header row
+      const dataRows = rows
+        .slice(headerRowIndex + 1)
+        .filter((r) => r.some((cell) => String(cell).trim() !== ""));
+
+      const parsedRecords = dataRows.map((row) => ({
+        empId:    String(row[mapping.empId]    || "").trim(),
+        name:     String(row[mapping.name]     || "").trim(),
+        date:     String(row[mapping.date]     || "").trim(),
+        checkIn:  String(row[mapping.checkIn]  || "").trim(),
+        checkOut: String(row[mapping.checkOut] || "").trim(),
+        duration: String(row[mapping.duration] || "").trim(),
+      }))
+      // Filter out subtotal/total rows (no empId or name)
+      .filter((r) => r.empId || r.name);
+
+      if (parsedRecords.length === 0) {
+        setError("No valid data rows found in the file.");
+        setParsing(false);
+        return;
+      }
+
+      onImport?.({
+        month, year: yearDate.year(), file,
+        records: parsedRecords,
+      });
+      handleClose();
+    } catch (err) {
+      console.error("Parse error:", err);
+      setError("Failed to parse the file. Please make sure it's a valid Excel/CSV file.");
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+    <DialogContainer open={open} onClose={handleClose} maxWidth="480px" fullWidth>
+      <DialogHeader title="Import Attendance Records" onClose={handleClose} />
+
+      <DialogBody>
+        <Box sx={{ backgroundColor: "#F5F5F5", borderRadius: "16px", p: 3, display: "flex", flexDirection: "column", gap: 2.5 }}>
+
+          {/* Month / Year selection */}
+          <Box>
+            <CustomInputLabel label="Attendance Period — which month is this data for?" />
+            <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
+              <CustomSelect value={month} onChange={(e) => setMonth(e.target.value)} fullWidth height="45px" inputBgColor="#fff">
+                {MONTHS.map((m, idx) => (
+                  <MenuItem key={m} value={idx}>{m}</MenuItem>
+                ))}
+              </CustomSelect>
+              <DatePicker
+                views={["year"]}
+                value={yearDate}
+                onChange={(val) => val && setYearDate(val)}
+                sx={{
+                  ...GlobalStyle.datePickerStyle,
+                  width: "100%",
+                  "& .MuiOutlinedInput-root": {
+                    backgroundColor: "#fff",
+                    borderRadius: "14px",
+                    "& fieldset": { border: "none" },
+                  },
+                }}
+                slotProps={{ textField: { size: "small", fullWidth: true } }}
+              />
+            </Box>
+          </Box>
+
+          {/* File upload */}
+          <Box>
+            <CustomInputLabel label="Attendance Sheet" />
+            <Box
+              onClick={() => fileInputRef.current?.click()}
+              sx={{
+                border: "2px dashed #D1D5DB", borderRadius: "14px", backgroundColor: "#fff",
+                py: 4, px: 2, display: "flex", flexDirection: "column", alignItems: "center", gap: 1,
+                cursor: "pointer", transition: "all 0.15s ease",
+                "&:hover": { borderColor: "#AA2493", backgroundColor: "#AA249308" },
+              }}
+            >
+              {file ? (
+                <>
+                  <FileSpreadsheet size={28} color="#AA2493" />
+                  <Typography fontSize="13px" fontWeight={600} color="text.primary">{file.name}</Typography>
+                  <Typography fontSize="11px" color="text.secondary">{(file.size / 1024).toFixed(0)} KB — click to change</Typography>
+                </>
+              ) : (
+                <>
+                  <Upload size={28} color="#9CA3AF" />
+                  <Typography fontSize="13px" fontWeight={600} color="text.primary">Click to upload Excel or CSV</Typography>
+                  <Typography fontSize="11px" color="text.secondary">.xlsx, .xls, or .csv format</Typography>
+                </>
+              )}
+            </Box>
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={handleFileSelect} />
+          </Box>
+
+          {/* Required columns hint */}
+          <Box sx={{ backgroundColor: "#F0E8FA", borderRadius: "10px", px: 2, py: 1.5 }}>
+            <Typography fontSize="12px" fontWeight={600} color="#AA2493" mb={0.5}>Required columns in sheet:</Typography>
+            <Typography fontSize="11px" color="text.secondary">
+              ID, Name, Date, Check In, Check Out, Duration
+            </Typography>
+          </Box>
+
+          {/* Error message */}
+          {error && (
+            <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", backgroundColor: "#FFF0F0", border: "1px solid #FFCCCC", borderRadius: "10px", px: 2, py: 1.5 }}>
+              <AlertCircle size={16} color="#FF3B30" style={{ flexShrink: 0, marginTop: 1 }} />
+              <Typography fontSize="12px" color="error">{error}</Typography>
+            </Box>
+          )}
+
+        </Box>
+      </DialogBody>
+
+      <DialogActionButtons
+        onCancel={handleClose}
+        onConfirm={handleImport}
+        showCancelBtn
+        cancelText="Cancel"
+        confirmText="Import"
+        variant="gradient"
+        confirmLoading={parsing}
+      />
+    </DialogContainer>
+    </LocalizationProvider>
+  );
+};
+
+export default ImportAttendanceDialog;

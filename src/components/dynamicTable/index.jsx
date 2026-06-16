@@ -198,24 +198,28 @@ export default function PaginatedTable({
     switch (val) {
 
       // ── Employee avatar + name + role ─────────────────────────────────────
-      case "employee_details":
-        return (
-          <TableCell key={val}>
-            <Stack direction="row" alignItems="center" gap={1}>
-              <Avatar src={row.image} alt={row.name || row.employee} sx={{ width: 40, height: 40 }} />
-              <Stack>
-                <Typography fontSize="12px" fontWeight={700} color="text.black">
-                  {row.employee || row.name}
-                </Typography>
-                {row.role && (
-                  <Typography fontSize="10px" color="text.secondary">
-                    {row.role}
-                  </Typography>
-                )}
-              </Stack>
-            </Stack>
-          </TableCell>
-        );
+case "employee_details":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1}>
+        <Avatar
+          src={row.image || row.avatar}
+          alt={row.name || row.employee}
+          sx={{ width: 40, height: 40 }}
+        />
+        <Stack>
+          <Typography fontSize="12px" fontWeight={700} color="text.black">
+            {row.employee || row.name}
+          </Typography>
+          {(row.role || row.designation || row.subtitle) && (
+            <Typography fontSize="10px" color="text.secondary">
+              {row.role || row.designation || row.subtitle}
+            </Typography>
+          )}
+        </Stack>
+      </Stack>
+    </TableCell>
+  );
 
       // ── Task assignee — avatar + name ─────────────────────────────────────
   case "task_assignees":
@@ -250,7 +254,7 @@ export default function PaginatedTable({
             </Typography>
           </TableCell>
         );
-         case "task_end_date":
+      case "task_end_date":
         return (
           <TableCell key={val}>
             <Typography fontSize="13px" fontWeight={400} color="text.black">
@@ -1678,6 +1682,7 @@ case "att_mon_hours":
   );
 
 // ── Attendance monitoring — status chip ───────────────────────────────────
+// In dynamicTable.jsx — att_mon_status case, replace the existing one:
 case "att_mon_status": {
   const ATT_MON_CONFIG = {
     Present: { bg: "#AA24931A", color: "#AA2493" },
@@ -1685,17 +1690,12 @@ case "att_mon_status": {
     Late:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
     Leave:   { bg: "#04C3731A", color: "#04C373" },
   };
-  const cfg = ATT_MON_CONFIG[row.attendanceStatus] || { bg: "#F5F5F5", color: "#757575" };
+  // Treat legacy "Partial" as "Present" until migration script is run
+  const displayStatus = row.attendanceStatus === "Partial" ? "Present" : (row.attendanceStatus || "Present");
+  const cfg = ATT_MON_CONFIG[displayStatus] || { bg: "#AA24931A", color: "#AA2493" };
   return (
     <TableCell key={val}>
-      <Chip
-        label={row.attendanceStatus}
-        sx={{
-          height: "24px", fontSize: "12px", fontWeight: 500,
-          px: 1, borderRadius: "12px",
-          backgroundColor: cfg.bg, color: cfg.color,
-        }}
-      />
+      <Chip label={displayStatus} sx={{ height: "24px", fontSize: "12px", fontWeight: 500, px: 1, borderRadius: "12px", backgroundColor: cfg.bg, color: cfg.color }} />
     </TableCell>
   );
 }
@@ -2616,6 +2616,89 @@ case "task_assignees": {
   );
 }
 
+case "att_summary_month":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+        {row.month || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Attendance Records (monthly summary) — total present (green) ──────────
+case "att_summary_present":
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.totalPresent ?? 0}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 600,
+          px: 1, borderRadius: "8px",
+          backgroundColor: "#04C3731A", color: "#04C373",
+        }}
+      />
+    </TableCell>
+  );
+ 
+// ── Attendance Records (monthly summary) — total absent (red) ─────────────
+case "att_summary_absent":
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.totalAbsent ?? 0}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 600,
+          px: 1, borderRadius: "8px",
+          backgroundColor: "#FF00001A", color: "#FF0000",
+        }}
+      />
+    </TableCell>
+  );
+ 
+// ── Attendance Records (monthly summary) — total hours ─────────────────────
+case "att_summary_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        {row.totalHours || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Attendance Records (monthly summary) — view-only action ───────────────
+case "att_summary_actions":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={() => onViewClick?.(row)}
+        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        <img src={viewIcon} alt="view" style={{ width: 20, height: 20 }} />
+      </IconButton>
+    </TableCell>
+  );
+ 
+// ── Detail page table — edit-only action ────────────────────────────────────
+case "att_detail_actions":
+  return (
+    <TableCell key={val}>
+      <IconButton
+        size="small"
+        onClick={() => onEditClick?.(row)}
+        sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+      >
+        {React.isValidElement(EditIcon)
+          ? EditIcon
+          : typeof EditIcon === "string"
+            ? <img src={EditIcon} alt="edit" style={{ width: 20, height: 20 }} />
+            : EditIcon
+              ? React.createElement(EditIcon, { style: { width: 20, height: 20 } })
+              : null}
+      </IconButton>
+    </TableCell>
+  );
+
 
 case "proj_type_label": {
   const typeList = projectTypes.length ? projectTypes : [];
@@ -2699,7 +2782,12 @@ case "proj_type_label": {
               paginatedData.map((row, index) => (
                 <TableRow
                   key={getRowId(row)}
-                  sx={{ "& > td": { verticalAlign: "middle" }, "&:hover": { backgroundColor: "#FAFAFB" } }}
+                  sx={{ "& > td": { verticalAlign: "middle" }, "&:hover":  { backgroundColor: "#FAFAFB" },
+                  // ── Highlight incomplete punch rows in amber ──────────────────────────
+                backgroundColor: row.isIncomplete ? "#FFFBEB" : "transparent",
+                "&:hover": {
+                  backgroundColor: row.isIncomplete ? "#FEF3C7" : "#FAFAFB",
+                }, }}
                 >
                   {columnKeys.map((val) => renderCell(row, val, index))}
                 </TableRow>

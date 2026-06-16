@@ -22,6 +22,7 @@ import ForgotPasswordPage from "../app/auth/forgotPassword";
 // HR components
 import HRDashboard from "../app/hrPortal/dashboard";
 import AttendanceMonitoring from "../app/hrPortal/attendance";
+import AttendanceDetail from "../app/hrPortal/attendance/attendanceDetail";
 import LeaveManagement from "../app/hrPortal/leaves";
 import PayrollManagement from "../app/hrPortal/payroll";
 import HRDocuments         from "../app/hrPortal/documents";
@@ -401,7 +402,15 @@ const HR_ROUTES = [
       <img src={DocumentsInactiveIcon} alt="HR Documents" style={{ width: 20, height: 20 }} />
     ),
     isHideMenu: false,
-  }
+  },
+  {
+  id: 7,   // any unique id — or renumber sequentially
+  nameKey: "Attendance Detail",
+  component: <AttendanceDetail />,
+  exact: "exact",
+  path: "/attendance-monitoring/detail",
+  isHideMenu: true,
+},
 ];
 
 const PM_ROUTES = [

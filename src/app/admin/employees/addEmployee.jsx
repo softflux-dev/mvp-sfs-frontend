@@ -32,6 +32,7 @@ const INITIAL_FORM = {
   workingHours:   "",
   joiningDate:    null,
   monthlySalary:  "",
+  machineId:      "",
   avatarFile:     null,
   avatarPreview:  "",
 };
@@ -75,6 +76,7 @@ const AddEmployee = ({
                           ? new Date(editingEmployee.joiningDate) : null,
         monthlySalary:  editingEmployee.monthlySalary != null
                           ? String(editingEmployee.monthlySalary) : "",
+        machineId:      editingEmployee.machineId     || "",
         avatarFile:     null,
         avatarPreview:  editingEmployee.avatar || "",
       });
@@ -224,6 +226,21 @@ const AddEmployee = ({
                   JPG, PNG or GIF (max. 2MB)
                 </Typography>
               </Box>
+            </Box>
+
+             {/* Attendance Machine ID */}
+            <Box>
+              <CustomInputLabel label="Attendance Machine ID (Optional)" />
+              <TextInput
+                placeholder="e.g. 1024 (ID from biometric device)"
+                value={formData.machineId}
+                onChange={handleChange("machineId")}
+                inputBgColor="#fff"
+                fullWidth
+                error={!!errors.machineId}
+                helperText={errors.machineId}
+              />
+          
             </Box>
 
             {/* Full Name */}

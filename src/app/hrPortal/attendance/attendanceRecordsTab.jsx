@@ -1,63 +1,73 @@
-import { useState } from "react";
-import { Box }       from "@mui/material";
+// hrPortal/attendance/attendanceRecordsTab.jsx 
+import { useState, useMemo } from "react";
+import { Box }               from "@mui/material";
 
 import Filter         from "../../../components/filterBar/filter";
 import PaginatedTable from "../../../components/dynamicTable";
 import ViewIcon       from "../../../assets/icons/view.svg";
-import EditIcon       from "../../../assets/icons/editIcon.svg";
-import EditAttendanceDialog from "./editAttendanceDialog";
 
 const tableHeader = [
-   { id: "empId",       label: "ID"           },
-  { id: "name",        label: "Employee"     },
-  { id: "department",       label: "Department" },
-  { id: "date",             label: "Date"       },
-  { id: "checkIn",          label: "Check-In"   },
-  { id: "checkOut",         label: "Check-Out"  },
-  { id: "hours",            label: "Hours"      },
-  { id: "attendanceStatus", label: "Status"     },
-  { id: "notes",            label: "Notes"      },
-  { id: "actions",          label: "Actions"    },
+  { id: "empId",        label: "Emp ID"        },
+  { id: "name",         label: "Employee"      },
+  { id: "department",   label: "Department"    },
+  { id: "month",        label: "Month"         },
+  { id: "totalPresent", label: "Total Present" },
+  { id: "totalAbsent",  label: "Total Absent"  },
+  { id: "totalHours",   label: "Total Hours"   },
+  { id: "actions",      label: "Actions"       },
 ];
 
 const displayRows = [
   "empId",
-  "employee_details", 
+  "employee_details",
   "department",
-  "att_mon_date",
-  "att_mon_check_in",
-  "att_mon_check_out",
-  "att_mon_hours",
-  "att_mon_status",
-  "att_mon_notes",
-  "att_rec_actions",   // ← new case with view + edit
+  "att_summary_month",
+  "att_summary_present",
+  "att_summary_absent",
+  "att_summary_hours",
+  "att_summary_actions",
 ];
 
-const AttendanceRecordsTab = ({ records = [], onView, onRecordsChange }) => {
-  const [filters,     setFilters]     = useState({});
-  const [editOpen,    setEditOpen]    = useState(false);
-  const [editingRow,  setEditingRow]  = useState(null);
+const AttendanceRecordsTab = ({ records = [], loading = false, onView, onFilterChange }) => {
+  const [filters, setFilters] = useState({});
 
-  const filteredData = records.filter((row) => {
-    const search = filters.search?.toLowerCase() || "";
-    const status = filters.status || "";
-    const matchSearch = !search || row.name.toLowerCase().includes(search);
-    const matchStatus = !status || row.attendanceStatus.toLowerCase() === status;
-    return matchSearch && matchStatus;
-  });
+  const employees = useMemo(() => {
+    const seen = new Map();
+    records.forEach((r) => {
+      if (!seen.has(r.empId)) seen.set(r.empId, { _id: r.empId, fullName: r.name });
+    });
+    return Array.from(seen.values());
+  }, [records]);
 
-  const handleEditSave = (updated) => {
-    onRecordsChange((prev) =>
-      prev.map((r) => (r.id === updated.id ? updated : r))
-    );
-    setEditOpen(false);
-    setEditingRow(null);
-  };
+ const handleFilterChange = (newFilters) => {
+  setFilters(newFilters);
+  onFilterChange?.({ search: newFilters.search || "", department: newFilters.department || "" });
+};
+
+// In filteredData:
+const filteredData = records.filter((row) => {
+  const search = filters.search?.toLowerCase() || "";
+  const dept   = filters.department || "";
+  const emp    = filters.employee   || "";
+  
+  // monthYear is a Date object from the DatePicker
+  const selectedMonth = filters.monthYear ? filters.monthYear.getMonth()     : null;  // 0-indexed
+  const selectedYear  = filters.monthYear ? filters.monthYear.getFullYear()  : null;
+
+  const matchSearch = !search || row.name.toLowerCase().includes(search) || row.empId?.toLowerCase().includes(search);
+  const matchDept   = !dept   || row.department?.toLowerCase() === dept.toLowerCase();
+  const matchEmp    = !emp    || row.empId === emp;
+  const matchMonth  = selectedMonth === null || row.monthIndex === selectedMonth;
+  const matchYear   = !selectedYear           || row.yearNum   === selectedYear;
+
+  return matchSearch && matchDept && matchEmp && matchMonth && matchYear;
+});
+
 
   return (
     <>
       <Box mt={2}>
-        <Filter mode="attendance_monitoring" onFilterChange={setFilters} />
+        <Filter mode="attendance_monitoring" employees={employees} onFilterChange={handleFilterChange} />
       </Box>
 
       <Box mt={2} bgcolor="#fff" borderRadius="25px" p={1}>
@@ -65,20 +75,11 @@ const AttendanceRecordsTab = ({ records = [], onView, onRecordsChange }) => {
           tableHeader={tableHeader}
           tableData={filteredData}
           displayRows={displayRows}
-          isLoading={false}
+          isLoading={loading}
           viewIcon={ViewIcon}
-          editIcon={EditIcon}
           onViewClick={onView}
-          onEditClick={(row) => { setEditingRow(row); setEditOpen(true); }}
         />
       </Box>
-
-      <EditAttendanceDialog
-        open={editOpen}
-        onClose={() => { setEditOpen(false); setEditingRow(null); }}
-        record={editingRow}
-        onSave={handleEditSave}
-      />
     </>
   );
 };

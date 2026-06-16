@@ -1,10 +1,13 @@
-// src/app/empPortal/myAttendance/myLeaveRequests.jsx — FULL REPLACEMENT
-import { useRef, useState } from "react";
-import { Box, Typography }  from "@mui/material";
+// src/app/empPortal/myAttendance/myLeaveRequests.jsx
+import { useRef, useState, useMemo } from "react";
+import { Box, Typography }           from "@mui/material";
 
-import PaginatedTable     from "../../../components/dynamicTable";
-import ConfirmationDialog from "../../../components/popups/confirmation";
-import SuccessPopup       from "../../../components/popups/confirmationDialog";
+import Filter              from "../../../components/filterBar/filter";
+import PaginatedTable      from "../../../components/dynamicTable";
+import ConfirmationDialog  from "../../../components/popups/confirmation";
+import SuccessPopup        from "../../../components/popups/confirmationDialog";
+import CustomButton  from "../../../components/customButton";
+import calendarIcon  from "../../../assets/icons/tasks.svg";
 
 const LEAVE_TYPE_LABELS = {
   sick:      "Sick Leave",
@@ -37,11 +40,15 @@ const displayRows = [
   "leave_cancel",
 ];
 
-const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, cancelLeave }) => {
+const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, cancelLeave, onRequestLeave }) => {
   const confirmRef = useRef();
   const [successMsg,  setSuccessMsg]  = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMsg,    setErrorMsg]    = useState("");
+
+  // ── Month/Year filter — defaults to current month ──────────────────────────
+  const now = new Date();
+  const [filters, setFilters] = useState({ monthYear: now });
 
   const handleCancel = (row) => {
     confirmRef.current?.open({
@@ -62,7 +69,25 @@ const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, 
     });
   };
 
-  const tableData = leaves.map((l) => ({
+  // ── Filter leaves to the selected month/year — match if the leave's date
+  // range overlaps the selected month at all ──────────────────────────────
+  const filteredLeaves = useMemo(() => {
+    if (!filters.monthYear) return leaves;
+
+    const selMonth = filters.monthYear.getMonth();
+    const selYear  = filters.monthYear.getFullYear();
+    const monthStart = new Date(selYear, selMonth, 1);
+    const monthEnd   = new Date(selYear, selMonth + 1, 0, 23, 59, 59);
+
+    return leaves.filter((l) => {
+      if (!l.fromDate) return false;
+      const from = new Date(l.fromDate);
+      const to   = l.toDate ? new Date(l.toDate) : from;
+      return from <= monthEnd && to >= monthStart;
+    });
+  }, [leaves, filters.monthYear]);
+
+  const tableData = filteredLeaves.map((l) => ({
     id:          l._id,
     leaveType:   LEAVE_TYPE_LABELS[l.leaveType] || l.leaveType || "—",
     fromDate:    l.fromDate
@@ -90,6 +115,25 @@ const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, 
           <Typography fontSize={13} color="error">{errorMsg}</Typography>
         </Box>
       )}
+
+      {/* ── Filter + Request Leave button on one line ──────────────────── */}
+      <Box display="flex" justifyContent="space-between" alignItems="center" gap={2} mb={2}>
+        <Box flex={1}>
+          <Filter
+            mode="emp_leave_requests"
+            defaultValues={{ monthYear: now }}
+            onFilterChange={setFilters}
+          />
+        </Box>
+
+        <CustomButton
+          btnLabel="Request Leave"
+          variant="gradient"
+          handlePressBtn={onRequestLeave}
+          startIcon={<img src={calendarIcon} alt="" style={{ width: 16, height: 16, filter: "brightness(0) invert(1)" }} />}
+          sx={{ minWidth: "150px", height: "40px", fontSize: "14px", flexShrink: 0 }}
+        />
+      </Box>
 
       <Box bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable

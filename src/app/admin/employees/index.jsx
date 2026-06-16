@@ -70,6 +70,7 @@ const Employees = () => {
   const tableData = employees.map((emp) => ({
     id:          emp._id,
     empId:       emp.empId,
+    machineId:     emp.machineId || "", 
     name:        emp.fullName,
     avatar:      emp.avatar || "",
     email:       emp.email,

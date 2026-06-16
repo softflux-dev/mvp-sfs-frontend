@@ -19,8 +19,17 @@ const Filter = ({
   projects    = [],
   isPM        = false,
   stages = [],
+  defaultValues = {},
 }) => {
-  const [values, setValues] = useState({});
+ const [values, setValues] = useState(defaultValues);
+
+ 
+  // ── Fire default values up to parent once on mount ──────────────────────
+  useEffect(() => {
+    if (Object.keys(defaultValues).length > 0 && onFilterChange) {
+      onFilterChange(defaultValues);
+    }
+  }, []); // run once on mount only
 
   useEffect(() => {
     if (resetKey > 0) {
@@ -459,44 +468,62 @@ integrations: [
     ],
   },
 ],
-attendance_monitoring: [
+attendance_monitoring: ({ employees = [] }) => [
   {
     type: "search",
     key: "search",
     placeholder: "Search employee...",
-    grid: { xs: 12, md: 4 },
+    grid: { xs: 12, md: 3 },
   },
   {
     type: "select",
     key: "department",
-   
-    grid: { xs: 12, md: 3 },
+    placeholder: "All Department",
+    grid: { xs: 12, md: 2 },
     options: [
-      { v: "",            l: "All Department"         },
-      { v: "engineering", l: "Engineering" },
-      { v: "design",      l: "Design"      },
-      { v: "qa",          l: "QA"          },
-      { v: "hr",          l: "HR"          },
+      { v: "",            l: "All Department" },
+      { v: "engineering", l: "Engineering"    },
+      { v: "design",      l: "Design"         },
+      { v: "qa",          l: "QA"             },
+      { v: "hr",          l: "HR"             },
     ],
   },
   {
     type: "select",
-    key: "status",
-    
-    grid: { xs: 12, md: 3 },
+    key: "employee",
+    placeholder: "All Employees",
+    grid: { xs: 12, md: 2 },
     options: [
-      { v: "",        l: "All Status"     },
-      { v: "present", l: "Present" },
-      { v: "absent",  l: "Absent"  },
-      { v: "late",    l: "Late"    },
-      { v: "leave",   l: "Leave"   },
+      { v: "", l: "All Employees" },
+      ...employees.map((e) => ({ v: e._id || e.empId, l: e.fullName || e.name })),
+    ],
+  },
+  {
+    type: "monthyear",   
+    key: "monthYear",
+    placeholder: "Month & Year",
+    grid: { xs: 12, md: 5 },
+  },
+],
+attendance_detail: [
+  {
+    type: "select",
+    key: "status",
+    placeholder: "All Status",
+    grid: { xs: 12, md: 6 },
+    options: [
+      { v: "",         l: "All Status" },
+      { v: "Present",  l: "Present"    },
+      { v: "Absent",   l: "Absent"     },
+      { v: "Late",     l: "Late"       },
+      { v: "Leave",    l: "Leave"      },
     ],
   },
   {
     type: "date",
     key: "dateRange",
-    placeholder: "Date Range",
-    grid: { xs: 12, md: 2 },
+    placeholder: "Date",
+    grid: { xs: 12, md: 6 },
   },
 ],
 leave_management: [
@@ -734,6 +761,15 @@ salary_history: [
  
 ],
 
+emp_leave_requests: [
+  {
+    type: "monthyear",
+    key: "monthYear",
+    placeholder: "Select Month",
+    grid: { xs: 12, md: 3 },
+  },
+],
+
     // ── Full (default fallback) ───────────────────────────────────────────────
     full: [
       {
@@ -816,6 +852,32 @@ salary_history: [
                     inputProps: {
                       placeholder: f.placeholder,
                     },
+                  },
+                }}
+              />
+            )}
+            {f.type === "monthyear" && (
+              <DatePicker
+                views={["year", "month"]}
+                openTo="month"
+                value={values[f.key] || null}
+                onChange={(v) => setVal(f.key, v)}
+                sx={{
+                  ...GlobalStyle.datePickerStyle,
+                  "& input": {
+                    color: values[f.key] ? "inherit" : "transparent",
+                  },
+                  "& input::placeholder": {
+                    color: "#9CA3AF",
+                    opacity: 1,
+                    visibility: "visible",
+                  },
+                }}
+                slotProps={{
+                  textField: {
+                    label: "",
+                    fullWidth: true,
+                    inputProps: { placeholder: f.placeholder },
                   },
                 }}
               />
