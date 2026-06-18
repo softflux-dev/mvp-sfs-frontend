@@ -1,4 +1,4 @@
-// app/auth/login/index.jsx
+// app/auth/login/index.jsx — FULL REPLACEMENT
 import { useState } from "react";
 import {
   Box, Typography, Checkbox, FormControlLabel,
@@ -14,25 +14,72 @@ import { useAuth }      from "../../../hooks/auth";          // ← hook
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { loading, apiError, clearError, handleLogin } = useAuth();
+  const {
+    loading, apiError, clearError,
+    handleLogin, handleForgotPassword,
+  } = useAuth();
 
   const [form,       setForm]       = useState({ email: "", password: "" });
   const [errors,     setErrors]     = useState({});
   const [keepSigned, setKeepSigned] = useState(false);
+  const [fpLoading,  setFpLoading]  = useState(false);   // separate loading state for the forgot-password check
 
   const validate = () => {
     const e = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      e.email = "You have entered an invalid email";
-    if (!form.password)
-      e.password = "You have entered an invalid password";
+    const trimmedEmail = form.email.trim();
+
+    if (!trimmedEmail) {
+      e.email = "Please enter your email address first.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      e.email = "You have entered an invalid email.";
+    }
+
+    if (!form.password) {
+      e.password = "Please enter your password.";
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const onLogin = async () => {
     if (!validate()) return;
-    await handleLogin({ email: form.email, password: form.password });
+    await handleLogin({ email: form.email.trim(), password: form.password });
+  };
+
+  // ── "Forgot Password?" click — reuses the SAME email field on this page ───
+  // 1. Must have something typed in the email field first.
+  // 2. Must be a valid email format.
+  // 3. We check with the backend whether this email is actually registered
+  //    (this also sends the OTP if it is). Only on success do we navigate
+  //    to /forgot-password — carrying the email forward so that page can
+  //    skip straight to the OTP step instead of asking for the email again.
+  const onForgotPasswordClick = async () => {
+    const trimmedEmail = form.email.trim();
+
+    if (!trimmedEmail) {
+      setErrors((p) => ({ ...p, email: "Please enter your email address first." }));
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setErrors((p) => ({ ...p, email: "You have entered an invalid email." }));
+      return;
+    }
+
+    setErrors((p) => ({ ...p, email: "" }));
+    if (apiError) clearError();
+
+    setFpLoading(true);
+    const result = await handleForgotPassword(trimmedEmail);
+    setFpLoading(false);
+
+    if (result.success) {
+      // Email is registered + OTP already sent — go straight to OTP step.
+      navigate("/forgot-password", { state: { skipEmailStep: true } });
+    }
+    // On failure, handleForgotPassword already sets apiError (e.g.
+    // "This email is not registered.") — shown via the existing apiError
+    // banner on THIS page. No navigation happens.
   };
 
   return (
@@ -93,11 +140,13 @@ const LoginPage = () => {
           label={<Typography fontSize="13px" color="text.secondary">Keep me signed in</Typography>}
         />
         <Link component="button" fontSize="13px" fontWeight={500}
-          onClick={() => navigate("/forgot-password")}
+          onClick={onForgotPasswordClick}
+          disabled={fpLoading}
           sx={{ color: "#030229", textDecoration: "underline",
-                fontFamily: '"Poppins", sans-serif', cursor: "pointer" }}
+                fontFamily: '"Poppins", sans-serif', cursor: fpLoading ? "default" : "pointer",
+                opacity: fpLoading ? 0.6 : 1 }}
         >
-          Forgot Password?
+          {fpLoading ? "Checking..." : "Forgot Password?"}
         </Link>
       </Box>
 

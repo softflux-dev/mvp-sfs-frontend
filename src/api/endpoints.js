@@ -149,6 +149,9 @@ empAttendanceAnnual:       "employee/attendance/annual",
 
 getHolidays: "hr/holidays",
 
+getCompanyProfile:    "admin/settings/company",
+updateCompanyProfile: "admin/settings/company",
+
 };
 
 

@@ -1,9 +1,10 @@
-// app/auth/login/otpDialog.jsx
+// app/auth/login/otpDialog.jsx — FULL REPLACEMENT
 import { useState } from "react";
 import {
   Box, Typography, Dialog, DialogContent,
-  Link, CircularProgress,
+  Link, CircularProgress, IconButton,
 } from "@mui/material";
+import { X } from "lucide-react";
 import CustomButton from "../../../components/customButton";
 
 const OtpDialog = ({ open, onClose, onVerify, apiError = "", loading = false, onResend }) => {
@@ -39,10 +40,33 @@ const OtpDialog = ({ open, onClose, onVerify, apiError = "", loading = false, on
     onClose();
   };
 
+  // ── Only the explicit X button can close this dialog ──────────────────────
+  // MUI's Dialog onClose fires for BOTH backdrop clicks and Escape key by
+  // default — we intercept that here and ignore those two reasons entirely,
+  // so the OTP entry can't be accidentally dismissed mid-flow.
+  const handleDialogClose = (event, reason) => {
+    if (reason === "backdropClick" || reason === "escapeKeyDown") {
+      return;  // do nothing — dialog stays open
+    }
+    handleClose();
+  };
+
   return (
-    <Dialog open={open} onClose={handleClose}
-      PaperProps={{ sx: { borderRadius: "20px", p: 3, minWidth: 360, maxWidth: 420 } }}
+    <Dialog open={open} onClose={handleDialogClose}
+      PaperProps={{ sx: { borderRadius: "20px", p: 3, minWidth: 360, maxWidth: 420, position: "relative" } }}
     >
+      {/* Explicit close button — the ONLY way to dismiss this dialog */}
+      <IconButton
+        onClick={handleClose}
+        sx={{
+          position: "absolute", top: 12, right: 12,
+          color: "#9CA3AF",
+          "&:hover": { color: "#374151", backgroundColor: "#F5F5F5" },
+        }}
+      >
+        <X size={18} />
+      </IconButton>
+
       <DialogContent sx={{ p: 0 }}>
         <Typography fontSize="20px" fontWeight={600} color="text.primary"
           textAlign="center" mb={3}
