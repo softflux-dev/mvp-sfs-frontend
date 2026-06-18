@@ -1,9 +1,11 @@
 // hrPortal/attendance/attendanceDetail/detailTableTab.jsx — FULL REPLACEMENT
 import { useState, useMemo } from "react";
 import { Box }               from "@mui/material";
+import { Plus }               from "lucide-react";
 
 import Filter               from "../../../components/filterBar/filter";
 import PaginatedTable       from "../../../components/dynamicTable";
+import CustomButton         from "../../../components/customButton";
 import EditIcon             from "../../../assets/icons/editIcon.svg";
 import EditAttendanceDialog from "./editAttendanceDialog";
 
@@ -31,13 +33,16 @@ const DetailTableTab = ({
   dailyRecords  = [],
   loading       = false,
   actionLoading = false,
-  onEditSave,          // async (updated) → called for real API save
-  onRecordsChange,     // local fallback state updater
+  employeeId,            // ← needed for Manual Entry (creating a new record)
+  onEditSave,            // async (updated) → edit existing record
+  onManualEntrySave,     // async (payload) → create brand-new record
+  onRecordsChange,       // local fallback state updater
 }) => {
-  const [editOpen,   setEditOpen]   = useState(false);
-  const [editingRow, setEditingRow] = useState(null);
-  const [saving,     setSaving]     = useState(false);
-  const [filters,    setFilters]    = useState({});
+  const [editOpen,     setEditOpen]     = useState(false);
+  const [editingRow,   setEditingRow]   = useState(null);
+  const [manualOpen,   setManualOpen]   = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [filters,      setFilters]      = useState({});
 
   const filteredRecords = useMemo(() => {
     return dailyRecords.filter((row) => {
@@ -59,14 +64,12 @@ const DetailTableTab = ({
   const handleEditSave = async (updated) => {
     setSaving(true);
     if (onEditSave) {
-      // Real API path — hook updates records state internally
       const result = await onEditSave(updated);
       if (result?.success) {
         setEditOpen(false);
         setEditingRow(null);
       }
     } else {
-      // Local fallback (mock mode)
       onRecordsChange?.((prev) => prev.map((r) => r.id === updated.id ? updated : r));
       setEditOpen(false);
       setEditingRow(null);
@@ -74,9 +77,29 @@ const DetailTableTab = ({
     setSaving(false);
   };
 
+  // ── Manual Entry — creates a brand-new record (e.g. weekend with no punch
+  // captured by the machine, or any ad-hoc date the system has no row for) ──
+  const handleManualEntrySave = async (payload) => {
+    setSaving(true);
+    const result = await onManualEntrySave?.(payload);
+    if (result?.success) {
+      setManualOpen(false);
+    }
+    setSaving(false);
+  };
+
   return (
     <>
-      <Box mt={2}>
+      <Box mt={2} display="flex" justifyContent="flex-end">
+        <CustomButton
+          btnLabel="Manual Entry"
+          variant="gradient"
+          startIcon={<Plus size={15} />}
+          handlePressBtn={() => setManualOpen(true)}
+        />
+      </Box>
+
+      <Box mt={1.5}>
         <Filter mode="attendance_detail" onFilterChange={setFilters} />
       </Box>
 
@@ -92,11 +115,22 @@ const DetailTableTab = ({
         />
       </Box>
 
+      {/* Edit existing record */}
       <EditAttendanceDialog
         open={editOpen}
         onClose={() => { setEditOpen(false); setEditingRow(null); }}
         record={editingRow}
         onSave={handleEditSave}
+        loading={saving}
+      />
+
+      {/* Create a brand-new record — same dialog, create mode */}
+      <EditAttendanceDialog
+        open={manualOpen}
+        onClose={() => setManualOpen(false)}
+        record={null}
+        manualEntry={{ employeeId, date: new Date() }}
+        onSave={handleManualEntrySave}
         loading={saving}
       />
     </>

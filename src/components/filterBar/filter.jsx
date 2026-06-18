@@ -770,6 +770,43 @@ emp_leave_requests: [
   },
 ],
 
+ 
+holidays: [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search holiday name...",
+    grid: { xs: 12, md: 4 },
+  },
+  {
+    type: "select",
+    key: "type",
+    placeholder: "All Types",
+    grid: { xs: 12, md: 4 },
+    options: [
+      { v: "",          l: "All Types"  },
+      { v: "public",    l: "Public"     },
+      { v: "religious", l: "Religious"  },
+      { v: "national",  l: "National"   },
+      { v: "company",   l: "Company"    },
+      { v: "optional",  l: "Optional"   },
+    ],
+  },
+  {
+    type: "select",
+    key: "year",
+    placeholder: "All Years",
+    grid: { xs: 12, md: 4 },
+    options: [
+      { v: "",     l: "All Years" },
+      { v: "2024", l: "2024"      },
+      { v: "2025", l: "2025"      },
+      { v: "2026", l: "2026"      },
+      { v: "2027", l: "2027"      },
+    ],
+  },
+],
+
     // ── Full (default fallback) ───────────────────────────────────────────────
     full: [
       {

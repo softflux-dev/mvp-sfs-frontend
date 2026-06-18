@@ -1,9 +1,10 @@
-// src/hooks/attendance.js 
+// src/hooks/attendance.js — FULL REPLACEMENT
 import { useState, useCallback, useEffect } from "react";
 import {
   getAttendanceSummaryApi,
   getAttendanceDetailApi,
   updateAttendanceRecordApi,
+  createManualEntryApi,
   importAttendanceApi,
   getImportHistoryApi,
 } from "../../api/modules/attendance";
@@ -25,8 +26,6 @@ export const useAttendanceSummary = () => {
           ...s,
           id:           `${s.empId}_${s.yearNum}_${s.monthIndex}`,
           employeeDbId: s.employeeDbId || "",
-          // Keep monthIndex and yearNum as numbers for filtering + navigation
-          // Format display label separately
           month:        `${new Date(s.yearNum, s.monthIndex, 1).toLocaleString("default", { month: "short" })} ${s.yearNum}`,
         })));
       } else {
@@ -78,7 +77,7 @@ export const useAttendanceDetail = (employeeId, month, year) => {
         setRecords((prev) =>
           prev.map((r) =>
             r.id?.toString() === id?.toString()
-              ? { ...r, checkIn: updated.checkIn, checkOut: updated.checkOut, hours: updated.hours, attendanceStatus: updated.attendanceStatus, notes: updated.notes }
+              ? { ...r, checkIn: updated.checkIn, checkOut: updated.checkOut, hours: updated.hours, attendanceStatus: updated.attendanceStatus, notes: updated.notes, isIncomplete: updated.isIncomplete }
               : r
           )
         );
@@ -92,9 +91,44 @@ export const useAttendanceDetail = (employeeId, month, year) => {
     }
   }, []);
 
+  // ── Create a brand-new record (Manual Entry button) ────────────────────────
+  // Used when a date has NO existing Attendance doc — e.g. a weekend the
+  // employee worked but the machine sheet never captured.
+  const createManualEntry = useCallback(async (payload) => {
+    setActionLoading(true);
+    try {
+      const res = await createManualEntryApi(payload);
+      if (res?.status === 200 || res?.status === 201) {
+        const newRecord = res.data.data.record;
+        const formatted = {
+          id:               newRecord._id,
+          date:             new Date(newRecord.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          rawDate:          newRecord.date,
+          checkIn:          newRecord.checkIn  || "",
+          checkOut:         newRecord.checkOut || "",
+          hours:            newRecord.hours,
+          attendanceStatus: newRecord.attendanceStatus,
+          notes:            newRecord.notes || "",
+          isIncomplete:     newRecord.isIncomplete || false,
+          isOvertime:       newRecord.isOvertime   || false,
+        };
+        // Insert in date order
+        setRecords((prev) =>
+          [...prev, formatted].sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate))
+        );
+        return { success: true };
+      }
+      return { success: false, message: res?.data?.message || "Failed to create entry." };
+    } catch {
+      return { success: false, message: "Something went wrong." };
+    } finally {
+      setActionLoading(false);
+    }
+  }, []);
+
   useEffect(() => { fetchDetail(); }, [fetchDetail]);
 
-  return { records, loading, actionLoading, error, fetchDetail, updateRecord, setRecords };
+  return { records, loading, actionLoading, error, fetchDetail, updateRecord, createManualEntry, setRecords };
 };
 
 // ── useAttendanceImport ───────────────────────────────────────────────────────
@@ -162,5 +196,5 @@ export const useAttendanceImport = () => {
   useEffect(() => { fetchImportHistory(); }, []);
 
   return { importLogs, setImportLogs, logsLoading, importing, importWarning, error,
-    importRecords, fetchImportHistory, };
+    importRecords, fetchImportHistory };
 };

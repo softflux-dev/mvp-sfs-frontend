@@ -1689,6 +1689,7 @@ case "att_mon_status": {
     Absent:  { bg: "#FF00001A", color: "#FF0000" },
     Late:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
     Leave:   { bg: "#04C3731A", color: "#04C373" },
+    Holiday: { bg: "#9E9E9E1A", color: "#9E9E9E" },
   };
   // Treat legacy "Partial" as "Present" until migration script is run
   const displayStatus = row.attendanceStatus === "Partial" ? "Present" : (row.attendanceStatus || "Present");
@@ -1843,7 +1844,120 @@ case "lm_status": {
     </TableCell>
   );
 }
-
+case "holiday_name":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        {row.name || "-"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Holiday type chip ─────────────────────────────────────────────────────
+case "holiday_type": {
+  const HOLIDAY_TYPE_CFG = {
+    public:    { bg: "#2B6EFF1A", color: "#2B6EFF", label: "Public"    },
+    religious: { bg: "#AA24931A", color: "#AA2493", label: "Religious" },
+    national:  { bg: "#04C3731A", color: "#04C373", label: "National"  },
+    company:   { bg: "#FF972F1A", color: "#FF972F", label: "Company"   },
+    optional:  { bg: "#F5F5F5",   color: "#757575", label: "Optional"  },
+  };
+  const cfg = HOLIDAY_TYPE_CFG[row.type] || { bg: "#F5F5F5", color: "#757575", label: row.type };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={cfg.label}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+ 
+// ── Holiday pay type chip (Paid / Unpaid) ─────────────────────────────────
+case "holiday_pay_type": {
+  const isPaid = row.payType === "paid";
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={isPaid ? "Paid" : "Unpaid"}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: isPaid ? "#04C3731A" : "#FF00001A",
+          color:           isPaid ? "#04C373"   : "#FF0000",
+        }}
+      />
+    </TableCell>
+  );
+}
+ 
+// ── Holiday date range (From → To, or single date) ───────────────────────
+case "holiday_dates":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.primary">
+        {row.fromDateFmt === row.toDateFmt
+          ? row.fromDateFmt
+          : `${row.fromDateFmt} → ${row.toDateFmt}`}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Holiday duration (days) ───────────────────────────────────────────────
+case "holiday_days":
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={`${row.days} day${row.days > 1 ? "s" : ""}`}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 600,
+          px: 1, borderRadius: "8px",
+          backgroundColor: "#AA24931A", color: "#AA2493",
+        }}
+      />
+    </TableCell>
+  );
+ 
+// ── Holiday status (Active/Inactive) ──────────────────────────────────────
+case "holiday_status": {
+  const isActive = row.isActive;
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={isActive ? "Active" : "Inactive"}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: isActive ? "#04C3731A" : "#F5F5F5",
+          color:           isActive ? "#04C373"   : "#9E9E9E",
+        }}
+      />
+    </TableCell>
+  );
+}
+ 
+// ── Holiday edit/delete actions ───────────────────────────────────────────
+case "holiday_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={0.5}>
+        <IconButton size="small" onClick={() => onEditClick?.(row)} sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}>
+          {React.isValidElement(EditIcon)
+            ? EditIcon
+            : typeof EditIcon === "string"
+              ? <img src={EditIcon} alt="edit" style={{ width: 20, height: 20 }} />
+              : EditIcon ? React.createElement(EditIcon, { style: { width: 20, height: 20 } }) : null}
+        </IconButton>
+        <IconButton size="small" onClick={() => onDeleteClick?.(row)} sx={{ color: "#9CA3AF", "&:hover": { color: "#FF0000", backgroundColor: "#FF00001A" } }}>
+          <img src={Delete} alt="delete" style={{ width: 20, height: 20 }} />
+        </IconButton>
+      </Box>
+    </TableCell>
+  );
 // ── Leave management — approve/reject + view actions ──────────────────────
 case "lm_actions":
   return (
@@ -2783,11 +2897,19 @@ case "proj_type_label": {
                 <TableRow
                   key={getRowId(row)}
                   sx={{ "& > td": { verticalAlign: "middle" }, "&:hover":  { backgroundColor: "#FAFAFB" },
-                  // ── Highlight incomplete punch rows in amber ──────────────────────────
-                backgroundColor: row.isIncomplete ? "#FFFBEB" : "transparent",
-                "&:hover": {
-                  backgroundColor: row.isIncomplete ? "#FEF3C7" : "#FAFAFB",
-                }, }}
+                 // Amber highlight for: incomplete punch (one side missing) OR Absent
+                  // (HR should check — maybe employee forgot to punch entirely, or this
+                  // is a genuine absence; the highlight just prompts a manual review).
+                  backgroundColor: (row.isIncomplete || row.attendanceStatus === "Absent")
+                    ? "#FFFBEB"
+                    : "transparent",
+                  "&:hover": {
+                    backgroundColor: (row.isIncomplete || row.attendanceStatus === "Absent")
+                      ? "#FEF3C7"
+                      : "#FAFAFB",
+                  },
+              
+              }}
                 >
                   {columnKeys.map((val) => renderCell(row, val, index))}
                 </TableRow>

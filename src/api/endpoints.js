@@ -8,10 +8,10 @@ const ENDPOINTS = {
   getMe:          "auth/me",
 
   // Employee Auth
-employeeLogin:          "employee/auth/login",
-employeeForgotPassword: "employee/auth/forgot-password",
-employeeVerifyOtp:      "employee/auth/verify-otp",
-employeeResetPassword:  "employee/auth/reset-password",
+  employeeLogin:          "employee/auth/login",
+  employeeForgotPassword: "employee/auth/forgot-password",
+  employeeVerifyOtp:      "employee/auth/verify-otp",
+  employeeResetPassword:  "employee/auth/reset-password",
 
   // Departments
   getDepartments:    "admin/departments",
@@ -146,6 +146,8 @@ empAttendanceStats:        "employee/attendance/stats",
 empAttendanceMonthly:      "employee/attendance/monthly",
 empAttendanceWeek:         "employee/attendance/week",
 empAttendanceAnnual:       "employee/attendance/annual",
+
+getHolidays: "hr/holidays",
 
 };
 

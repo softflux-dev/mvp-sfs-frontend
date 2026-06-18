@@ -32,6 +32,7 @@ import PMprojectDetail from "../app/projectManagerPortal/myProjects/PMprojectDet
 import TaskManagement from "../app/projectManagerPortal/taskManagement";
 import TaskDetail from "../app/projectManagerPortal/taskManagement/taskDetail";
 import TeamPerformance from "../app/projectManagerPortal/teamPerformance";
+import HolidayManagement from "../app/hrPortal/holidays";
 
 // Employee components
 import EmpDashboard from "../app/empPortal/dashboard";
@@ -361,8 +362,24 @@ const HR_ROUTES = [
     ),
     isHideMenu: false,
   },
-  {
+
+    {
     id: 4,
+    nameKey: "Holiday Management",
+    component: <HolidayManagement />,
+    exact: "exact",
+    
+    path: "/holiday-management",
+    activeIcon: (
+      <img src={LeavesActiveIcon} alt="Leave Management" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={LeavesInactiveIcon} alt="Leave Management" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+    id: 5,
     nameKey: "Payroll",
     component: <PayrollManagement />,
     exact: "exact",
@@ -376,7 +393,7 @@ const HR_ROUTES = [
     isHideMenu: false,
   },
   {
-    id: 5,
+    id: 6,
     nameKey: "Messages",
     component: <Messages />,
     exact: "exact",
@@ -390,7 +407,7 @@ const HR_ROUTES = [
     isHideMenu: false,
   },
   {
-    id: 6,
+    id: 7,
     nameKey: "Documents",
     component: <HRDocuments />,
     exact: "exact",
@@ -404,7 +421,7 @@ const HR_ROUTES = [
     isHideMenu: false,
   },
   {
-  id: 7,   // any unique id — or renumber sequentially
+  id: 8,   // any unique id — or renumber sequentially
   nameKey: "Attendance Detail",
   component: <AttendanceDetail />,
   exact: "exact",

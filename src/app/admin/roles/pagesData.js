@@ -18,6 +18,7 @@ export const hrPages = [
   { id: "hr-dashboard",   title: "HR Dashboard",         path: "/hr-dashboard"         },
   { id: "hr-attendance",  title: "Attendance Management", path: "/attendance-monitoring" },
   { id: "hr-leaves",      title: "Leave Management",      path: "/leave-management"      },
+  { id: "hr-holidays",    title: "Holiday Management",     path: "/holiday-management"    },
   { id: "hr-payroll",     title: "Payroll",               path: "/payroll-management"    },
   { id: "hr-messages",    title: "Messages",              path: "/hr-messages"           },
   { id: "hr-documents",   title: "Documents",             path: "/hr-documents"          },

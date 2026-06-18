@@ -1,4 +1,4 @@
-// hrPortal/attendance/attendanceDetail/index.jsx 
+// hrPortal/attendance/attendanceDetail/index.jsx — FULL REPLACEMENT
 import { useState }                            from "react";
 import { Box, IconButton, Typography, Avatar } from "@mui/material";
 import { useNavigate, useLocation }            from "react-router-dom";
@@ -25,17 +25,15 @@ const AttendanceDetail = () => {
     year:  yearRaw,
   } = location.state || {};
 
-  // Ensure these are always numbers for new Date(year, month)
   const month = typeof monthRaw === "number" ? monthRaw : parseInt(monthRaw);
   const year  = typeof yearRaw  === "number" ? yearRaw  : parseInt(yearRaw);
 
   const [activeTab, setActiveTab] = useState(1);
 
   const {
-    records, loading, actionLoading, updateRecord, setRecords,
+    records, loading, actionLoading, updateRecord, createManualEntry, setRecords,
   } = useAttendanceDetail(employeeId, month, year);
 
-  // EditAttendanceDialog calls this — we forward to the real API
   const handleEditSave = async (updated) => {
     return await updateRecord(updated.id, {
       checkIn:          updated.checkIn,
@@ -43,6 +41,11 @@ const AttendanceDetail = () => {
       attendanceStatus: updated.attendanceStatus,
       notes:            updated.notes,
     });
+  };
+
+  // Manual Entry — creates a brand-new record for a date that has none
+  const handleManualEntrySave = async (payload) => {
+    return await createManualEntry(payload);
   };
 
   const monthName = month !== undefined
@@ -63,7 +66,6 @@ const AttendanceDetail = () => {
         </Typography>
       </Box>
 
-      {/* Employee info header */}
       <Box sx={{
         display: "flex", alignItems: "center", gap: 2,
         backgroundColor: "#fff", borderRadius: "20px",
@@ -100,7 +102,9 @@ const AttendanceDetail = () => {
           dailyRecords={records}
           loading={loading}
           actionLoading={actionLoading}
+          employeeId={employeeId}
           onEditSave={handleEditSave}
+          onManualEntrySave={handleManualEntrySave}
           onRecordsChange={setRecords}
         />
       )}

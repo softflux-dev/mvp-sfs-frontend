@@ -1,4 +1,4 @@
-// src/api/modules/attendance.js 
+// src/api/modules/attendance.js — FULL REPLACEMENT
 import ENDPOINTS from "../endpoints";
 import api       from "../index";
 
@@ -18,6 +18,10 @@ export const getAttendanceDetailApi = (employeeId, month, year) =>
 export const updateAttendanceRecordApi = (id, payload) =>
   api(`${ENDPOINTS.updateAttendanceRecord}/${id}`, payload, "patch");
 
+// Create a brand-new record for a date that has none (Manual Entry button)
+export const createManualEntryApi = (payload) =>
+  api(`${ENDPOINTS.updateAttendanceRecord}/manual-entry`, payload, "post");
+
 export const importAttendanceApi = (payload) =>
   api(ENDPOINTS.importAttendance, payload, "post");
 
@@ -29,12 +33,11 @@ export const getImportHistoryApi = (params = {}) => {
   return api(`${ENDPOINTS.getAttendanceImports}${qs ? `?${qs}` : ""}`, null, "get");
 };
 
-// Fetch unresolved partial punch records (missing check-in or check-out)
 export const getPartialRecordsApi = () =>
   api(ENDPOINTS.getAttendancePartial, null, "get");
 
 export const downloadImportFileApi = (id) =>
   api(`${ENDPOINTS.getAttendanceImports}/${id}/download`, null, "get", { responseType: "blob" });
- 
+
 export const deleteImportBatchApi = (id) =>
   api(`${ENDPOINTS.getAttendanceImports}/${id}`, null, "delete");

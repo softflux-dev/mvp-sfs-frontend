@@ -8,15 +8,20 @@ import {
 } from "../../../components";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
 import AttachmentCard      from "../../../components/cards/attachmentCard";
+import { baseUrl }         from "../../../api/index";   
 
 const ViewWorkDialog = ({ open, onClose, submissions = [], loading = false, taskId }) => {
 
   const handleDownload = async (sub) => {
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || "";
-    const url     = `${baseUrl}/api/tasks/${taskId}/submissions/${sub._id}/download`;
-    const token   = localStorage.getItem("token");
+    // baseUrl already ends with "/api/" — just append the path, no leading slash
+    const url   = `${baseUrl}tasks/${taskId}/submissions/${sub._id}/download`;
+    const token = localStorage.getItem("token");
     try {
       const res  = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) {
+        console.error("Download failed:", res.status);
+        return;
+      }
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -56,7 +61,6 @@ const ViewWorkDialog = ({ open, onClose, submissions = [], loading = false, task
           )}
 
           {!loading && submissions.map((sub, idx) => {
-            // submittedBy is now a populated object
             const submitterName = sub.submittedBy?.fullName
               || sub.submittedBy?.name
               || "Unknown";

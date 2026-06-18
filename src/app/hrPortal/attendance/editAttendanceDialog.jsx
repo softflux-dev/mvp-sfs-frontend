@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Box, MenuItem }       from "@mui/material";
 import { TimePicker }          from "@mui/x-date-pickers/TimePicker";
+import { DatePicker }          from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider} from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs }        from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs                   from "dayjs";
@@ -22,19 +23,17 @@ const STATUS_OPTIONS = [
   { value: "Absent",  label: "Absent"  },
   { value: "Late",    label: "Late"    },
   { value: "Leave",   label: "Leave"   },
- 
+  { value: "Holiday", label: "Holiday" },
 ];
 
-const INITIAL = { checkIn: null, checkOut: null, attendanceStatus: "", notes: "" };
+const INITIAL = { date: null, checkIn: null, checkOut: null, attendanceStatus: "", notes: "" };
 
 // ── Parse time string — handles both 24hr ("09:24") and 12hr ("09:24 AM") ────
 const parseTime = (timeStr) => {
   if (!timeStr || timeStr === "-" || timeStr.trim() === "") return null;
   const str = timeStr.trim();
-  // Try 24hr first "HH:mm" or "H:mm"
   let parsed = dayjs(str, "HH:mm", true);
   if (parsed.isValid()) return parsed;
-  // Try 12hr "hh:mm A" / "h:mm A"
   parsed = dayjs(str, "hh:mm A", true);
   if (parsed.isValid()) return parsed;
   parsed = dayjs(str, "h:mm A", true);
@@ -42,62 +41,110 @@ const parseTime = (timeStr) => {
   return null;
 };
 
-// ── Format time back for saving — use 24hr for backend consistency ────────────
 const formatTime = (dayjsObj) => {
   if (!dayjsObj || !dayjsObj.isValid()) return "";
   return dayjsObj.format("HH:mm");
 };
 
-const EditAttendanceDialog = ({ open, onClose, record = null, onSave, loading = false }) => {
+/**
+ * EditAttendanceDialog — dual mode:
+ *
+ * EDIT mode   — pass `record` (existing Attendance doc shape with `id`).
+ *               Title: "Edit Attendance". Date is shown read-only.
+ *
+ * CREATE mode — pass `record={null}` AND `manualEntry={{ employeeId, date }}`.
+ *               Title: "Manual Attendance Entry". Date is editable
+ *               (defaults to manualEntry.date, e.g. a weekend with no record).
+ *               Used by the "Manual Entry" button in Attendance Detail.
+ */
+const EditAttendanceDialog = ({
+  open, onClose, record = null, manualEntry = null, onSave, loading = false,
+}) => {
+  const isCreateMode = !record && !!manualEntry;
   const [form, setForm] = useState(INITIAL);
 
   useEffect(() => {
-  if (!open) return;
-  if (record) {
-   
-    const status = record.attendanceStatus === "Partial" ? "Present" : (record.attendanceStatus || "");
-    setForm({
-      checkIn:          parseTime(record.checkIn),
-      checkOut:         parseTime(record.checkOut),
-      attendanceStatus: status,
-      notes:            record.notes || "",
-    });
-  } else {
-    setForm(INITIAL);
-  }
-}, [record, open]);
+    if (!open) return;
+    if (record) {
+      const status = record.attendanceStatus === "Partial" ? "Present" : (record.attendanceStatus || "");
+      setForm({
+        date:             record.rawDate ? dayjs(record.rawDate) : null,
+        checkIn:          parseTime(record.checkIn),
+        checkOut:         parseTime(record.checkOut),
+        attendanceStatus: status,
+        notes:            record.notes || "",
+      });
+    } else if (manualEntry) {
+      setForm({
+        ...INITIAL,
+        date: manualEntry.date ? dayjs(manualEntry.date) : dayjs(),
+      });
+    } else {
+      setForm(INITIAL);
+    }
+  }, [record, manualEntry, open]);
 
   const handleSave = () => {
     const checkIn  = formatTime(form.checkIn);
     const checkOut = formatTime(form.checkOut);
 
-    // Calculate hours if both present
     let hoursStr = "";
     if (form.checkIn?.isValid() && form.checkOut?.isValid()) {
       const diffMins = form.checkOut.diff(form.checkIn, "minute");
-      const netMins  = Math.max(0, diffMins - 60);  // minus 1hr lunch
+      const netMins  = Math.max(0, diffMins - 60);
       const h = Math.floor(netMins / 60);
       const m = netMins % 60;
       hoursStr = `${h}h ${m}m`;
     }
 
-    onSave?.({
-      ...record,
-      checkIn,
-      checkOut,
-      hours:            hoursStr,
-      attendanceStatus: form.attendanceStatus,
-      notes:            form.notes,
-    });
+    if (isCreateMode) {
+      onSave?.({
+        employeeId:       manualEntry.employeeId,
+        date:             form.date ? form.date.format("YYYY-MM-DD") : null,
+        checkIn,
+        checkOut,
+        attendanceStatus: form.attendanceStatus || undefined,
+        notes:            form.notes,
+      });
+    } else {
+      onSave?.({
+        ...record,
+        checkIn,
+        checkOut,
+        hours:            hoursStr,
+        attendanceStatus: form.attendanceStatus,
+        notes:            form.notes,
+      });
+    }
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <DialogContainer open={open} onClose={onClose} maxWidth="480px" fullWidth>
-        <DialogHeader title="Edit Attendance" onClose={onClose} />
+        <DialogHeader title={isCreateMode ? "Manual Attendance Entry" : "Edit Attendance"} onClose={onClose} />
 
         <DialogBody>
           <Box sx={{ backgroundColor: "#F5F5F5", borderRadius: "16px", p: 3, display: "flex", flexDirection: "column", gap: 2.5 }}>
+
+            {/* Date — editable in create mode, read-only label in edit mode */}
+            {isCreateMode && (
+              <Box>
+                <CustomInputLabel label="Date" />
+                <DatePicker
+                  value={form.date}
+                  onChange={(val) => setForm((prev) => ({ ...prev, date: val }))}
+                  slotProps={{ textField: { size: "small", fullWidth: true } }}
+                  sx={{
+                    ...GlobalStyle.datePickerStyle,
+                    width: "100%",
+                    "& .MuiOutlinedInput-root": {
+                      backgroundColor: "#fff", borderRadius: "14px",
+                      "& fieldset": { border: "none" },
+                    },
+                  }}
+                />
+              </Box>
+            )}
 
             {/* Check-In / Check-Out */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
@@ -143,7 +190,9 @@ const EditAttendanceDialog = ({ open, onClose, record = null, onSave, loading = 
                 onChange={(e) => setForm((prev) => ({ ...prev, attendanceStatus: e.target.value }))}
                 fullWidth height="45px" inputBgColor="#fff"
               >
-                <MenuItem value="">Select Status</MenuItem>
+                <MenuItem value="">
+                  {isCreateMode ? "Auto-detect (based on check-in/out)" : "Select Status"}
+                </MenuItem>
                 {STATUS_OPTIONS.map((s) => (
                   <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
                 ))}
@@ -170,7 +219,7 @@ const EditAttendanceDialog = ({ open, onClose, record = null, onSave, loading = 
           onConfirm={handleSave}
           showCancelBtn
           cancelText="Cancel"
-          confirmText="Save Changes"
+          confirmText={isCreateMode ? "Add Entry" : "Save Changes"}
           variant="gradient"
           confirmLoading={loading}
         />

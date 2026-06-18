@@ -182,24 +182,24 @@ const EmpAttendance = () => {
       )}
 
       {/* ── My Leaves tab ──────────────────────────────────────────────── */}
-   {mainTab === 2 && (
-  <Box mt={2}>
-    <MyLeaveRequests
-      leaves={leaves}
-      loading={leavesLoading}
-      cancelLeave={cancelLeave}
-      actionLoading={actionLoading}
-      onRequestLeave={() => setLeaveDialogOpen(true)}
-    />
-  </Box>
-)}
+      {mainTab === 2 && (
+          <Box mt={2}>
+            <MyLeaveRequests
+              leaves={leaves}
+              loading={leavesLoading}
+              cancelLeave={cancelLeave}
+              actionLoading={actionLoading}
+              onRequestLeave={() => setLeaveDialogOpen(true)}
+            />
+          </Box>
+        )}
 
-      <ApplyLeaveDialog
-        open={leaveDialogOpen}
-        onClose={() => setLeaveDialogOpen(false)}
-        onSubmit={handleLeaveSubmit}
-        loading={actionLoading}
-      />
+          <ApplyLeaveDialog
+            open={leaveDialogOpen}
+            onClose={() => setLeaveDialogOpen(false)}
+            onSubmit={handleLeaveSubmit}
+            loading={actionLoading}
+          />
     </>
   );
 };
