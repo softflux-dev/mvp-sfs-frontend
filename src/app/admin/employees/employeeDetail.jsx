@@ -17,7 +17,7 @@ import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
 const tabs = [
   { id: 1, label: "Personal Info" },
   { id: 2, label: "Salary"        },
-  { id: 3, label: "Attendance"    },
+  //{ id: 3, label: "Attendance"    },
   { id: 4, label: "Tasks"         },
   { id: 5, label: "Documents"     },
 ];
@@ -58,9 +58,8 @@ const EmployeeDetail = () => {
       {/* ── Tab content ──────────────────────────────────────────────────── */}
       {activeTab === 1 && <PersonalInfoTab employee={employee} />}
       {activeTab === 2 && <SalaryTab employee={employee} />}
-      {activeTab === 3 && <AttendanceTab employee={employee} />}
-      {activeTab === 4 && <TasksTab employee={employee} />}
-      {activeTab === 5 && <DocumentsTab employee={employee} />}
+      {activeTab === 3 && <TasksTab employee={employee} />}
+      {activeTab === 4 && <DocumentsTab employee={employee} />}
 
       {/* ── Edit Employee dialog ──────────────────────────────────────────── */}
       <AddEmployee

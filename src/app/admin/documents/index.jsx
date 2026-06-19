@@ -1,20 +1,13 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Box, Grid, Typography } from "@mui/material";
 
 import HeaderText         from "../../../components/headerText";
-import CustomButton       from "../../../components/customButton";
 import Filter             from "../../../components/filterBar/filter";
 import PaginatedTable     from "../../../components/dynamicTable";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";
-import UploadDocument     from "./uploadDocument";
-import { useSharedDocument }    from "../../../hooks/sharedDocument";
-import useUserStore              from "../../../zustand/useUserStore";
-import { useProjectType }        from "../../../hooks/projectType";
-import { useDepartment }         from "../../../hooks/department";
-import { getProjectManagersApi } from "../../../api/modules/project";
-import { getProjectsApi }        from "../../../api/modules/project";
-import { getEmployeesApi }       from "../../../api/modules/employee";
+import { useSharedDocument } from "../../../hooks/sharedDocument";
+import useUserStore          from "../../../zustand/useUserStore";
 
 const tableHeader = [
   { id: "fileName",   label: "Document Name" },
@@ -44,7 +37,6 @@ const Documents = () => {
     loading,
     actionLoading,
     error,
-    uploadDocument,
     deleteDocument,
     downloadDocument,
     fetchDocuments,
@@ -52,73 +44,30 @@ const Documents = () => {
     pmId: isPM ? (user?._id || user?.id) : null,
   });
 
-  const { projectTypes, fetchProjectTypes } = useProjectType();
-  const { departments,  fetchDepartments  } = useDepartment();
-
-  const [managers,      setManagers]      = useState([]);
-  const [employees,     setEmployees]     = useState([]);
-  const [allProjects,   setAllProjects]   = useState([]);
-
-  const [filters,       setFilters]       = useState({});
-  const [openModal,     setOpenModal]     = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [apiError,      setApiError]      = useState("");
 
   const confirmDialogRef = useRef();
 
-  // ── Fetch supporting data for the upload modal ────────────────────────
-  useEffect(() => {
-    if (isEmployee) return;
-
-    fetchProjectTypes();
-    fetchDepartments({ limit: 100 });
-
-    // PM doesn't need managers list (no manager assignment in their upload form)
-    if (!isPM) {
-      getProjectManagersApi().then((res) => {
-        if (res?.status === 200 || res?.status === 201) {
-          setManagers(res.data.data.managers || []);
-        }
-      });
-    }
-
-    getProjectsApi({ limit: 200 }).then((res) => {
-      if (res?.status === 200 || res?.status === 201) {
-        setAllProjects(res.data.data.projects || []);
-      }
-    });
-
-    getEmployeesApi({ limit: 200 }).then((res) => {
-      if (res?.status === 200 || res?.status === 201) {
-        setEmployees(res.data.data.employees || []);
-      }
-    });
-  }, [isEmployee, isPM]);
-
-  // ── Map API shape → table row ─────────────────────────────────────────
   const tableData = documents.map((doc) => ({
-    id:         doc._id,
-    fileName:   doc.title,
-    type:       doc.documentType,
-    uploadedBy: doc.uploadedBy?.fullName || doc.uploadedBy?.name || "—",
-    date:       doc.createdAt
+    id:           doc._id,
+    fileName:     doc.title,
+    type:         doc.documentType,
+    uploadedBy:   doc.uploadedBy?.fullName || doc.uploadedBy?.name || "—",
+    date:         doc.createdAt
       ? new Date(doc.createdAt).toLocaleDateString("en-US", {
           month: "short", day: "numeric", year: "numeric",
         })
       : "—",
-    fileSize:   doc.fileSize || "—",
-    // keep uploadedBy id so PM can only delete their own docs
+    fileSize:     doc.fileSize || "—",
     uploadedById: doc.uploadedBy?._id || doc.uploadedBy?.id || "",
   }));
 
-  // ── Menu options per role ─────────────────────────────────────────────
   const menuOptions = (row) => {
     if (isEmployee) {
       return [{ value: "download", label: "Download" }];
     }
     if (isPM) {
-      // PM can only delete docs they uploaded themselves
       const canDelete = row.uploadedById?.toString() === (user?._id || user?.id)?.toString();
       return canDelete
         ? [
@@ -127,7 +76,7 @@ const Documents = () => {
           ]
         : [{ value: "download", label: "Download" }];
     }
-    // Admin
+    // Admin — can delete any doc
     return [
       { value: "download", label: "Download" },
       { value: "delete",   label: "Delete", color: "#FF0000" },
@@ -156,51 +105,15 @@ const Documents = () => {
     }
   };
 
-  const handleUploadSave = async (formData) => {
-    const fd = new FormData();
-    fd.append("title",        formData.title);
-    fd.append("documentType", formData.type || "other");
-    fd.append("description",  formData.description || "");
-
-    const assignees = formData.assigneeId
-      ? [formData.assigneeId]
-      : (formData.assigneeIds || []);
-    fd.append("assigneeIds", JSON.stringify(assignees));
-
-    if (formData.files?.[0]) {
-      fd.append("file", formData.files[0]);
-    }
-
-    const result = await uploadDocument(fd);
-    if (result.success) {
-      setOpenModal(false);
-      setUploadSuccess(true);
-      setApiError("");
-    } else {
-      setApiError(result.message);
-    }
-  };
-
   return (
     <>
       <Grid container spacing={2} mb={3} alignItems="center">
-        <Grid size={{ xs: 12, md: 6 }}>
+        <Grid size={{ xs: 12 }}>
           <HeaderText
             title="Document Management"
-            subtitle="Manage and organize all company documents"
+            subtitle="All documents uploaded from employee and project pages"
           />
         </Grid>
-        {!isEmployee && (
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Box display="flex" justifyContent="flex-end">
-              <CustomButton
-                btnLabel="+ Upload Document"
-                handlePressBtn={() => setOpenModal(true)}
-                variant="gradient"
-              />
-            </Box>
-          </Grid>
-        )}
       </Grid>
 
       {(error || apiError) && (
@@ -211,11 +124,10 @@ const Documents = () => {
         </Box>
       )}
 
-     <Filter
+      <Filter
         mode="documents"
-        isPM={isPM}          
+        isPM={isPM}
         onFilterChange={(f) => {
-          setFilters(f);
           fetchDocuments({ search: f.search || "", type: f.type || "" });
         }}
       />
@@ -231,34 +143,12 @@ const Documents = () => {
         />
       </Box>
 
-      {!isEmployee && (
-        <UploadDocument
-          open={openModal}
-          onClose={() => { setOpenModal(false); setApiError(""); }}
-          onSave={handleUploadSave}
-          loading={actionLoading}
-          projectTypeOptions={projectTypes}
-          allProjects={allProjects}
-          managerOptions={managers}
-          employeeOptions={employees}
-          departmentOptions={departments}
-          isPM={isPM}
-        />
-      )}
-
       <ConfirmationDialog ref={confirmDialogRef} />
 
       <SuccessPopup
         open={deleteSuccess}
         onClose={() => setDeleteSuccess(false)}
         message="Document deleted successfully"
-        autoClose
-        autoCloseDelay={2000}
-      />
-      <SuccessPopup
-        open={uploadSuccess}
-        onClose={() => setUploadSuccess(false)}
-        message="Document uploaded successfully"
         autoClose
         autoCloseDelay={2000}
       />

@@ -1,5 +1,5 @@
 // employees/projectDetailTabs/documentsTab.jsx — FULL REPLACEMENT
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { Box, Grid, Typography } from "@mui/material";
 
 import CustomButton         from "../../../../components/customButton";
@@ -8,6 +8,7 @@ import ConfirmationDialog   from "../../../../components/popups/confirmation";
 import SuccessPopup         from "../../../../components/popups/confirmationDialog";
 import UploadProjectDocumentDialog from "./uploadProjectDocumentDialog";
 import { useProjectDocument } from "../../../../hooks/projectDocument";
+import { getProjectTeamApi }  from "../../../../api/modules/project";
 
 import UploadIcon   from "../../../../assets/icons/upload-doc-icon.svg";
 import DeleteIcon   from "../../../../assets/icons/delete-icon-inactive.svg";
@@ -34,9 +35,12 @@ const displayRows = [
  *
  * Props:
  *   project        — the current project (needs project.id)
- *   teamMembers    — array from TeamTab's onTeamChange, this project's team
+ *   teamMembers    — array from TeamTab's onTeamChange (used as an instant
+ *                     cache if already loaded, but NOT relied upon — this
+ *                     tab fetches the team itself so it works correctly
+ *                     even if Documents is opened before ever visiting Team)
  *   projectManager — { _id, fullName, avatar } — included separately since
- *                     TeamTab's member list may not include the PM
+ *                     the team API's member list may not include the PM
  */
 const DocumentsTab = ({ project = {}, teamMembers = [], projectManager = null }) => {
   const {
@@ -56,9 +60,31 @@ const DocumentsTab = ({ project = {}, teamMembers = [], projectManager = null })
 
   const confirmDialogRef = useRef();
 
+  // ── Fetch the project's team independently — do NOT rely solely on the
+  // teamMembers prop, which only populates once TeamTab has been mounted
+  // and fetched at least once. Without this, opening Documents before ever
+  // visiting the Team tab shows only the PM in the picker (the bug being
+  // fixed here). If teamMembers is already populated (passed from parent
+  // because Team was visited), use it immediately as a fast first paint,
+  // then this fetch confirms/refreshes it.
+  const [fetchedTeam, setFetchedTeam] = useState(teamMembers);
+
+  useEffect(() => {
+    if (!project.id) return;
+    getProjectTeamApi(project.id).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setFetchedTeam(res.data.data.team || []);
+      }
+    });
+  }, [project.id]);
+
+  // Prefer the freshly-fetched team; fall back to the prop only if the
+  // fetch hasn't resolved yet (avoids a flash of empty state).
+  const effectiveTeam = fetchedTeam.length ? fetchedTeam : teamMembers;
+
   // ── Team picker source: project team members + PM, deduplicated ─────────
   const teamOptions = useMemo(() => {
-    const list = teamMembers.map((m) => ({
+    const list = effectiveTeam.map((m) => ({
       _id:      m._id || m.id,
       fullName: m.name || m.fullName,
       avatar:   m.avatar,
@@ -78,7 +104,7 @@ const DocumentsTab = ({ project = {}, teamMembers = [], projectManager = null })
     }
 
     return list;
-  }, [teamMembers, projectManager]);
+  }, [effectiveTeam, projectManager]);
 
   const tableData = documents.map((doc) => ({
     id:         doc._id,
