@@ -80,6 +80,7 @@ const MyDocuments = () => {
 
       <Filter
         mode="documents"
+         isEmployee={true} 
         isPM={false}
         onFilterChange={(f) => {
           fetchDocuments({ search: f.search || "", type: f.type || "" });

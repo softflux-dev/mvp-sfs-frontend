@@ -1,4 +1,5 @@
-import { useState } from "react";
+// components/appBar/profile.jsx — FULL REPLACEMENT
+import { useState, useEffect } from "react";
 import {
   IconButton,
   Avatar,
@@ -11,11 +12,42 @@ import logoutIcon  from "../../assets/icons/logout-red.svg";
 import personIcon  from "../../assets/icons/profile-active.svg";
 import { useNavigate } from "react-router-dom";
 import useUserStore from "../../zustand/useUserStore";
+import { useCompanyLogoStore } from "../../zustand/useCompanyLogoStore";
+import { getCompanyProfileApi } from "../../api/modules/companySettings";
+import { baseUrl } from "../../api/index";
+
+const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
+const resolveFileUrl = (path) => {
+  if (!path) return "";
+  if (path.startsWith("http") || path.startsWith("blob:")) return path;
+  return `${getBackendOrigin()}${path}`;
+};
 
 export default function Profile() {
   const [anchorEl, setAnchorEl] = useState(null);
   const { user, clearUserData } = useUserStore();
   const navigate = useNavigate();
+
+  const isAdmin = user?.role === "ADMIN";
+
+  // ── Admin: company logo instead of a personal photo ──────────────────────
+  const companyLogo    = useCompanyLogoStore((state) => state.logoUrl);
+  const setCompanyLogo = useCompanyLogoStore((state) => state.setLogoUrl);
+
+  useEffect(() => {
+    if (!isAdmin || companyLogo) return;
+    (async () => {
+      try {
+        const res = await getCompanyProfileApi();
+        if (res?.status === 200 || res?.status === 201) {
+          const rawLogoUrl = res.data.data.profile?.logoUrl || "";
+          setCompanyLogo(resolveFileUrl(rawLogoUrl));
+        }
+      } catch {
+        // Non-fatal — falls back to the default avatar below
+      }
+    })();
+  }, [isAdmin, companyLogo, setCompanyLogo]);
 
   const handleLogout = () => {
     clearUserData();
@@ -26,6 +58,18 @@ export default function Profile() {
     setAnchorEl(null);
     navigate("/profile");
   };
+
+  // What to actually show:
+  //   Admin              → company logo (live) → fallback to their own avatar
+  //   HR / PM / Employee → user.avatar from useUserStore, which the Profile
+  //                          page now keeps in sync on every save (name,
+  //                          avatar, etc.) — see profile/index.jsx's
+  //                          syncUserStore(). No separate fetch/store needed
+  //                          here anymore; this is the single source of truth.
+  const displaySrc = isAdmin
+    ? (companyLogo || resolveFileUrl(user?.avatar) || user?.profilePicture)
+    : (resolveFileUrl(user?.avatar) || user?.profilePicture
+       || "https://i.pinimg.com/736x/36/83/32/3683323f88954ae8c498f8a8bec7272b.jpg");
 
   return (
     <>
@@ -38,10 +82,7 @@ export default function Profile() {
             cursor: "pointer",
             border: "2px solid #AA2493",
           }}
-          src={
-            user?.profilePicture ||
-            "https://i.pinimg.com/736x/36/83/32/3683323f88954ae8c498f8a8bec7272b.jpg"
-          }
+          src={displaySrc}
         />
       </IconButton>
 
@@ -69,18 +110,15 @@ export default function Profile() {
               mb: 2,
               border: "3px solid #AA2493",
             }}
-            src={user?.avatar || user?.profileImage || user?.profilePicture || "https://...fallback"}
-
+            src={displaySrc}
           />
 
           <Typography fontSize="20px" fontWeight="600" mb={0.5}>
             {user?.fullName || user?.name || "User Name"}
-
           </Typography>
 
           <Typography fontSize="14px" color="#666" mb={3}>
             {user?.email || "user@email.com"}
-
           </Typography>
 
           <Stack direction="column" gap={1} width="100%" mt={3}>

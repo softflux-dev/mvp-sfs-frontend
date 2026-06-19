@@ -17,6 +17,7 @@ const useUserStore = create(
         set({ user: null, authEmail: "", resetToken: "" });
         localStorage.removeItem("userData");
         localStorage.removeItem("token");
+        localStorage.removeItem("sessionTimeout");
       },
     }),
     { name: "userData" }

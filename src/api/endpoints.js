@@ -151,7 +151,15 @@ getHolidays: "hr/holidays",
 
 getCompanyProfile:    "admin/settings/company",
 updateCompanyProfile: "admin/settings/company",
+getWorkingHours:    "admin/settings/working-hours",
+updateWorkingHours: "admin/settings/working-hours",
 
+getLeavePolicy:    "admin/settings/leave-policy",
+updateLeavePolicy: "admin/settings/leave-policy",
+
+getSecuritySettings:    "admin/settings/security",
+updateSecuritySettings: "admin/settings/security",
+changeAdminPassword:    "admin/settings/security/password",
 };
 
 

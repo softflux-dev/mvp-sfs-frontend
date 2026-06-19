@@ -1,4 +1,4 @@
-// src/hooks/companySettings.js — NEW FILE
+// src/hooks/companySettings.js — FULL REPLACEMENT
 import { useState, useEffect, useCallback } from "react";
 import { getCompanyProfileApi, updateCompanyProfileApi } from "../../api/modules/companySettings";
 
@@ -45,8 +45,11 @@ export const useCompanyProfile = () => {
 
       const res = await updateCompanyProfileApi(payload);
       if (res?.status === 200 || res?.status === 201) {
-        setProfile(res.data.data.profile);
-        return { success: true, message: res.data.message };
+        const savedProfile = res.data.data.profile;
+        setProfile(savedProfile);
+        // Include the saved profile in the result so callers (e.g. the
+        // topbar logo broadcast) can read the fresh logoUrl immediately.
+        return { success: true, message: res.data.message, profile: savedProfile };
       }
       const msg = res?.data?.message || "Failed to save changes.";
       setError(msg);

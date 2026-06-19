@@ -9,10 +9,16 @@ import {
 import { useNavigate } from "react-router-dom";
 import AppBar from "./appBar";
 import Drawer, { drawerWidth, collapsedWidth } from "./drawer";
+import { useSessionTimeout } from "../../hooks/useSessionTimeout";  // ← adjust path if your hooks folder is elsewhere relative to this file
 
 export default function MainLayout({ children }) {
   const navigate = useNavigate();
-  
+
+  // Enforces the system-wide inactivity timeout (set by Admin in
+  // Settings > Security) for every authenticated route — Admin, HR, PM,
+  // and Employee all render through MainLayout, so this one call covers
+  // the entire authenticated app.
+  useSessionTimeout();
 
   const theme = useTheme();
   const isMobileOrTablet = useMediaQuery(theme.breakpoints.down("md")); // mobile/tablet detection

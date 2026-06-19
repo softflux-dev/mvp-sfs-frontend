@@ -164,7 +164,15 @@ const ProjectDetail = () => {
         />
       )}
       {activeTab === 6 && <PerformanceTab project={project} />}
-      {activeTab === 7 && <DocumentsTab   project={project} />}
+      {activeTab === 7 && (
+        <DocumentsTab
+          project={project}
+          teamMembers={teamMembers}
+          projectManager={
+            managers.find((m) => m._id === project.projectManagerId) || null
+          }
+        />
+      )}
 
       <AddProject
         open={editOpen}

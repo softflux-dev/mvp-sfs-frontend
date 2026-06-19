@@ -6,6 +6,7 @@ import {
   empCancelLeaveApi,
   hrGetLeavesApi,
   hrReviewLeaveApi,
+  hrGetEmployeeLeaveBalanceApi,
 } from "../../api/modules/leave";
 
 // ── Hook: Employee — own leave requests ───────────────────────────────────────
@@ -110,26 +111,29 @@ export const useHRLeaves = () => {
     finally   { setLoading(false); }
   }, []); // ← no filters dependency — uses ref instead
  
-  const reviewLeave = useCallback(async (leaveId, status, hrNotes = "") => {
-    setActionLoading(true);
-    try {
-      const res = await hrReviewLeaveApi(leaveId, { status, hrNotes });
-      if (res?.status === 200 || res?.status === 201) {
-        // Optimistically update the leave status in state immediately
-        setLeaves((prev) =>
-          prev.map((l) =>
-            l._id === leaveId ? { ...l, status, hrNotes } : l
-          )
-        );
-        // Also refetch to get fresh data
-        await fetchLeaves();
-        return { success: true, message: `Leave ${status} successfully.` };
-      }
-      const msg = res?.data?.message || "Failed to review leave.";
-      return { success: false, message: msg };
-    } catch { return { success: false, message: "Something went wrong." }; }
-    finally   { setActionLoading(false); }
-  }, [fetchLeaves]);
+  // Inside useHRLeaves — replace reviewLeave only:
+// Inside useHRLeaves — reviewLeave back to two payload fields:
+const reviewLeave = useCallback(async (leaveId, status, hrNotes = "") => {
+  setActionLoading(true);
+  try {
+    const res = await hrReviewLeaveApi(leaveId, { status, hrNotes });
+    if (res?.status === 200 || res?.status === 201) {
+      setLeaves((prev) =>
+        prev.map((l) =>
+          l._id === leaveId ? { ...l, status, hrNotes } : l
+        )
+      );
+      await fetchLeaves();
+      return { success: true, message: `Leave ${status} successfully.` };
+    }
+    const msg = res?.data?.message || "Failed to review leave.";
+    return { success: false, message: msg };
+  } catch {
+    return { success: false, message: "Something went wrong." };
+  } finally {
+    setActionLoading(false);
+  }
+}, [fetchLeaves]);
  
   const handleFilterChange = useCallback((values = {}) => {
     setFilters((prev) => ({ ...prev, ...values, page: 1 }));

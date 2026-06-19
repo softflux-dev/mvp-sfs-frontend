@@ -1,6 +1,6 @@
-// tabs/workingHoursTab.jsx
-import { useState } from "react";
-import { Box, Typography, Button, Grid } from "@mui/material";
+// tabs/workingHoursTab.jsx — FULL REPLACEMENT
+import { useState, useEffect } from "react";
+import { Box, Typography, Button, Grid, CircularProgress } from "@mui/material";
 import { LocalizationProvider, TimePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
@@ -10,6 +10,7 @@ import TextInput        from "../../../../components/textInput";
 import CustomButton     from "../../../../components/customButton";
 import SuccessPopup     from "../../../../components/popups/confirmationDialog";
 import GlobalStyle      from "../../../../style/style";
+import { useWorkingHours } from "../../../../hooks/workingHours";
 
 const DAYS = [
   { key: "MON", label: "Mon" },
@@ -21,16 +22,39 @@ const DAYS = [
   { key: "SUN", label: "Sun" },
 ];
 
-const WorkingHoursTab = () => {
-  const [formData, setFormData] = useState({
-    startTime:   dayjs().hour(8).minute(0),
-    endTime:     dayjs().hour(9).minute(0),
-    workingDays: ["MON", "TUE", "WED", "THU", "FRI", "SAT"],
-    dailyHours:  "",
-  });
+const INITIAL_FORM = {
+  startTime:   dayjs().hour(8).minute(0),
+  endTime:     dayjs().hour(17).minute(0),
+  breakHours:  "1",
+  workingDays: ["MON", "TUE", "WED", "THU", "FRI", "SAT"],
+};
 
+// Format a decimal hours number as "Xh Ym"
+const fmtHoursLabel = (decimalHrs) => {
+  if (decimalHrs == null || isNaN(decimalHrs)) return "—";
+  const h = Math.floor(decimalHrs);
+  const m = Math.round((decimalHrs - h) * 60);
+  return `${h}h ${m}m`;
+};
+
+const WorkingHoursTab = () => {
+  const { settings, loading, actionLoading, error, saveSettings } = useWorkingHours();
+
+  const [formData,    setFormData]    = useState(INITIAL_FORM);
   const [errors,      setErrors]      = useState({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Populate from backend once loaded
+  useEffect(() => {
+    if (settings) {
+      setFormData({
+        startTime:   settings.startTime ? dayjs(settings.startTime, "HH:mm") : INITIAL_FORM.startTime,
+        endTime:     settings.endTime   ? dayjs(settings.endTime, "HH:mm")   : INITIAL_FORM.endTime,
+        breakHours:  settings.breakHours != null ? String(settings.breakHours) : "1",
+        workingDays: settings.workingDays?.length ? settings.workingDays : INITIAL_FORM.workingDays,
+      });
+    }
+  }, [settings]);
 
   const handleDayToggle = (key) => {
     setFormData((prev) => ({
@@ -39,26 +63,95 @@ const WorkingHoursTab = () => {
         ? prev.workingDays.filter((d) => d !== key)
         : [...prev.workingDays, key],
     }));
+    if (errors.workingDays) setErrors((prev) => ({ ...prev, workingDays: "" }));
   };
+
+  // ── Auto-calculated Daily Work Hours = (End - Start) - Break ─────────────
+  // Single source of truth — Start/End/Break are the real inputs, this is
+  // always derived from them so it can never go out of sync.
+  const shiftHoursRaw = (() => {
+    if (!formData.startTime?.isValid?.() || !formData.endTime?.isValid?.()) return null;
+    let diffMins = formData.endTime.diff(formData.startTime, "minute");
+    if (diffMins < 0) diffMins += 24 * 60;  // handle overnight shifts gracefully
+    return diffMins / 60;
+  })();
+
+  const breakHoursNum = parseFloat(formData.breakHours) || 0;
+  const dailyWorkHours = shiftHoursRaw != null ? Math.max(0, shiftHoursRaw - breakHoursNum) : null;
 
   const validate = () => {
     const e = {};
-    if (!formData.startTime)       e.startTime   = "Start time is required";
-    if (!formData.endTime)         e.endTime     = "End time is required";
-    if (!formData.workingDays.length) e.workingDays = "Select at least one working day";
-    if (!formData.dailyHours.trim())  e.dailyHours  = "Daily work hours is required";
+
+    if (!formData.startTime?.isValid?.()) {
+      e.startTime = "Start time is required.";
+    }
+    if (!formData.endTime?.isValid?.()) {
+      e.endTime = "End time is required.";
+    }
+    if (
+      formData.startTime?.isValid?.() && formData.endTime?.isValid?.() &&
+      formData.startTime.isSame(formData.endTime)
+    ) {
+      e.endTime = "End time cannot be the same as start time.";
+    }
+
+    if (!formData.workingDays.length) {
+      e.workingDays = "Select at least one working day.";
+    }
+
+    const breakVal = formData.breakHours.trim();
+    if (!breakVal) {
+      e.breakHours = "Break time is required.";
+    } else {
+      const num = parseFloat(breakVal);
+      if (isNaN(num)) {
+        e.breakHours = "Break time must be a number.";
+      } else if (num < 0) {
+        e.breakHours = "Break time cannot be negative.";
+      } else if (num > 6) {
+        e.breakHours = "Break time cannot exceed 6 hours.";
+      }
+    }
+
+    // Cross-field check: break time can't exceed (or equal) the total shift span
+    if (
+      !e.breakHours && !e.startTime && !e.endTime &&
+      shiftHoursRaw != null && breakHoursNum >= shiftHoursRaw
+    ) {
+      e.breakHours = "Break time cannot be greater than or equal to the total shift duration.";
+    }
+
     return e;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    console.log("Save working hours:", formData);
-    setSaveSuccess(true);
+
+    const result = await saveSettings({
+      startTime:    formData.startTime.format("HH:mm"),
+      endTime:      formData.endTime.format("HH:mm"),
+      breakHours:   breakHoursNum,
+      workingDays:  formData.workingDays,
+      dailyWorkHours, // sent for reference/payroll calculations server-side
+    });
+
+    if (result.success) {
+      setSaveSuccess(true);
+      setErrors({});
+    }
   };
+
+  if (loading) {
+  return (
+    <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", p: 6, display: "flex", justifyContent: "center" }}>
+      <CircularProgress size={28} sx={{ color: "#AA2493" }} />
+    </Box>
+  );
+}
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -68,15 +161,21 @@ const WorkingHoursTab = () => {
           Working Hours
         </Typography>
 
+        {error && (
+          <Box mb={2.5} px={2} py={1.5} sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}>
+            <Typography fontSize={13} color="error">{error}</Typography>
+          </Box>
+        )}
+
         {/* ── Start Time + End Time ────────────────────────────────────── */}
         <Grid container spacing={2} mb={3}>
           <Grid size={{ xs: 12, md: 6 }}>
-            <CustomInputLabel label="Start Time" />
+            <CustomInputLabel label="Start Time *" />
             <TimePicker
               value={formData.startTime}
               onChange={(v) => {
                 setFormData((prev) => ({ ...prev, startTime: v }));
-                setErrors((prev) => ({ ...prev, startTime: "" }));
+                setErrors((prev) => ({ ...prev, startTime: "", breakHours: "" }));
               }}
               slotProps={{
                 textField: {
@@ -92,18 +191,18 @@ const WorkingHoursTab = () => {
           </Grid>
 
           <Grid size={{ xs: 12, md: 6 }}>
-            <CustomInputLabel label="End Time" />
+            <CustomInputLabel label="End Time *" />
             <TimePicker
               value={formData.endTime}
               onChange={(v) => {
                 setFormData((prev) => ({ ...prev, endTime: v }));
-                setErrors((prev) => ({ ...prev, endTime: "" }));
+                setErrors((prev) => ({ ...prev, endTime: "", breakHours: "" }));
               }}
               slotProps={{
                 textField: {
                   size: "small",
                   fullWidth: true,
-                  placeholder: "09:00 am",
+                  placeholder: "05:00 pm",
                   error: !!errors.endTime,
                   helperText: errors.endTime,
                 },
@@ -115,7 +214,7 @@ const WorkingHoursTab = () => {
 
         {/* ── Working Days ─────────────────────────────────────────────── */}
         <Box mb={3}>
-          <CustomInputLabel label="Working Days" />
+          <CustomInputLabel label="Working Days *" />
           <Box display="flex" gap={1} flexWrap="wrap" mt={0.5}>
             {DAYS.map((day) => {
               const isActive = formData.workingDays.includes(day.key);
@@ -143,30 +242,49 @@ const WorkingHoursTab = () => {
           )}
         </Box>
 
-        {/* ── Daily Work Hours ─────────────────────────────────────────── */}
-        <Box mb={3}>
-          <CustomInputLabel label="Daily Work Hours" />
-          <TextInput
-            placeholder="Enter Hours"
-            value={formData.dailyHours}
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, dailyHours: e.target.value }));
-              setErrors((prev) => ({ ...prev, dailyHours: "" }));
-            }}
-            inputBgColor="#F5F5F5"
-            fullWidth
-            type="number"
-            error={!!errors.dailyHours}
-            helperText={errors.dailyHours}
-          />
-        </Box>
+        {/* ── Break Time + Daily Work Hours (auto-calculated) ─────────────── */}
+        <Grid container spacing={2} mb={3}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <CustomInputLabel label="Break Time (hours) *" />
+            <TextInput
+              placeholder="e.g. 1"
+              value={formData.breakHours}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, breakHours: e.target.value }));
+                setErrors((prev) => ({ ...prev, breakHours: "" }));
+              }}
+              inputBgColor="#F5F5F5"
+              fullWidth
+              type="number"
+              inputProps={{ min: 0, max: 6, step: 0.5 }}
+              error={!!errors.breakHours}
+              helperText={errors.breakHours}
+            />
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+            <CustomInputLabel label="Daily Work Hours" />
+            <Box sx={{
+              height: "45px", display: "flex", alignItems: "center", px: 2,
+              backgroundColor: "#F5F5F5", borderRadius: "10px",
+            }}>
+              <Typography fontSize="14px" fontWeight={600} color="text.primary">
+                {fmtHoursLabel(dailyWorkHours)}
+              </Typography>
+              <Typography fontSize="11px" color="text.secondary" ml={1.5}>
+                (Auto-calculated: Shift time minus break)
+              </Typography>
+            </Box>
+          </Grid>
+        </Grid>
 
         {/* ── Save ─────────────────────────────────────────────────────── */}
         <Box display="flex" justifyContent="flex-end">
           <CustomButton
-            btnLabel="Save Changes"
+            btnLabel={actionLoading ? "Saving..." : "Save Changes"}
             variant="gradient"
             handlePressBtn={handleSave}
+            isDisabled={actionLoading || loading}
           />
         </Box>
 

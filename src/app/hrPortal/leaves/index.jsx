@@ -65,6 +65,7 @@ const LeaveManagement = () => {
   // Map API data → table rows
   const tableData = leaves.map((l) => ({
     id:            l._id,
+    employeeMongoId:  l.employee?._id || "", 
     name:          l.employee?.fullName  || "—",
     avatar:        l.employee?.avatar   || "",
     designation: l.employee?.role?.roleName || l.employee?.designation || "",
@@ -90,43 +91,47 @@ const LeaveManagement = () => {
       ? l.status.charAt(0).toUpperCase() + l.status.slice(1)
       : "Pending",
     hrNotes:       l.hrNotes || "",
+     rejectionReason:  l.rejectionReason || "",   // ← ADD
+     isUnpaid:         l.isUnpaid        || false,
   }));
 
-  const handleApprove = (row, hrNotes = "") => {
-    confirmRef.current?.open({
-      title:       "Approve Leave?",
-      description: `Approve leave request for ${row.name}?`,
-      confirmText: "Yes, Approve",
-      cancelText:  "Cancel",
-      onConfirm: async () => {
-        const result = await reviewLeave(row.id, "approved", hrNotes);
-        if (result.success) {
-          setActionSuccess({ open: true, message: "Leave approved successfully." });
-          setViewOpen(false);
-        } else {
-          setApiError(result.message);
-        }
-      },
-    });
-  };
+ const handleApprove = (row, hrNotes = "") => {
+  confirmRef.current?.open({
+    title:       "Approve Leave?",
+    description: `Approve leave request for ${row.name}?`,
+    confirmText: "Yes, Approve",
+    cancelText:  "Cancel",
+    onConfirm: async () => {
+      const result = await reviewLeave(row.id, "approved", hrNotes);
+      if (result.success) {
+        setActionSuccess({ open: true, message: result.message || "Leave approved successfully." });
+        setViewOpen(false);
+      } else {
+        setApiError(result.message);
+      }
+    },
+  });
+};
 
-  const handleReject = (row, hrNotes = "") => {
-    confirmRef.current?.open({
-      title:       "Reject Leave?",
-      description: `Reject leave request for ${row.name}?`,
-      confirmText: "Yes, Reject",
-      cancelText:  "Cancel",
-      onConfirm: async () => {
-        const result = await reviewLeave(row.id, "rejected", hrNotes);
-        if (result.success) {
-          setActionSuccess({ open: true, message: "Leave rejected." });
-          setViewOpen(false);
-        } else {
-          setApiError(result.message);
-        }
-      },
-    });
-  };
+const handleReject = (row, hrNotes = "") => {
+  confirmRef.current?.open({
+    title:       "Reject Leave?",
+    description: hrNotes
+      ? `Reject leave for ${row.name}?\nReason: "${hrNotes}"`
+      : `Reject leave request for ${row.name}?`,
+    confirmText: "Yes, Reject",
+    cancelText:  "Cancel",
+    onConfirm: async () => {
+      const result = await reviewLeave(row.id, "rejected", hrNotes);
+      if (result.success) {
+        setActionSuccess({ open: true, message: "Leave rejected." });
+        setViewOpen(false);
+      } else {
+        setApiError(result.message);
+      }
+    },
+  });
+};
 
 
 const handleExportPDF = () => {

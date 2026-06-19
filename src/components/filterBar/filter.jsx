@@ -18,6 +18,7 @@ const Filter = ({
   employees   = [],
   projects    = [],
   isPM        = false,
+   isEmployee  = false,
   stages = [],
   defaultValues = {},
 }) => {
@@ -159,52 +160,7 @@ team: ({ employees = [] }) => [
 ],
 
     // ── Documents ─────────────────────────────────────────────────────────────
-  documents: [
-    {
-      type: "search",
-      key: "search",
-      placeholder: "Search employees...",
-      grid: { xs: 12, md: 8 },
-    },
-    {
-      type: "select",
-      key: "department",
-      placeholder: "All Department",
-      grid: { xs: 12, md: 2 },
-      options: [
-        { v: "",            l: "All Department" },
-        { v: "engineering", l: "Engineering"    },
-        { v: "design",      l: "Design"         },
-        { v: "qa",          l: "QA"             },
-        { v: "hr",          l: "HR"             },
-      ],
-    },
-    {
-      type: "select",
-      key: "role",
-      placeholder: "All Role",
-      grid: { xs: 12, md: 1 },
-      options: [
-        { v: "",               l: "All Role"       },
-        { v: "developer",      l: "Developer"      },
-        { v: "designer",       l: "Designer"       },
-        { v: "qa_tester",      l: "QA Tester"      },
-        { v: "project_manager",l: "Project Manager"},
-        { v: "hr_manager",     l: "HR Manager"     },
-      ],
-    },
-    {
-      type: "select",
-      key: "status",
-      placeholder: "All Status",
-      grid: { xs: 12, md: 1 },
-      options: [
-        { v: "",         l: "All Status" },
-        { v: "active",   l: "Active"     },
-        { v: "inactive", l: "Inactive"   },
-      ],
-    },
-  ],
+  
  // ── Employees page ────────────────────────────────────────────────────────
  
 employees: ({ departments = [], roles = [] }) => [
@@ -316,7 +272,7 @@ employee_tasks: ({ projects = [], stages = [] }) => [
       grid: { xs: 12, md: 3 },
     },
   ],
-  documents: ({ isPM = false } = {}) => [
+documents: ({ isPM = false, isEmployee = false } = {}) => [
   {
     type: "search",
     key: "search",
@@ -326,21 +282,33 @@ employee_tasks: ({ projects = [], stages = [] }) => [
   {
     type: "select",
     key: "type",
-    placeholder: "All",
+    placeholder: "All Types",
     grid: { xs: 12, md: 3 },
-    options: isPM
+    options: isEmployee
       ? [
-          { v: "",                      l: "All"                   },
-          { v: "project_documentation", l: "Project Documentation" },
-          { v: "other",                 l: "Other"                 },
+          // Employee "My Documents" — only types admin would upload for them
+          { v: "",                    l: "All Types"            },
+          { v: "employment_contract", l: "Employment Contract"  },
+          { v: "nda",                 l: "NDA"                  },
+          { v: "id_document",         l: "ID Document"          },
+          { v: "other",               l: "Other"                },
+        ]
+      : isPM
+      ? [
+          // PM sees only project-related types
+          { v: "",                        l: "All Types"             },
+          { v: "project_documentation",   l: "Project Documentation" },
+          { v: "other",                   l: "Other"                 },
         ]
       : [
-          { v: "",                      l: "All"                    },
-          { v: "employment_contract",   l: "Employment Contract"    },
-          { v: "nda",                   l: "NDA"                    },
-          { v: "project_documentation", l: "Project Documentation"  },
-          { v: "client_agreement",      l: "Client Agreement"       },
-          { v: "other",                 l: "Other"                  },
+          // Admin/HR sees everything
+          { v: "",                        l: "All Types"             },
+          { v: "employment_contract",     l: "Employment Contract"   },
+          { v: "nda",                     l: "NDA"                   },
+          { v: "project_documentation",   l: "Project Documentation" },
+          { v: "id_document",             l: "ID Document"           },
+          { v: "client_agreement",        l: "Client Agreement"      },
+          { v: "other",                   l: "Other"                 },
         ],
   },
 ],
@@ -830,7 +798,7 @@ holidays: [
 
   const fields =
     typeof configs[mode] === "function"
-      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM, stages })
+      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM,isEmployee, stages })
       : configs[mode] || configs.full;
 
   return (

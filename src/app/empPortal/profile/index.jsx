@@ -7,6 +7,7 @@ import ProfileHeader  from "./profileHeader";
 import PersonalTab    from "./tabs/personalTab";
 import SecurityTab    from "./tabs/securityTab";
 import { useProfile } from "../../../hooks/profile";
+import useUserStore   from "../../../zustand/useUserStore";
 
 const tabs = [
   { id: 1, label: "Personal" },
@@ -15,6 +16,8 @@ const tabs = [
 
 const Profile = () => {
   const [activeTab, setActiveTab] = useState(1);
+  const setUserData = useUserStore((state) => state.setUserData);
+  const currentUser  = useUserStore((state) => state.user);
 
   const {
     profile,
@@ -45,6 +48,36 @@ const Profile = () => {
       : "—",
   } : null;
 
+  // ── Sync ANY profile update (name, avatar, phone, etc.) into the global
+  // user store — this is what the topbar dropdown (appBar/profile.jsx)
+  // actually reads from. Without this, editing your name or uploading a
+  // new avatar updates this page correctly but the topbar stays stale
+  // until the next full login.
+  const syncUserStore = (updatedProfile) => {
+    if (!updatedProfile) return;
+    setUserData({
+      ...currentUser,
+      fullName: updatedProfile.fullName ?? currentUser?.fullName,
+      name:     updatedProfile.fullName ?? currentUser?.name,
+      avatar:   updatedProfile.avatar   ?? currentUser?.avatar,
+      email:    updatedProfile.email    ?? currentUser?.email,
+      phone:    updatedProfile.phone    ?? currentUser?.phone,
+    });
+  };
+
+  const handleAvatarChange = async (file) => {
+    const fd = new FormData();
+    fd.append("avatar", file);
+    const result = await updateProfile(fd);
+    if (result?.success) syncUserStore(result.profile);
+  };
+
+  const handlePersonalSave = async (formData) => {
+    const result = await updateProfile(formData);
+    if (result?.success) syncUserStore(result.profile);
+    return result;
+  };
+
   return (
     <Box>
       <Grid container spacing={2} mb={3} alignItems="center">
@@ -69,11 +102,7 @@ const Profile = () => {
         <>
           <ProfileHeader
             profile={normalized}
-            onAvatarChange={async (file) => {
-              const fd = new FormData();
-              fd.append("avatar", file);
-              await updateProfile(fd);
-            }}
+            onAvatarChange={handleAvatarChange}
           />
 
           <CustomTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
@@ -83,7 +112,7 @@ const Profile = () => {
               <PersonalTab
                 profile={normalized}
                 loading={actionLoading}
-                onSave={updateProfile}
+                onSave={handlePersonalSave}
               />
             )}
             {activeTab === 2 && (

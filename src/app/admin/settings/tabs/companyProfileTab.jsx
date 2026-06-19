@@ -7,7 +7,8 @@ import CustomInputLabel  from "../../../../components/customInputLabel";
 import CustomButton      from "../../../../components/customButton";
 import SuccessPopup      from "../../../../components/popups/confirmationDialog";
 import { useCompanyProfile } from "../../../../hooks/companySettings";
-
+import { useCompanyLogoStore } from "../../../../zustand/useCompanyLogoStore";
+import { baseUrl } from "../../../../api/index";
 import UploadIcon from "../../../../assets/icons/upload.svg";
 
 const INDUSTRY_OPTIONS = [
@@ -33,9 +34,25 @@ const INITIAL_FORM = {
   logoPreview: "",
 };
 
+// baseUrl already ends with "/api/" (e.g. "http://localhost:5000/api/")
+// — strip that off to get the bare backend origin for static file URLs.
+const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
+
+// The backend stores logoUrl as a RELATIVE path (e.g. "/uploads/images/logo-123.png").
+// This must be prefixed with the backend's actual domain before being used as
+// an <Avatar src>, otherwise the browser tries to load it from the frontend's
+// own origin (localhost:5173) instead of the backend (localhost:5000) and
+// silently fails to render.
+const resolveLogoUrl = (logoUrl) => {
+  if (!logoUrl) return "";
+  if (logoUrl.startsWith("http")) return logoUrl;  // already absolute, leave as-is
+  return `${getBackendOrigin()}${logoUrl}`;
+};
+
 const CompanyProfileTab = () => {
   const fileInputRef = useRef(null);
   const { profile, loading, actionLoading, error, saveProfile } = useCompanyProfile();
+  const setCompanyLogo = useCompanyLogoStore((state) => state.setLogoUrl);
 
   const [formData,    setFormData]    = useState(INITIAL_FORM);
   const [errors,      setErrors]      = useState({});
@@ -51,7 +68,7 @@ const CompanyProfileTab = () => {
         address:     profile.address     || "",
         website:     profile.website     || "",
         logoFile:    null,
-        logoPreview: profile.logoUrl     || "",
+        logoPreview: resolveLogoUrl(profile.logoUrl),
       });
     }
   }, [profile]);
@@ -80,6 +97,9 @@ const CompanyProfileTab = () => {
     setFormData((prev) => ({
       ...prev,
       logoFile:    file,
+      // URL.createObjectURL gives a temporary LOCAL blob URL for instant
+      // preview before saving — this is fine as-is, it's not a backend
+      // path so resolveLogoUrl doesn't apply here.
       logoPreview: URL.createObjectURL(file),
     }));
   };
@@ -124,6 +144,21 @@ const CompanyProfileTab = () => {
     if (result.success) {
       setSaveSuccess(true);
       setErrors({});
+
+      // Broadcast the new logo URL immediately so the topbar avatar
+      // (Profile.jsx, Admin only) updates live without a page refresh.
+      // Must resolve to an absolute URL here too — same reasoning as above.
+      if (result.profile?.logoUrl) {
+        setCompanyLogo(resolveLogoUrl(result.profile.logoUrl));
+      }
+
+      // Also refresh the local preview to the now-permanent backend URL,
+      // replacing the temporary blob: URL used during preview.
+      setFormData((prev) => ({
+        ...prev,
+        logoFile: null,
+        logoPreview: resolveLogoUrl(result.profile?.logoUrl) || prev.logoPreview,
+      }));
     }
   };
 
@@ -154,7 +189,6 @@ const CompanyProfileTab = () => {
           sx={{
             width: 72,
             height: 72,
-            background: "linear-gradient(135deg, #AA2493, #022179)",
             fontSize: "24px",
             fontWeight: 700,
           }}

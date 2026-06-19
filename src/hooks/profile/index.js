@@ -33,8 +33,12 @@ export const useProfile = () => {
     try {
       const res = await updateProfileApi(formData);
       if (res?.status === 200 || res?.status === 201) {
-        setProfile(res.data.data.employee);
-        return { success: true, message: "Profile updated successfully." };
+        const updated = res.data.data.employee;
+        setProfile(updated);
+        // Return the freshly-saved profile so callers (e.g. broadcasting
+        // the new avatar to the topbar) don't have to rely on stale
+        // closure state from before this update resolved.
+        return { success: true, message: "Profile updated successfully.", profile: updated };
       }
       const msg = res?.data?.message || "Failed to update profile.";
       setError(msg);

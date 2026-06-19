@@ -1,11 +1,12 @@
-import { useState, useRef }        from "react";
-import { Box, Grid, Typography }   from "@mui/material";
+// employees/projectDetailTabs/documentsTab.jsx — FULL REPLACEMENT
+import { useState, useRef, useMemo } from "react";
+import { Box, Grid, Typography } from "@mui/material";
 
 import CustomButton         from "../../../../components/customButton";
 import PaginatedTable       from "../../../../components/dynamicTable";
 import ConfirmationDialog   from "../../../../components/popups/confirmation";
 import SuccessPopup         from "../../../../components/popups/confirmationDialog";
-import UploadDocumentDialog from "./uploadDocumentDialog";
+import UploadProjectDocumentDialog from "./uploadProjectDocumentDialog";
 import { useProjectDocument } from "../../../../hooks/projectDocument";
 
 import UploadIcon   from "../../../../assets/icons/upload-doc-icon.svg";
@@ -14,23 +15,30 @@ import downloadIcon from "../../../../assets/icons/download.svg";
 
 const tableHeader = [
   { id: "fileName",   label: "Name"        },
- 
+  { id: "sharedWith", label: "Shared With" },
   { id: "uploadDate", label: "Upload Date" },
- 
   { id: "fileSize",   label: "File Size"   },
   { id: "actions",    label: "Actions"     },
 ];
 
 const displayRows = [
   "doc_name",
- 
+  "doc_shared_with",
   "uploadDate",
- 
   "doc_file_size",
   "actions",
 ];
 
-const DocumentsTab = ({ project = {} }) => {
+/**
+ * DocumentsTab (Project Detail)
+ *
+ * Props:
+ *   project        — the current project (needs project.id)
+ *   teamMembers    — array from TeamTab's onTeamChange, this project's team
+ *   projectManager — { _id, fullName, avatar } — included separately since
+ *                     TeamTab's member list may not include the PM
+ */
+const DocumentsTab = ({ project = {}, teamMembers = [], projectManager = null }) => {
   const {
     documents,
     loading,
@@ -48,26 +56,51 @@ const DocumentsTab = ({ project = {} }) => {
 
   const confirmDialogRef = useRef();
 
- const tableData = documents.map((doc) => ({
-  id:         doc._id,
-  fileName:   doc.title,
-  uploadDate: doc.createdAt
-    ? new Date(doc.createdAt).toLocaleDateString("en-US", {
-        month: "short", day: "numeric", year: "numeric",
-      })
-    : "—",
-  fileSize:   doc.fileSize || "—",
-  _source:    doc._source || "project",  
-}));
+  // ── Team picker source: project team members + PM, deduplicated ─────────
+  const teamOptions = useMemo(() => {
+    const list = teamMembers.map((m) => ({
+      _id:      m._id || m.id,
+      fullName: m.name || m.fullName,
+      avatar:   m.avatar,
+      role:     m.role,
+    }));
+
+    if (projectManager?._id) {
+      const alreadyIncluded = list.some((m) => m._id === projectManager._id);
+      if (!alreadyIncluded) {
+        list.unshift({
+          _id:      projectManager._id,
+          fullName: projectManager.fullName,
+          avatar:   projectManager.avatar,
+          role:     "Project Manager",
+        });
+      }
+    }
+
+    return list;
+  }, [teamMembers, projectManager]);
+
+  const tableData = documents.map((doc) => ({
+    id:         doc._id,
+    fileName:   doc.title,
+    uploadDate: doc.createdAt
+      ? new Date(doc.createdAt).toLocaleDateString("en-US", {
+          month: "short", day: "numeric", year: "numeric",
+        })
+      : "—",
+    fileSize:    doc.fileSize || "—",
+    sharedNames: (doc.assigneeIds || []).map((a) => a.fullName).filter(Boolean),
+    sharedCount: doc.assigneeIds?.length || 0,
+  }));
 
   const handleDelete = (row) => {
     confirmDialogRef.current?.open({
       title:       "Delete Document?",
-      description: `"${row.fileName}" will be permanently removed.`,
+      description: `"${row.fileName}" will be permanently removed, including from any team members' My Documents.`,
       confirmText: "Yes, Delete",
       cancelText:  "Cancel",
       onConfirm: async () => {
-        const result = await deleteDocument(row.id, row._source);
+        const result = await deleteDocument(row.id);
         if (result.success) {
           setSuccessMsg(result.message);
           setShowSuccess(true);
@@ -78,6 +111,8 @@ const DocumentsTab = ({ project = {} }) => {
     });
   };
 
+  // Pass the raw form object straight through — the hook's uploadDocument
+  // builds the FormData itself (title, documentType, assigneeIds, file).
   const handleUploadSave = async (formData) => {
     const result = await uploadDocument(formData);
     if (result.success) {
@@ -123,19 +158,19 @@ const DocumentsTab = ({ project = {} }) => {
           tableData={tableData}
           displayRows={displayRows}
           downloadIcon={downloadIcon}
-          onDownloadClick={(row) => downloadDocument(row.id, row._source)}
+          onDownloadClick={(row) => downloadDocument(row.id)}
           deleteIcon={DeleteIcon}
           onDeleteClick={handleDelete}
           isLoading={loading}
         />
       </Box>
 
-     
-      <UploadDocumentDialog
+      <UploadProjectDocumentDialog
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         onSave={handleUploadSave}
         loading={actionLoading}
+        teamOptions={teamOptions}
       />
 
       <ConfirmationDialog ref={confirmDialogRef} />

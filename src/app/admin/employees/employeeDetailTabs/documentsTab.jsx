@@ -30,20 +30,14 @@ const displayRows = [
 
 const DocumentsTab = ({ employee = {} }) => {
   const {
-    documents,
-    loading,
-    actionLoading,
-    error,
-    uploadDocument,
-    deleteDocument,
-    downloadDocument,
+    documents, loading, actionLoading, error,
+    uploadDocument, deleteDocument, downloadDocument,
   } = useDocument(employee.id);
 
   const [uploadOpen,  setUploadOpen]  = useState(false);
   const [successMsg,  setSuccessMsg]  = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [apiError,    setApiError]    = useState("");
-
   const confirmDialogRef = useRef();
 
   const tableData = documents.map((doc) => ({
@@ -57,18 +51,10 @@ const DocumentsTab = ({ employee = {} }) => {
       : "—",
     uploadedBy: doc.uploadedBy?.fullName || doc.uploadedBy?.name || "Admin",
     fileSize:   doc.fileSize || "—",
-    // carry source so handlers know which API to call
-    _source:    doc._source || "employee",
-    // render a small badge in the Source column
-    
   }));
 
-  const handleDelete = (row) => {
-    // shared docs are read-only here — admin manages them from Document Management
-    if (row._source === "shared") {
-      setApiError("Shared documents can only be deleted from Document Management.");
-      return;
-    }
+
+    const handleDelete = (row) => {
     confirmDialogRef.current?.open({
       title:       "Delete Document?",
       description: `"${row.fileName}" will be permanently removed.`,
@@ -86,7 +72,7 @@ const DocumentsTab = ({ employee = {} }) => {
     downloadDocument(row.id, row._source);
   };
 
-  const handleUploadSave = async (formData) => {
+ const handleUploadSave = async (formData) => {
     const result = await uploadDocument(formData);
     if (result.success) {
       setSuccessMsg(result.message);

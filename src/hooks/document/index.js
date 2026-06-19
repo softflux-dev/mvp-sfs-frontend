@@ -4,7 +4,6 @@ import {
   uploadEmployeeDocumentApi,
   deleteEmployeeDocumentApi,
 } from "../../api/modules/document";
-import { getSharedDocumentsApi } from "../../api/modules/sharedDocument";
 import { downloadSharedDocumentApi } from "../../api/modules/sharedDocument";
 
 export const useDocument = (employeeId) => {
@@ -13,32 +12,20 @@ export const useDocument = (employeeId) => {
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
 
-  // ── Fetch both employee-specific docs AND shared docs assigned to this employee ──
+  // ── Only fetch employee-specific docs — shared mirror is for employee portal only
   const fetchDocuments = useCallback(async () => {
     if (!employeeId) return;
     setLoading(true);
     setError("");
     try {
-      const [empRes, sharedRes] = await Promise.all([
-        getEmployeeDocumentsApi(employeeId),
-        getSharedDocumentsApi({ assigneeId: employeeId }),
-      ]);
-
-      const empDocs = (empRes?.status === 200 || empRes?.status === 201)
-        ? (empRes.data.data.documents || []).map((d) => ({ ...d, _source: "employee" }))
-        : [];
-
-      const sharedDocs = (sharedRes?.status === 200 || sharedRes?.status === 201)
-        ? (sharedRes.data.data.documents || []).map((d) => ({ ...d, _source: "shared" }))
-        : [];
-
-      setDocuments([...empDocs, ...sharedDocs]);
-
-      if (!empRes || (empRes.status !== 200 && empRes.status !== 201)) {
-        setError(empRes?.data?.message || "Failed to fetch employee documents.");
+      const res = await getEmployeeDocumentsApi(employeeId);
+      if (res?.status === 200 || res?.status === 201) {
+        setDocuments(res.data.data.documents || []);
+        return { success: true };
       }
-
-      return { success: true };
+      const msg = res?.data?.message || "Failed to fetch documents.";
+      setError(msg);
+      return { success: false };
     } catch {
       setError("Something went wrong.");
       return { success: false };
@@ -47,7 +34,6 @@ export const useDocument = (employeeId) => {
     }
   }, [employeeId]);
 
-  // ── Upload (always employee-specific) ─────────────────────────────────────
   const uploadDocument = useCallback(async (formData) => {
     setActionLoading(true);
     setError("");
@@ -58,7 +44,6 @@ export const useDocument = (employeeId) => {
       if (formData.file) payload.append("file", formData.file);
 
       const response = await uploadEmployeeDocumentApi(employeeId, payload);
-
       if (response?.status === 200 || response?.status === 201) {
         await fetchDocuments();
         return { success: true, message: "Document uploaded successfully." };
@@ -74,13 +59,11 @@ export const useDocument = (employeeId) => {
     }
   }, [employeeId, fetchDocuments]);
 
-  // ── Delete (only employee-specific docs can be deleted from here) ──────────
   const deleteDocument = useCallback(async (documentId) => {
     setActionLoading(true);
     setError("");
     try {
       const response = await deleteEmployeeDocumentApi(employeeId, documentId);
-
       if (response?.status === 200 || response?.status === 201) {
         await fetchDocuments();
         return { success: true, message: "Document deleted successfully." };
@@ -96,29 +79,7 @@ export const useDocument = (employeeId) => {
     }
   }, [employeeId, fetchDocuments]);
 
-  // ── Download — route to the right API based on source ─────────────────────
-  const downloadDocument = useCallback(async (documentId, source = "employee") => {
-    if (source === "shared") {
-      try {
-        const res = await downloadSharedDocumentApi(documentId);
-        const disposition = res.headers?.["content-disposition"] || "";
-        const nameMatch   = disposition.match(/filename="?([^";\n]+)"?/);
-        const fileName    = nameMatch?.[1]?.trim() || "document";
-        const blob = new Blob([res.data], {
-          type: res.headers?.["content-type"] || "application/octet-stream",
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a   = document.createElement("a");
-        a.href = url; a.download = fileName;
-        document.body.appendChild(a); a.click(); a.remove();
-        window.URL.revokeObjectURL(url);
-      } catch {
-        setError("Failed to download document.");
-      }
-      return;
-    }
-
-    // employee-specific download
+  const downloadDocument = useCallback(async (documentId) => {
     const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api/";
     const url     = `${baseUrl}admin/employees/${employeeId}/documents/${documentId}/download`;
     const token   = localStorage.getItem("token");

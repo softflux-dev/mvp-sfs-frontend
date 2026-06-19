@@ -8,6 +8,7 @@ import {
   resetPasswordApi,
 } from "../../api/modules/auth";
 import useUserStore from "../../zustand/useUserStore";
+import { getSecuritySettingsApi } from "../../api/modules/securitySettings";
 
 // First route for each role after login
 const ROLE_HOME = {
@@ -46,6 +47,18 @@ const handleLogin = async ({ email, password }) => {
 
       if (token) localStorage.setItem("token", token);
 
+      try {
+        const secRes = await getSecuritySettingsApi();
+        if (secRes?.status === 200 || secRes?.status === 201) {
+          localStorage.setItem(
+            "sessionTimeout",
+            secRes.data.data.settings.sessionTimeout || "30min"
+          );
+        }
+      } catch {
+        // Non-fatal — useSessionTimeout falls back to "30min" if this is
+        // missing, login should never be blocked by this fetch failing.
+      }
       // Decode role from JWT — most reliable source
       // Employee.role is an ObjectId ref, NOT a string like "EMPLOYEE"
       // The JWT always has the correct string role set by the backend

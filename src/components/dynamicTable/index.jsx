@@ -2792,7 +2792,19 @@ case "att_summary_actions":
       </IconButton>
     </TableCell>
   );
- 
+ case "doc_shared_with":
+  return (
+    <TableCell key={val}>
+      {row.sharedCount === 0 ? (
+        <Typography fontSize="12px" color="text.secondary">Not shared</Typography>
+      ) : (
+        <Typography fontSize="13px" color="text.primary">
+          {row.sharedNames.slice(0, 2).join(", ")}
+          {row.sharedCount > 2 ? ` +${row.sharedCount - 2} more` : ""}
+        </Typography>
+      )}
+    </TableCell>
+  );
 // ── Detail page table — edit-only action ────────────────────────────────────
 case "att_detail_actions":
   return (
