@@ -85,7 +85,7 @@ const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
       )}
 
       {/* Edit/delete menu — own messages only */}
-      {isOwn && !pending && !editing && (
+     {isOwn && !pending && !failed && !editing && (
         <Box sx={{ opacity: hovered ? 1 : 0, transition: "opacity 0.15s", alignSelf: "center" }}>
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); setMenuAnchor(e.currentTarget); }} sx={{ p: 0.5, color: "#9CA3AF", "&:hover": { color: "#AA2493" } }}>
             <MoreVertical size={14} />

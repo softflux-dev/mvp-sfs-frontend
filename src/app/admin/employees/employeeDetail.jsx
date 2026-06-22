@@ -11,24 +11,55 @@ import SalaryTab            from "./employeeDetailTabs/salaryTab";
 import AttendanceTab        from "./employeeDetailTabs/attendanceTab";
 import TasksTab             from "./employeeDetailTabs/tasksTab";
 import DocumentsTab         from "./employeeDetailTabs/documentsTab";
-
 import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
+import { useEmployee } from "../../../hooks/employee";
+
 
 const tabs = [
   { id: 1, label: "Personal Info" },
   { id: 2, label: "Salary"        },
   //{ id: 3, label: "Attendance"    },
-  { id: 4, label: "Tasks"         },
-  { id: 5, label: "Documents"     },
+  { id: 3, label: "Tasks"         },
+  { id: 4, label: "Documents"     },
 ];
 
 const EmployeeDetail = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const employee  = location.state?.employee || {};
+  const [employee, setEmployee] = useState(location.state?.employee || {});
+
 
   const [activeTab, setActiveTab] = useState(1);
   const [editOpen,  setEditOpen]  = useState(false);
+  const { updateEmployee, actionLoading } = useEmployee();
+  const [apiError, setApiError] = useState("");
+
+  const handleSave = async (formData) => {
+  const result = await updateEmployee(employee.id, formData);
+  if (result.success) {
+    // Merge updated fields back into local employee state so the header,
+    // tabs, and all child components reflect the change immediately.
+   setEmployee((prev) => ({
+      ...prev,
+      name:           formData.fullName        || prev.name,
+      phone:          formData.phone           || prev.phone,
+      // DON'T overwrite role/department with raw IDs from the form —
+      // those are ObjectIds used by the edit dialog, not display labels.
+      // The header shows prev.role (roleName string) and prev.department
+      // (department name string) which are already correct.
+      departmentId:   formData.department      || prev.departmentId,
+      roleId:         formData.role            || prev.roleId,
+      employmentType: formData.employmentType  || prev.employmentType,
+      workingHours:   formData.workingHours    ?? prev.workingHours,
+      monthlySalary:  formData.monthlySalary   ?? prev.monthlySalary,
+      machineId:      formData.machineId       || prev.machineId,
+    }));
+    setEditOpen(false);
+    setApiError("");
+  } else {
+    setApiError(result.message);
+  }
+};
 
   return (
     <>
@@ -63,11 +94,13 @@ const EmployeeDetail = () => {
 
       {/* ── Edit Employee dialog ──────────────────────────────────────────── */}
       <AddEmployee
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        onSave={(data) => { console.log("Updated:", data); setEditOpen(false); }}
-        editingEmployee={employee}
-      />
+      open={editOpen}
+      onClose={() => { setEditOpen(false); setApiError(""); }}
+      onSave={handleSave}
+      editingEmployee={employee}
+      loading={actionLoading}
+      apiError={apiError}
+    />
     </>
   );
 };

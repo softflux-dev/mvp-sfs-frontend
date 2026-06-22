@@ -79,9 +79,19 @@ const AddProject = ({
     if (!formData.projectName.trim()) e.projectName    = "Project name is required";
     if (!formData.clientName.trim())  e.clientName     = "Client name is required";
     if (!formData.projectManager)     e.projectManager = "Project manager is required";
-    if (!formData.startDate)          e.startDate      = "Start date is required";
-    if (!formData.endDate)            e.endDate        = "End date is required";
     if (!formData.status)             e.status         = "Status is required";
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (!formData.startDate) {
+      e.startDate = "Start date is required.";
+    } 
+
+   if (!formData.endDate) {
+      e.endDate = "End date is required.";
+    } else if (formData.startDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
+      e.endDate = "End date must be after the start date.";
+    }
     return e;
   };
 
@@ -189,7 +199,7 @@ const AddProject = ({
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box>
                 <CustomInputLabel label="Start Date *" />
-                <DatePicker value={formData.startDate} onChange={handleDateChange("startDate")}
+                <DatePicker value={formData.startDate} onChange={handleDateChange("startDate") } 
                   slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.startDate } }}
                   sx={GlobalStyle.datePickerStyle}
                 />
@@ -197,7 +207,8 @@ const AddProject = ({
               </Box>
               <Box>
                 <CustomInputLabel label="End Date *" />
-                <DatePicker value={formData.endDate} onChange={handleDateChange("endDate")}
+                <DatePicker value={formData.endDate} onChange={handleDateChange("endDate")} 
+                minDate={formData.startDate ? new Date(formData.startDate) : undefined}
                   slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.endDate } }}
                   sx={GlobalStyle.datePickerStyle}
                 />

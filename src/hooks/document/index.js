@@ -5,6 +5,7 @@ import {
   deleteEmployeeDocumentApi,
 } from "../../api/modules/document";
 import { downloadSharedDocumentApi } from "../../api/modules/sharedDocument";
+import { baseUrl } from "../../api/index";
 
 export const useDocument = (employeeId) => {
   const [documents,     setDocuments]     = useState([]);
@@ -80,8 +81,7 @@ export const useDocument = (employeeId) => {
   }, [employeeId, fetchDocuments]);
 
   const downloadDocument = useCallback(async (documentId) => {
-    const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api/";
-    const url     = `${baseUrl}admin/employees/${employeeId}/documents/${documentId}/download`;
+    const url = `${baseUrl}admin/employees/${employeeId}/documents/${documentId}/download`;
     const token   = localStorage.getItem("token");
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.blob())

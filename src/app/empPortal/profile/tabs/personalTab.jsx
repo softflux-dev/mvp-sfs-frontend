@@ -9,12 +9,14 @@ import SuccessPopup      from "../../../../components/popups/confirmationDialog"
 const PersonalTab = ({ profile = {}, loading = false, onSave }) => {
 
   if (!profile) return null;
+
   const [formData, setFormData] = useState({
-    fullName:     "",
-    phone:        "",
+    fullName: "",
+    phone:    "",
   });
+  const [errors,      setErrors]      = useState({});
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [error,       setError]       = useState("");
+  const [apiError,    setApiError]    = useState("");
 
   // seed form when profile loads
   useEffect(() => {
@@ -28,10 +30,40 @@ const PersonalTab = ({ profile = {}, loading = false, onSave }) => {
 
   const handleChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+    if (apiError) setApiError("");
+  };
+
+  const validate = () => {
+    const e = {};
+
+    // Name: required, no digits
+    if (!formData.fullName.trim()) {
+      e.fullName = "Full name is required.";
+    } else if (/\d/.test(formData.fullName)) {
+      e.fullName = "Name cannot contain numbers.";
+    }
+
+    // Phone: optional, but if entered must be exactly 11 digits
+    if (formData.phone.trim()) {
+      if (!/^\d+$/.test(formData.phone.trim())) {
+        e.phone = "Phone number must contain digits only.";
+      } else if (formData.phone.trim().length !== 11) {
+        e.phone = "Phone number must be exactly 11 digits.";
+      }
+    }
+
+    return e;
   };
 
   const handleSave = async () => {
-    setError("");
+    setApiError("");
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
     const fd = new FormData();
     fd.append("fullName", formData.fullName);
     fd.append("phone",    formData.phone);
@@ -39,19 +71,20 @@ const PersonalTab = ({ profile = {}, loading = false, onSave }) => {
     const result = await onSave?.(fd);
     if (result?.success) {
       setSaveSuccess(true);
+      setErrors({});
     } else {
-      setError(result?.message || "Failed to save.");
+      setApiError(result?.message || "Failed to save.");
     }
   };
 
   // read-only fields — admin controls these
   const readOnlyFields = [
-    { label: "Email Address",      value: profile.email        || "—" },
-    { label: "Department",         value: profile.department   || "—" },
-    { label: "Role",               value: profile.role         || "—" },
-    { label: "Joining Date",       value: profile.joiningDate  || "—" },
-    { label: "Employment Type",    value: profile.empType      || "—" },
-    { label: "Working Hours / Day",value: profile.workingHours || "—" },
+    { label: "Email Address",       value: profile.email        || "—" },
+    { label: "Department",          value: profile.department   || "—" },
+    { label: "Role",                value: profile.role         || "—" },
+    { label: "Joining Date",        value: profile.joiningDate  || "—" },
+    { label: "Employment Type",     value: profile.empType      || "—" },
+    { label: "Working Hours / Day", value: profile.workingHours || "—" },
   ];
 
   return (
@@ -60,39 +93,58 @@ const PersonalTab = ({ profile = {}, loading = false, onSave }) => {
         Personal Profile
       </Typography>
 
-      {error && (
+      {apiError && (
         <Box mb={2} px={2} py={1}
           sx={{ backgroundColor: "#FFF0F0", borderRadius: "8px", border: "1px solid #FFCCCC" }}
         >
-          <Typography fontSize={13} color="error">{error}</Typography>
+          <Typography fontSize={13} color="error">{apiError}</Typography>
         </Box>
       )}
 
       <Grid container spacing={2}>
-        {/* Editable fields */}
+        {/* Editable — Full Name */}
         <Grid size={{ xs: 12, md: 6 }}>
           <CustomInputLabel label="Full Name" />
           <TextInput
             placeholder="Enter Full Name"
             value={formData.fullName}
             onChange={handleChange("fullName")}
+            onKeyDown={(e) => {
+              // Block digit keys so numbers can't be typed into the name field
+              if (/^\d$/.test(e.key)) e.preventDefault();
+            }}
             inputBgColor="#F5F5F5"
             fullWidth
+            error={!!errors.fullName}
+            helperText={errors.fullName}
           />
         </Grid>
 
+        {/* Editable — Phone */}
         <Grid size={{ xs: 12, md: 6 }}>
           <CustomInputLabel label="Phone Number" />
           <TextInput
-            placeholder="Enter Phone Number"
+            placeholder="Enter 11-digit phone number"
             value={formData.phone}
             onChange={handleChange("phone")}
+            onKeyDown={(e) => {
+              // Allow only digits, backspace, delete, arrows, tab
+              if (
+                !/^\d$/.test(e.key) &&
+                !["Backspace", "Delete", "ArrowLeft", "ArrowRight", "Tab", "Enter"].includes(e.key)
+              ) {
+                e.preventDefault();
+              }
+            }}
             inputBgColor="#F5F5F5"
             fullWidth
+            inputProps={{ maxLength: 11 }}
+            error={!!errors.phone}
+            helperText={errors.phone}
           />
         </Grid>
 
-        {/* Read-only fields */}
+        {/* Read-only fields — admin controls these */}
         {readOnlyFields.map(({ label, value }) => (
           <Grid key={label} size={{ xs: 12, md: 6 }}>
             <CustomInputLabel label={label} />

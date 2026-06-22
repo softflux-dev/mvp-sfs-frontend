@@ -121,17 +121,21 @@ const AddEmployee = ({
 
   const validate = () => {
     const e = {};
+    if (formData.machineId.trim()) {
+      if (!/^\d+$/.test(formData.machineId.trim())) {
+        e.machineId = "Machine ID must contain numbers only.";
+      }
+    };
     if (!formData.fullName.trim())  e.fullName       = "Full name is required";
     if (!formData.email.trim())     e.email          = "Email is required";
-     if (formData.phone.trim()) {
-    if (!/^\d+$/.test(formData.phone.trim())) {
-      e.phone = "Phone number must contain digits only";
-    } else if (formData.phone.trim().length < 7) {
-      e.phone = "Phone number must be at least 7 digits";
-    } else if (formData.phone.trim().length > 15) {
-      e.phone = "Phone number cannot exceed 15 digits";
+    if (formData.phone.trim()) {
+      if (!/^\d+$/.test(formData.phone.trim())) {
+        e.phone = "Phone number must contain digits only.";
+      } else if (formData.phone.trim().length !== 11) {
+        e.phone = "Phone number must be exactly 11 digits.";
+      }
     }
-  }
+
     if (!formData.department)       e.department     = "Department is required";
     if (!formData.role)             e.role           = "Role is required";
     if (!formData.employmentType)   e.employmentType = "Employment type is required";
@@ -235,6 +239,13 @@ const AddEmployee = ({
                 placeholder="e.g. 1024 (ID from biometric device)"
                 value={formData.machineId}
                 onChange={handleChange("machineId")}
+                onKeyDown={(e) => {
+                  if (["-", "+", "e", "E", "."].includes(e.key)) e.preventDefault();
+                  if (!/[\d]/.test(e.key) &&
+                      !["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Enter"].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
                 inputBgColor="#fff"
                 fullWidth
                 error={!!errors.machineId}
