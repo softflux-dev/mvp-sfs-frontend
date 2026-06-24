@@ -33,6 +33,7 @@ import TaskManagement from "../app/projectManagerPortal/taskManagement";
 import TaskDetail from "../app/projectManagerPortal/taskManagement/taskDetail";
 import TeamPerformance from "../app/projectManagerPortal/teamPerformance";
 import HolidayManagement from "../app/hrPortal/holidays";
+import BonusIncrement from "../app/hrPortal/bonusIncrement";
 
 // Employee components
 import EmpDashboard from "../app/empPortal/dashboard";
@@ -392,8 +393,22 @@ const HR_ROUTES = [
     ),
     isHideMenu: false,
   },
-  {
+   {
     id: 6,
+    nameKey: "Bonus & Increment",
+    component: <BonusIncrement />,
+    exact: "exact",
+    path: "/bonus-increment",
+    activeIcon: (
+      <img src={PayrollActiveIcon} alt="Payroll" style={{ width: 20, height: 20 }} />
+    ),
+    inActiveIcon: (
+      <img src={PayrollInactiveIcon} alt="Payroll" style={{ width: 20, height: 20 }} />
+    ),
+    isHideMenu: false,
+  },
+  {
+    id: 7,
     nameKey: "Messages",
     component: <Messages />,
     exact: "exact",
@@ -407,7 +422,7 @@ const HR_ROUTES = [
     isHideMenu: false,
   },
   {
-    id: 7,
+    id: 8,
     nameKey: "Documents",
     component: <HRDocuments />,
     exact: "exact",
@@ -421,7 +436,7 @@ const HR_ROUTES = [
     isHideMenu: false,
   },
   {
-  id: 8,   // any unique id — or renumber sequentially
+  id: 9,   // any unique id — or renumber sequentially
   nameKey: "Attendance Detail",
   component: <AttendanceDetail />,
   exact: "exact",

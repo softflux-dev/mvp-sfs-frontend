@@ -90,6 +90,8 @@ const Employees = () => {
     phone:         emp.phone,
     workingHours:  emp.workingHours,
     monthlySalary: emp.monthlySalary,
+    hourlyRate:    emp.hourlyRate,          
+    salaryBreakdown: emp.salaryBreakdown,
     mustChangePassword: emp.mustChangePassword,
   }));
 

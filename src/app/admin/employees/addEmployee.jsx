@@ -10,8 +10,9 @@ import {
 import CustomInputLabel    from "../../../components/customInputLabel";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
-import { useDepartment }   from "../../../hooks/department";   // ← real depts
-import { useRole }         from "../../../hooks/role";         // ← real roles
+import { useDepartment }   from "../../../hooks/department";
+import { useRole }         from "../../../hooks/role";
+import SalarySetupDialog   from "./salarySetupDialog";
 
 import avatarPlaceholder from "../../../assets/icons/avatar-placeholder.svg";
 import cameraIcon        from "../../../assets/icons/camera-icon.svg";
@@ -48,11 +49,12 @@ const AddEmployee = ({
   const { departments, fetchDepartments } = useDepartment();
   const { roles,       fetchRoles }       = useRole();
 
-  const [formData, setFormData] = useState(INITIAL_FORM);
-  const [errors,   setErrors]   = useState({});
+  const [formData,       setFormData]       = useState(INITIAL_FORM);
+  const [errors,         setErrors]         = useState({});
+  const [salaryOpen,     setSalaryOpen]     = useState(false);  // step 2
+  const [pendingFormData, setPendingFormData] = useState(null); // holds step 1 data while step 2 is open
   const fileInputRef = useRef();
 
-  // ── Fetch dropdowns when dialog opens ─────────────────────────────────────
   useEffect(() => {
     if (open) {
       fetchDepartments({ limit: 100 });
@@ -60,7 +62,6 @@ const AddEmployee = ({
     }
   }, [open]);
 
-  // ── Populate form when editing ─────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
     if (editingEmployee) {
@@ -111,7 +112,6 @@ const AddEmployee = ({
     if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
   };
 
-  
   const blockNonNumericKeys = (e) => {
     if (!/[\d]/.test(e.key) &&
         !["Backspace","Delete","ArrowLeft","ArrowRight","Tab","Enter"].includes(e.key)) {
@@ -125,7 +125,7 @@ const AddEmployee = ({
       if (!/^\d+$/.test(formData.machineId.trim())) {
         e.machineId = "Machine ID must contain numbers only.";
       }
-    };
+    }
     if (!formData.fullName.trim())  e.fullName       = "Full name is required";
     if (!formData.email.trim())     e.email          = "Email is required";
     if (formData.phone.trim()) {
@@ -135,7 +135,6 @@ const AddEmployee = ({
         e.phone = "Phone number must be exactly 11 digits.";
       }
     }
-
     if (!formData.department)       e.department     = "Department is required";
     if (!formData.role)             e.role           = "Role is required";
     if (!formData.employmentType)   e.employmentType = "Employment type is required";
@@ -147,31 +146,44 @@ const AddEmployee = ({
     else if (wh > 24)  e.workingHours = "Cannot exceed 24";
     else if (!Number.isInteger(wh)) e.workingHours = "Must be a whole number";
 
-    const sal = Number(formData.monthlySalary);
-    if (formData.monthlySalary === "" || isNaN(sal)) e.monthlySalary = "Salary is required";
-    else if (sal <= 0) e.monthlySalary = "Must be greater than 0";
-
     return e;
   };
 
-  const handleSave = () => {
+  // Step 1 — validate and open salary dialog
+  const handleNext = () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    onSave?.(formData);
+    setPendingFormData(formData);
+    setSalaryOpen(true);
+  };
+
+  // Step 2 — salary dialog calls this with the salary breakdown
+  const handleSalaryDone = (salaryData) => {
+    setSalaryOpen(false);
+    // Merge step 1 + step 2 and call the parent's onSave
+    onSave?.({
+      ...pendingFormData,
+      monthlySalary:   salaryData.monthlySalary,
+      hourlyRate:      salaryData.hourlyRate,
+      salaryBreakdown: salaryData.salaryBreakdown,
+    });
   };
 
   const handleClose = () => {
     setFormData(INITIAL_FORM);
     setErrors({});
+    setSalaryOpen(false);
+    setPendingFormData(null);
     onClose?.();
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <DialogContainer open={open} onClose={handleClose} maxWidth="500px" fullWidth>
+      {/* ── Step 1: Employee Info ──────────────────────────────────────── */}
+      <DialogContainer open={open && !salaryOpen} onClose={handleClose} maxWidth="500px" fullWidth>
         <DialogHeader
           title={editingEmployee ? "Edit Employee" : "Add New Employee"}
           onClose={handleClose}
@@ -184,7 +196,6 @@ const AddEmployee = ({
             display: "flex", flexDirection: "column", gap: 2.5,
           }}>
 
-            {/* API error inside dialog */}
             {apiError && (
               <Box px={1.5} py={1}
                 sx={{ backgroundColor: "#FFF0F0", borderRadius: "8px", border: "1px solid #FFCCCC" }}
@@ -232,7 +243,7 @@ const AddEmployee = ({
               </Box>
             </Box>
 
-             {/* Attendance Machine ID */}
+            {/* Attendance Machine ID */}
             <Box>
               <CustomInputLabel label="Attendance Machine ID (Optional)" />
               <TextInput
@@ -251,7 +262,6 @@ const AddEmployee = ({
                 error={!!errors.machineId}
                 helperText={errors.machineId}
               />
-          
             </Box>
 
             {/* Full Name */}
@@ -262,7 +272,7 @@ const AddEmployee = ({
                 error={!!errors.fullName} helperText={errors.fullName} />
             </Box>
 
-            {/* Email — disabled on edit */}
+            {/* Email */}
             <Box>
               <CustomInputLabel label="Email *" />
               <TextInput placeholder="Enter Email" value={formData.email}
@@ -287,7 +297,6 @@ const AddEmployee = ({
                 helperText={errors.phone}
               />
             </Box>
-
 
             {/* Department + Role */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
@@ -382,38 +391,28 @@ const AddEmployee = ({
               </Box>
             </Box>
 
-            {/* Monthly Salary */}
-            <Box>
-              <CustomInputLabel label="Monthly Salary *" />
-              <TextInput placeholder="0" value={formData.monthlySalary}
-                onChange={handleChange("monthlySalary")}
-                onKeyDown={blockInvalidNumericKeys}
-                inputBgColor="#fff" fullWidth type="number"
-                inputProps={{ min: 1 }}
-                error={!!errors.monthlySalary} helperText={errors.monthlySalary}
-                InputStartIcon={
-                  <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>
-                }
-              />
-            </Box>
-
           </Box>
         </DialogBody>
 
         <DialogActionButtons
           onCancel={handleClose}
-          onConfirm={handleSave}
+          onConfirm={handleNext}
           showCancelBtn
           cancelText="Cancel"
-          confirmText={
-            loading
-              ? <CircularProgress size={18} sx={{ color: "#fff" }} />
-              : editingEmployee ? "Update Employee" : "Save Employee"
-          }
+          confirmText="Next"
           isConfirmBtnDisable={loading}
           variant="gradient"
         />
       </DialogContainer>
+
+      {/* ── Step 2: Salary Setup ───────────────────────────────────────── */}
+      <SalarySetupDialog
+        open={salaryOpen}
+        onClose={() => setSalaryOpen(false)}
+        onSave={handleSalaryDone}
+        loading={loading}
+        editingEmployee={editingEmployee}
+      />
     </LocalizationProvider>
   );
 };

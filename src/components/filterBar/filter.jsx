@@ -721,12 +721,11 @@ emp_my_tasks: ({ projects = [], stages = [] }) => [
 ],
 salary_history: [
   {
-    type: "date",
-    key: "from",
-    placeholder: "From",
-    grid: { xs: 4 },
+    type: "year",
+    key: "year",
+    placeholder: "Select Year",
+    grid: { xs: 12, md: 4 },
   },
- 
 ],
 
 emp_leave_requests: [
@@ -887,6 +886,18 @@ holidays: [
                 }}
               />
             )}
+            {f.type === "year" && (
+            <DatePicker
+              views={["year"]}
+              openTo="year"
+              value={values[f.key] || null}
+              onChange={(v) => setVal(f.key, v)}
+              sx={{ ...GlobalStyle.datePickerStyle, "& input": { color: values[f.key] ? "inherit" : "transparent" } }}
+              slotProps={{
+                textField: { label: "", fullWidth: true, inputProps: { placeholder: f.placeholder } },
+              }}
+            />
+          )}
             </Grid>
           ))}
         </Grid>
