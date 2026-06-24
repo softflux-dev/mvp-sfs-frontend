@@ -16,6 +16,22 @@ import SalarySetupDialog   from "./salarySetupDialog";
 
 import avatarPlaceholder from "../../../assets/icons/avatar-placeholder.svg";
 import cameraIcon        from "../../../assets/icons/camera-icon.svg";
+import { baseUrl } from "../../../api/index";
+
+const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
+
+const resolveAvatarUrl = (url) => {
+  if (!url) return "";
+  if (
+    url.startsWith("C:\\") ||
+    url.startsWith("/root/") ||
+    url.startsWith("/home/") ||
+    url.includes(":\\")
+  ) return "";
+  if (url.startsWith("http") || url.startsWith("blob:")) return url;
+  return `${getBackendOrigin()}${url}`;
+};
+
 
 const EMPLOYMENT_TYPE_OPTIONS = [
   { value: "full_time", label: "Full-time" },
@@ -79,7 +95,8 @@ const AddEmployee = ({
                           ? String(editingEmployee.monthlySalary) : "",
         machineId:      editingEmployee.machineId     || "",
         avatarFile:     null,
-        avatarPreview:  editingEmployee.avatar || "",
+       avatarPreview: resolveAvatarUrl(editingEmployee.avatar) || "",
+
       });
     } else {
       setFormData(INITIAL_FORM);

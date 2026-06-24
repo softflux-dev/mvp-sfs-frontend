@@ -29,7 +29,23 @@ import viewIcon from "../../assets/icons/view.svg";
 import Delete from "../../assets/icons/delete-icon-inactive.svg";
 import Edit from "../../assets/icons/editIcon.svg"
 import ProgressBar from "../progressBar";
+import { baseUrl } from "../../api/index";
 
+const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
+
+const resolveAvatarUrl = (url) => {
+  if (!url) return "";
+  // Reject absolute OS paths — Windows or Linux absolute paths can never
+  // be served as URLs; fall back to initials avatar instead.
+  if (
+    url.startsWith("C:\\") ||
+    url.startsWith("/root/") ||
+    url.startsWith("/home/") ||
+    url.includes(":\\")
+  ) return "";
+  if (url.startsWith("http") || url.startsWith("blob:")) return url;
+  return `${getBackendOrigin()}${url}`;
+};
 const STATUS_CONFIG = {
   Active:        { bg: "#D1FAE5", color: "#059669" },
   Completed:     { bg: "#D1FAE5", color: "#059669" },   
@@ -77,6 +93,7 @@ function TaskAssigneesCell({ row }) {
       </TableCell>
     );
   }
+
 
   return (
     <TableCell>
@@ -198,12 +215,13 @@ export default function PaginatedTable({
     switch (val) {
 
       // ── Employee avatar + name + role ─────────────────────────────────────
-case "employee_details":
+case "employee_details": {
+ 
   return (
     <TableCell key={val}>
       <Stack direction="row" alignItems="center" gap={1}>
         <Avatar
-          src={row.image || row.avatar}
+          src={resolveAvatarUrl(row.avatar)}  
           alt={row.name || row.employee}
           sx={{ width: 40, height: 40 }}
         />
@@ -220,6 +238,7 @@ case "employee_details":
       </Stack>
     </TableCell>
   );
+}
 
       // ── Task assignee — avatar + name ─────────────────────────────────────
   case "task_assignees":
@@ -2070,7 +2089,7 @@ case "payroll_salary":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="text.black">
-        {row.baseSalary ? `$${row.baseSalary.toLocaleString()}` : "-"}
+        {row.baseSalary ? `Rs.${row.baseSalary.toLocaleString()}` : "-"}
       </Typography>
     </TableCell>
   );
@@ -2080,7 +2099,7 @@ case "payroll_bonus_col":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#04C373">
-        {row.bonus ? `$${row.bonus.toLocaleString()}` : "-"}
+        {row.bonus ? `Rs.${row.bonus.toLocaleString()}` : "-"}
       </Typography>
     </TableCell>
   );
@@ -2090,7 +2109,7 @@ case "payroll_deductions_col":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#FF0000">
-        {row.deductions ? `$${row.deductions.toLocaleString()}` : "-"}
+        {row.deductions ? `Rs.${row.deductions.toLocaleString()}` : "-"}
       </Typography>
     </TableCell>
   );
@@ -2100,7 +2119,7 @@ case "payroll_net":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={700} color="text.primary">
-        {row.netPay ? `$${row.netPay.toLocaleString()}` : "-"}
+        {row.netPay ? `Rs.${row.netPay.toLocaleString()}` : "-"}
       </Typography>
     </TableCell>
   );

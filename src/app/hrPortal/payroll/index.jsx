@@ -1,5 +1,7 @@
-// src/app/hrPortal/payroll/index.jsx — FULL REPLACEMENT
-import { useState, useRef, useEffect } from "react";
+// src/app/hrPortal/payroll/index.jsx — FINAL
+// Email PDF: renders PayslipTemplate in hidden div, html2canvas captures it.
+// Same template, same UI. One render per employee, then instant capture.
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Box, Grid, Typography, CircularProgress } from "@mui/material";
 import { DatePicker }           from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -10,7 +12,7 @@ import CustomButton       from "../../../components/customButton";
 import PaginatedTable     from "../../../components/dynamicTable";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";
-import ViewPayslipDialog, { generatePayslipPdfBase64 } from "./viewPayslipDialog";
+import ViewPayslipDialog, { HiddenPayslipCapture, getLogo } from "./viewPayslipDialog";
 import EditPayrollDialog  from "./editPayrollDialog";
 import { usePayroll }     from "../../../hooks/payroll";
 import GlobalStyle        from "../../../style/style";
@@ -32,22 +34,11 @@ const tableHeader = [
   { id: "netPay",     label: "Net Pay"     },
   { id: "actions",    label: ""            },
 ];
-
 const displayRows = [
-  "payroll_checkbox",
-  "payroll_emp_id",
-  "payroll_employee",
-  "payroll_department",
-  "payroll_working",
-  "payroll_present",
-  "payroll_leave",
-  "payroll_salary",
-  "payroll_bonus_col",
-  "payroll_deductions_col",
-  "payroll_net",
-  "actions_menu",
+  "payroll_checkbox","payroll_emp_id","payroll_employee","payroll_department",
+  "payroll_working","payroll_present","payroll_leave","payroll_salary",
+  "payroll_bonus_col","payroll_deductions_col","payroll_net","actions_menu",
 ];
-
 const menuOptions = [
   { value: "view_payslip", label: "View Payslip" },
   { value: "edit_payroll", label: "Edit Payroll"  },
@@ -55,10 +46,7 @@ const menuOptions = [
 ];
 
 const PayrollManagement = () => {
-  const {
-    payrolls, loading, actionLoading, error,
-    fetchPayroll, generatePayroll,
-  } = usePayroll();
+  const { payrolls, loading, actionLoading, error, fetchPayroll, generatePayroll } = usePayroll();
 
   const [selectedDate,    setSelectedDate]    = useState(new Date());
   const [hasGenerated,    setHasGenerated]    = useState(false);
@@ -72,16 +60,23 @@ const PayrollManagement = () => {
   const [showSuccess,     setShowSuccess]     = useState(false);
   const [apiError,        setApiError]        = useState("");
 
+  // State for the hidden capture components
+  const [captureQueue,  setCaptureQueue]  = useState([]); // rows being rendered
+  const [logoDataUrl,   setLogoDataUrl]   = useState("");
+  const captureRefs = useRef({}); // ref map: rowId → HiddenPayslipCapture ref
+
   const confirmRef = useRef();
 
-  const currentMonth = selectedDate ? selectedDate.getMonth()    : new Date().getMonth();
-  const currentYear  = selectedDate ? selectedDate.getFullYear() : new Date().getFullYear();
+  const currentMonth = selectedDate?.getMonth()    ?? new Date().getMonth();
+  const currentYear  = selectedDate?.getFullYear() ?? new Date().getFullYear();
 
   useEffect(() => {
     (async () => {
       const result = await fetchPayroll(new Date().getMonth(), new Date().getFullYear());
       if (result?.data?.length > 0) setHasGenerated(true);
     })();
+    // Pre-load logo
+    getLogo().then(setLogoDataUrl);
   }, []);
 
   const tableData = payrolls.map((p) => ({
@@ -131,39 +126,48 @@ const PayrollManagement = () => {
 
   const handleSelectRow = (id) =>
     setSelectedRows((prev) => prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]);
-
   const handleSelectAll = () =>
     setSelectedRows((prev) => prev.length === tableData.length ? [] : tableData.map((r) => r.id));
 
-  // ── Core send logic — generates ALL PDFs in parallel, sends in ONE request ──
+  // ── Send: mount hidden templates → wait for paint → capture → send ─────────
   const sendPayslips = async (rows) => {
     setSending(true);
-    setSendProgress(`Generating ${rows.length} PDF${rows.length > 1 ? "s" : ""}...`);
     setApiError("");
-
     try {
-      // 1. Generate all PDFs in PARALLEL (not sequential)
-      const pdfResults = await Promise.allSettled(
-        rows.map((row) =>
-          generatePayslipPdfBase64(row, currentMonth, currentYear)
-            .then((pdfBase64) => ({ payrollId: row.id, empId: row.empId, empName: row.name, netSalary: row.netPay, pdfBase64 }))
-        )
-      );
+      const logo = logoDataUrl || await getLogo();
+      setLogoDataUrl(logo);
 
-      const payslips = pdfResults
-        .filter((r) => r.status === "fulfilled")
-        .map((r) => r.value);
+      // 1. Mount hidden PayslipTemplate for each employee
+      setSendProgress(`Rendering ${rows.length} payslip${rows.length > 1 ? "s" : ""}...`);
+      captureRefs.current = {};
+      setCaptureQueue(rows);
 
-      const failed = pdfResults.filter((r) => r.status === "rejected").length;
+      // 2. Wait for React to paint all templates (one tick is enough after setState)
+      await new Promise((r) => setTimeout(r, 500));
 
-      if (!payslips.length) {
-        setApiError("Failed to generate any PDFs.");
-        return;
+      // 3. Capture each rendered template via html2canvas
+      setSendProgress(`Capturing PDFs...`);
+      const payslips = [];
+      for (const row of rows) {
+        const ref = captureRefs.current[row.id];
+        if (!ref) { console.warn("No ref for", row.name); continue; }
+        try {
+          const pdfBase64 = await ref.captureToBase64();
+          if (pdfBase64 && pdfBase64.length > 100) {
+            payslips.push({ payrollId: row.id, empId: row.empId, empName: row.name, netSalary: row.netPay, pdfBase64 });
+          }
+        } catch (err) {
+          console.error(`Capture failed for ${row.name}:`, err);
+        }
       }
 
-      setSendProgress(`Sending ${payslips.length} email${payslips.length > 1 ? "s" : ""}...`);
+      // 4. Unmount hidden templates
+      setCaptureQueue([]);
 
-      // 2. Send ALL in a single API call (backend loops through and emails each)
+      if (!payslips.length) { setApiError("Failed to capture any PDFs."); return; }
+
+      // 5. Send all in one API call — backend responds immediately, emails in background
+      setSendProgress(`Sending ${payslips.length} email${payslips.length > 1 ? "s" : ""}...`);
       const res = await sendPayslipWithPdfApi({
         payslips,
         month:     currentMonth,
@@ -172,21 +176,18 @@ const PayrollManagement = () => {
       });
 
       if (res?.status === 200 || res?.status === 201) {
-        const { sent = 0, total = payslips.length } = res.data?.data || {};
-        setSuccessMsg(
-          `Payslips sent to ${sent} of ${total} employee(s).` +
-          (failed > 0 ? ` ${failed} PDF(s) failed to generate.` : "")
-        );
+        setSuccessMsg(res.data?.message || `Payslips sent to ${payslips.length} employee(s).`);
         setShowSuccess(true);
       } else {
-        setApiError(res?.data?.message || "Failed to send payslips.");
+        setApiError(res?.data?.message || "Failed to send.");
       }
     } catch (err) {
-      console.error("Send payslips error:", err);
-      setApiError("Failed to generate or send payslips.");
+      console.error("sendPayslips error:", err);
+      setApiError("Something went wrong.");
     } finally {
       setSending(false);
       setSendProgress("");
+      setCaptureQueue([]);
     }
   };
 
@@ -195,34 +196,29 @@ const PayrollManagement = () => {
     if (action === "edit_payroll") { setSelectedPayroll(row); setEditOpen(true); }
     if (action === "send") {
       confirmRef.current?.open({
-        title:       "Send Payslip?",
-        description: `Send payslip email to ${row.name}?`,
-        confirmText: "Yes, Send",
-        cancelText:  "Cancel",
-        onConfirm:   () => sendPayslips([row]),
+        title: "Send Payslip?", description: `Send payslip to ${row.name}?`,
+        confirmText: "Yes, Send", cancelText: "Cancel",
+        onConfirm: () => sendPayslips([row]),
       });
     }
   };
 
   const handleSendSelected = () => {
-    if (!selectedRows.length) { setApiError("Please select at least one employee."); return; }
+    if (!selectedRows.length) { setApiError("Select at least one employee."); return; }
     const rows = tableData.filter((r) => selectedRows.includes(r.id));
     confirmRef.current?.open({
-      title:       "Send Payslips?",
-      description: `Send payslip emails to ${rows.length} selected employee(s)?`,
-      confirmText: "Yes, Send",
-      cancelText:  "Cancel",
-      onConfirm:   () => sendPayslips(rows),
+      title: "Send Payslips?", description: `Send payslips to ${rows.length} selected employee(s)?`,
+      confirmText: "Yes, Send", cancelText: "Cancel",
+      onConfirm: () => sendPayslips(rows),
     });
   };
 
   const handleSendAll = () => {
     confirmRef.current?.open({
-      title:       "Send All Payslips?",
-      description: `Send payslip emails to ALL ${tableData.length} employees for ${MONTH_NAMES[currentMonth]} ${currentYear}?`,
-      confirmText: "Yes, Send All",
-      cancelText:  "Cancel",
-      onConfirm:   () => sendPayslips(tableData),
+      title: "Send All Payslips?",
+      description: `Send to ALL ${tableData.length} employees for ${MONTH_NAMES[currentMonth]} ${currentYear}?`,
+      confirmText: "Yes, Send All", cancelText: "Cancel",
+      onConfirm: () => sendPayslips(tableData),
     });
   };
 
@@ -248,19 +244,11 @@ const PayrollManagement = () => {
               {hasGenerated && tableData.length > 0 && (
                 <>
                   {selectedRows.length > 0 && (
-                    <CustomButton
-                      btnLabel={sending ? "Sending..." : `Send to Selected (${selectedRows.length})`}
-                      variant="outlined"
-                      handlePressBtn={handleSendSelected}
-                      isDisabled={actionLoading || sending}
-                    />
+                    <CustomButton btnLabel={sending ? "Sending..." : `Send to Selected (${selectedRows.length})`}
+                      variant="outlined" handlePressBtn={handleSendSelected} isDisabled={actionLoading || sending} />
                   )}
-                  <CustomButton
-                    btnLabel={sending ? "Sending..." : "Send All Payslips"}
-                    variant="outlined"
-                    handlePressBtn={handleSendAll}
-                    isDisabled={actionLoading || sending}
-                  />
+                  <CustomButton btnLabel={sending ? "Sending..." : "Send All Payslips"}
+                    variant="outlined" handlePressBtn={handleSendAll} isDisabled={actionLoading || sending} />
                 </>
               )}
             </Box>
@@ -271,39 +259,21 @@ const PayrollManagement = () => {
           sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 2.5 }}>
           <Box>
             <Typography fontSize="13px" fontWeight={500} color="text.secondary" mb={0.5}>Select Month</Typography>
-            <DatePicker
-              value={selectedDate}
-              onChange={handleDateChange}
-              views={["year", "month"]}
-              openTo="month"
-              slotProps={{ textField: { size: "small", sx: { width: 200 } } }}
-              sx={GlobalStyle.datePickerStyle}
-            />
+            <DatePicker value={selectedDate} onChange={handleDateChange} views={["year","month"]} openTo="month"
+              slotProps={{ textField: { size: "small", sx: { width: 200 } } }} sx={GlobalStyle.datePickerStyle} />
           </Box>
-          <Box>
-            <CustomButton
-              btnLabel={
-                actionLoading
-                  ? <Box display="flex" alignItems="center" gap={1}><CircularProgress size={14} sx={{ color: "#fff" }} />Generating...</Box>
-                  : hasGenerated ? "Re-generate Payroll" : "Generate Payroll"
-              }
-              variant="gradient"
-              handlePressBtn={handleGenerate}
-              isDisabled={actionLoading || loading}
-            />
-          </Box>
+          <CustomButton
+            btnLabel={actionLoading
+              ? <Box display="flex" alignItems="center" gap={1}><CircularProgress size={14} sx={{ color: "#fff" }} />Generating...</Box>
+              : hasGenerated ? "Re-generate Payroll" : "Generate Payroll"}
+            variant="gradient" handlePressBtn={handleGenerate} isDisabled={actionLoading || loading} />
           {hasGenerated && tableData.length > 0 && (
-            <Typography fontSize="12px" color="#04C373" fontWeight={500}>
-              ✓ {MONTH_NAMES[currentMonth]} {currentYear}
-            </Typography>
+            <Typography fontSize="12px" color="#04C373" fontWeight={500}>✓ {MONTH_NAMES[currentMonth]} {currentYear}</Typography>
           )}
         </Box>
 
-        {/* Sending progress banner */}
         {sending && (
-          <Box mb={2} px={2} py={1.5}
-            sx={{ backgroundColor: "#F0F9FF", borderRadius: "10px", border: "1px solid #BAE6FD", display: "flex", alignItems: "center", gap: 1.5 }}
-          >
+          <Box mb={2} px={2} py={1.5} sx={{ backgroundColor: "#F0F9FF", borderRadius: "10px", border: "1px solid #BAE6FD", display: "flex", alignItems: "center", gap: 1.5 }}>
             <CircularProgress size={16} sx={{ color: "#0369A1" }} />
             <Typography fontSize={13} color="#0369A1">{sendProgress || "Processing..."}</Typography>
           </Box>
@@ -332,64 +302,41 @@ const PayrollManagement = () => {
             <Typography fontSize={13} color="error">{error || apiError}</Typography>
           </Box>
         )}
-
-        {loading && (
-          <Box display="flex" justifyContent="center" py={6}>
-            <CircularProgress size={32} sx={{ color: "#AA2493" }} />
-          </Box>
-        )}
+        {loading && <Box display="flex" justifyContent="center" py={6}><CircularProgress size={32} sx={{ color: "#AA2493" }} /></Box>}
 
         {!hasGenerated && !loading && (
           <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={10} bgcolor="#fff" borderRadius="25px">
-            <Typography fontSize="15px" color="text.secondary" mb={1}>
-              No payroll generated yet for {MONTH_NAMES[currentMonth]} {currentYear}.
-            </Typography>
-            <Typography fontSize="13px" color="text.secondary">
-              Click <strong>Generate Payroll</strong> to begin.
-            </Typography>
+            <Typography fontSize="15px" color="text.secondary" mb={1}>No payroll generated yet for {MONTH_NAMES[currentMonth]} {currentYear}.</Typography>
+            <Typography fontSize="13px" color="text.secondary">Click <strong>Generate Payroll</strong> to begin.</Typography>
           </Box>
         )}
 
         {hasGenerated && !loading && (
           <Box bgcolor="#fff" borderRadius="25px" p={1}>
-            <PaginatedTable
-              tableHeader={tableHeader}
-              tableData={tableData}
-              displayRows={displayRows}
-              isLoading={false}
-              menuOptions={menuOptions}
-              onMenuAction={handleMenuAction}
-              selectedRows={selectedRows}
-              onSelectRow={handleSelectRow}
-              onSelectAll={handleSelectAll}
-            />
+            <PaginatedTable tableHeader={tableHeader} tableData={tableData} displayRows={displayRows}
+              isLoading={false} menuOptions={menuOptions} onMenuAction={handleMenuAction}
+              selectedRows={selectedRows} onSelectRow={handleSelectRow} onSelectAll={handleSelectAll} />
           </Box>
         )}
 
-        <ViewPayslipDialog
-          open={viewOpen}
-          onClose={() => { setViewOpen(false); setSelectedPayroll(null); }}
-          payroll={selectedPayroll || {}}
-          month={currentMonth}
-          year={currentYear}
-        />
+        {/* ── Hidden PayslipTemplates for email capture ─────────────────── */}
+        {captureQueue.map((row) => (
+          <HiddenPayslipCapture
+            key={row.id}
+            ref={(r) => { if (r) captureRefs.current[row.id] = r; }}
+            payroll={row}
+            month={currentMonth}
+            year={currentYear}
+            logoDataUrl={logoDataUrl}
+          />
+        ))}
 
-        <EditPayrollDialog
-          open={editOpen}
-          onClose={() => { setEditOpen(false); setSelectedPayroll(null); }}
-          payroll={selectedPayroll || {}}
-          onSave={() => { setSuccessMsg("Payroll updated."); setShowSuccess(true); }}
-        />
-
+        <ViewPayslipDialog open={viewOpen} onClose={() => { setViewOpen(false); setSelectedPayroll(null); }}
+          payroll={selectedPayroll || {}} month={currentMonth} year={currentYear} />
+        <EditPayrollDialog open={editOpen} onClose={() => { setEditOpen(false); setSelectedPayroll(null); }}
+          payroll={selectedPayroll || {}} onSave={() => { setSuccessMsg("Payroll updated."); setShowSuccess(true); }} />
         <ConfirmationDialog ref={confirmRef} />
-
-        <SuccessPopup
-          open={showSuccess}
-          onClose={() => setShowSuccess(false)}
-          message={successMsg}
-          autoClose
-          autoCloseDelay={2000}
-        />
+        <SuccessPopup open={showSuccess} onClose={() => setShowSuccess(false)} message={successMsg} autoClose autoCloseDelay={2000} />
       </>
     </LocalizationProvider>
   );
