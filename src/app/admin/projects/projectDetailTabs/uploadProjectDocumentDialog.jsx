@@ -1,6 +1,6 @@
 // employees/projectDetailTabs/uploadProjectDocumentDialog.jsx — NEW FILE
-import { useState } from "react";
-import { Box, MenuItem, Typography, Avatar, Checkbox } from "@mui/material";
+import { useState, useEffect} from "react";
+import { Box, MenuItem, Typography, Avatar, Checkbox, CircularProgress } from "@mui/material";
 import {
   DialogContainer,
   DialogHeader,
@@ -97,8 +97,16 @@ const UploadProjectDocumentDialog = ({
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     onSave?.(formData);
-    handleClose();
+    
   };
+
+  // Reset form when dialog closes (parent-driven)
+  useEffect(() => {
+    if (!open) {
+      setFormData(INITIAL_FORM);
+      setErrors({});
+    }
+  }, [open]);
 
   const handleClose = () => {
     setFormData(INITIAL_FORM);
@@ -129,7 +137,25 @@ const UploadProjectDocumentDialog = ({
   };
 
   return (
-    <DialogContainer open={open} onClose={handleClose} maxWidth="580px" fullWidth>
+   <DialogContainer open={open} onClose={!loading ? handleClose : undefined} maxWidth="580px" fullWidth>
+
+     {/* Loader overlay */}
+      {loading && (
+        <Box sx={{
+          position: "absolute", inset: 0, zIndex: 10,
+          backgroundColor: "rgba(255,255,255,0.7)",
+          borderRadius: "inherit",
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "center", gap: 1.5,
+        }}>
+          <CircularProgress size={40} sx={{ color: "#AA2493" }} />
+          <Typography fontSize={14} fontWeight={500} color="text.secondary">
+            Uploading document…
+          </Typography>
+        </Box>
+      )}
+
+
       <DialogHeader title="Upload Project Document" onClose={handleClose} />
 
       <Box
@@ -266,6 +292,7 @@ const UploadProjectDocumentDialog = ({
         confirmText="Upload"
         variant="gradient"
         confirmLoading={loading}
+        disabled={loading} 
       />
     </DialogContainer>
   );

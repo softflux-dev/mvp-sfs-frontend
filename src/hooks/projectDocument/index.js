@@ -1,3 +1,4 @@
+// hooks/projectDocument.js — FULL REPLACEMENT
 import { useState, useCallback, useEffect } from "react";
 import {
   getProjectDocumentsApi,
@@ -12,11 +13,6 @@ export const useProjectDocument = (projectId) => {
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
 
-  // ── Fetch — ProjectDocument is now the single source of truth for this
-  // tab. It already carries assigneeIds (who this was shared with), so
-  // there's no need to separately merge in SharedDocument records — that
-  // call never actually filtered by project (SharedDocument has no project
-  // field), so it was returning either nothing useful or unrelated docs.
   const fetchDocuments = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
@@ -38,8 +34,9 @@ export const useProjectDocument = (projectId) => {
     }
   }, [projectId]);
 
-  // ── Upload — now includes assigneeIds (selected team members to share
-  // with) alongside the existing title/documentType/file fields.
+  // ── Upload — optimistic update: prepend the returned doc immediately,
+  // no second fetchDocuments() call needed. The backend returns the fully
+  // populated document so the table row is complete straight away.
   const uploadDocument = useCallback(async (formData) => {
     setActionLoading(true);
     setError("");
@@ -49,14 +46,14 @@ export const useProjectDocument = (projectId) => {
       payload.append("documentType", formData.documentType || formData.type || "other");
       payload.append("assigneeIds",  JSON.stringify(formData.assigneeIds || []));
 
-      // Accept either a single `file` or a `files` array (the new dialog
-      // uses `files`, the older one used `file` — support both safely).
       const fileToSend = formData.file || formData.files?.[0];
       if (fileToSend) payload.append("file", fileToSend);
 
       const response = await uploadProjectDocumentApi(projectId, payload);
       if (response?.status === 200 || response?.status === 201) {
-        await fetchDocuments();
+        const newDoc = response.data.data.document;
+        // ✅ Prepend directly — no re-fetch, dialog closes instantly
+        setDocuments((prev) => [{ ...newDoc, _source: "project" }, ...prev]);
         return { success: true, message: "Document uploaded successfully." };
       }
       const msg = response?.data?.message || "Failed to upload document.";
@@ -66,19 +63,19 @@ export const useProjectDocument = (projectId) => {
       setError("Something went wrong.");
       return { success: false };
     } finally {
-      setActionLoading(false);
+      setActionLoading(false); // ✅ loading stops as soon as upload responds
     }
-  }, [projectId, fetchDocuments]);
+  }, [projectId]);
 
-  // ── Delete — project documents only now (no shared-doc branch needed,
-  // since the project tab no longer merges in SharedDocument records).
+  // ── Delete — optimistic removal, no re-fetch
   const deleteDocument = useCallback(async (documentId) => {
     setActionLoading(true);
     setError("");
     try {
       const response = await deleteProjectDocumentApi(projectId, documentId);
       if (response?.status === 200 || response?.status === 201) {
-        await fetchDocuments();
+        // ✅ Remove locally — no re-fetch
+        setDocuments((prev) => prev.filter((d) => d._id !== documentId));
         return { success: true, message: "Document deleted successfully." };
       }
       const msg = response?.data?.message || "Failed to delete document.";
@@ -90,19 +87,14 @@ export const useProjectDocument = (projectId) => {
     } finally {
       setActionLoading(false);
     }
-  }, [projectId, fetchDocuments]);
+  }, [projectId]);
 
-  // ── Download — fixed to use the shared `baseUrl` (single source of
-  // truth, see src/api/index.js) instead of a stale/incorrect env var name.
   const downloadDocument = useCallback(async (documentId) => {
     const url   = `${baseUrl}admin/projects/${projectId}/documents/${documentId}/download`;
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) {
-        setError("Failed to download document.");
-        return;
-      }
+      if (!res.ok) { setError("Failed to download document."); return; }
       const blob    = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
       const a       = document.createElement("a");
