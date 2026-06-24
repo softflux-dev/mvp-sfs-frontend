@@ -2838,6 +2838,208 @@ case "proj_type_label": {
     </TableCell>
   );
 }
+
+
+case "bonus_employee":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1}>
+        <Avatar src={row.avatar || ""} sx={{
+          width: 32, height: 32, fontSize: "12px", fontWeight: 700,
+          background: "linear-gradient(135deg, #AA2493, #022179)", color: "#fff",
+        }}>
+          {(row.employeeName || "").charAt(0)}
+        </Avatar>
+        <Box>
+          <Typography fontSize="13px" fontWeight={500} color="text.primary">{row.employeeName || "—"}</Typography>
+          <Typography fontSize="11px" color="text.secondary">{row.empId || ""}</Typography>
+        </Box>
+      </Box>
+    </TableCell>
+  );
+
+case "bonus_month":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.primary">{row.month || "—"}</Typography>
+    </TableCell>
+  );
+
+case "bonus_amount":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        Rs {(row.amount || 0).toLocaleString()}
+      </Typography>
+    </TableCell>
+  );
+
+case "bonus_added_on":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.secondary">{row.addedOn || "—"}</Typography>
+    </TableCell>
+  );
+
+case "bonus_added_by":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.secondary">{row.addedBy || "—"}</Typography>
+    </TableCell>
+  );
+
+case "bonus_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1}>
+        {onEditClick && EditIcon && (
+        <IconButton size="small" onClick={() => onEditClick(row)}>
+          <img src={EditIcon} alt="edit" style={{ width: 16, height: 16 }} />
+        </IconButton>
+      )}
+      {onDeleteClick && DeleteIcon && (
+        <IconButton size="small" onClick={() => onDeleteClick(row)}>
+          <img src={DeleteIcon} alt="delete" style={{ width: 16, height: 16 }} />
+        </IconButton>
+      )}
+      </Box>
+    </TableCell>
+  );
+
+// ── INCREMENT TABLE CASES ─────────────────────────────────────────────────
+
+case "increment_employee":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1}>
+        <Avatar src={row.avatar || ""} sx={{
+          width: 32, height: 32, fontSize: "12px", fontWeight: 700,
+          background: "linear-gradient(135deg, #AA2493, #022179)", color: "#fff",
+        }}>
+          {(row.employeeName || "").charAt(0)}
+        </Avatar>
+        <Box>
+          <Typography fontSize="13px" fontWeight={500} color="text.primary">{row.employeeName || "—"}</Typography>
+          <Typography fontSize="11px" color="text.secondary">{row.empId || ""}</Typography>
+        </Box>
+      </Box>
+    </TableCell>
+  );
+
+case "increment_date":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.secondary">{row.effectiveDate || "—"}</Typography>
+    </TableCell>
+  );
+
+case "increment_prev_salary":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.secondary">
+        Rs {(row.prevSalary || 0).toLocaleString()}
+      </Typography>
+    </TableCell>
+  );
+
+case "increment_percentage":
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={`${row.percentage || 0}%`}
+        sx={{
+          height: "22px", fontSize: "11px", fontWeight: 600,
+          borderRadius: "8px", backgroundColor: "#04C3731A", color: "#04C373",
+        }}
+      />
+    </TableCell>
+  );
+
+case "increment_new_salary":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={700} color="#AA2493">
+        Rs {(row.newSalary || 0).toLocaleString()}
+      </Typography>
+    </TableCell>
+  );
+
+case "increment_description":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.secondary"
+        sx={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        title={row.description}
+      >
+        {row.description || "—"}
+      </Typography>
+    </TableCell>
+  );
+
+case "increment_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={1}>
+        {onEditClick && EditIcon && (
+          <IconButton size="small" onClick={() => onEditClick(row)}>
+            <img src={EditIcon} alt="edit" style={{ width: 16, height: 16 }} />
+          </IconButton>
+        )}
+        {onDeleteClick && DeleteIcon && (
+          <IconButton size="small" onClick={() => onDeleteClick(row)}>
+            <img src={DeleteIcon} alt="delete" style={{ width: 16, height: 16 }} />
+          </IconButton>
+        )}
+      </Box>
+    </TableCell>
+  );
+
+  case "ps_payroll_status": {
+  const isDraft     = (row.status || "").toLowerCase() === "draft";
+  const isFinalized = (row.status || "").toLowerCase() === "finalized";
+  const cfg = isDraft
+    ? { bg: "#FEF3C7", color: "#D97706", label: "Draft"     }
+    : isFinalized
+    ? { bg: "#04C3731A", color: "#04C373", label: "Finalized" }
+    : { bg: "#F5F5F5",   color: "#9CA3AF", label: row.status || "—" };
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={cfg.label}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: cfg.bg, color: cfg.color,
+        }}
+      />
+    </TableCell>
+  );
+}
+ 
+// ── Payslip History — view eye + download icon ────────────────────────────────
+case "ps_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={0.5}>
+        {/* Eye — opens detail dialog */}
+        <IconButton
+          size="small"
+          onClick={() => onViewClick?.(row)}
+          sx={{ color: "#67768B", "&:hover": { backgroundColor: "#f5f5f5" } }}
+        >
+          <img src={viewIcon} alt="view" style={{ width: 20, height: 20 }} />
+        </IconButton>
+        {/* Download — generates single-payslip PDF */}
+        <IconButton
+          size="small"
+          onClick={() => onDownloadClick?.(row)}
+          sx={{ color: "#67768B", "&:hover": { backgroundColor: "#f5f5f5" } }}
+        >
+          <img src={download} alt="download" style={{ width: 20, height: 20 }} />
+        </IconButton>
+      </Box>
+    </TableCell>
+  );
   
   // ── Default: plain text ───────────────────────────────────────────────
       default:

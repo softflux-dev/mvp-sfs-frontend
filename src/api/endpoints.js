@@ -160,6 +160,27 @@ updateLeavePolicy: "admin/settings/leave-policy",
 getSecuritySettings:    "admin/settings/security",
 updateSecuritySettings: "admin/settings/security",
 changeAdminPassword:    "admin/settings/security/password",
+
+ 
+// ── Bonus ─────────────────────────────────────────────────────────────────────
+addBonus:    "hr/bonus",
+getBonuses:  "hr/bonus",
+updateBonus: "hr/bonus",     // used as `${updateBonus}/${id}`
+deleteBonus: "hr/bonus",     // used as `${deleteBonus}/${id}`
+ 
+// ── Increment ─────────────────────────────────────────────────────────────────
+addIncrement:    "hr/increment",
+getIncrements:   "hr/increment",
+deleteIncrement: "hr/increment",  // used as `${deleteIncrement}/${id}`
+
+generatePayroll:  "hr/payroll/generate",
+getPayroll:       "hr/payroll",
+finalizePayroll:  "hr/payroll",
+sendPayslipEmail: "hr/payroll/send-payslip",
+
+empGetMySalary: "employee/salary",
+ 
+ 
 };
 
 

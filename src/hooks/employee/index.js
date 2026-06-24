@@ -79,12 +79,15 @@ export const useEmployee = () => {
       // build FormData for multipart (avatar support)
       const payload = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
-        if (key === "avatarFile" && value) {
-          payload.append("avatar", value);
-        } else if (key !== "avatarPreview" && key !== "avatarFile" && value != null) {
-          payload.append(key, value);
-        }
-      });
+  if (key === "avatarFile" && value) {
+    payload.append("avatar", value);
+  } else if (key === "salaryBreakdown" && value != null) {
+    // Objects must be JSON-stringified before appending to FormData
+    payload.append(key, JSON.stringify(value));
+  } else if (key !== "avatarPreview" && key !== "avatarFile" && value != null) {
+    payload.append(key, value);
+  }
+});
 
       const response = await createEmployeeApi(payload);
 
@@ -115,13 +118,16 @@ export const useEmployee = () => {
     setError("");
     try {
       const payload = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        if (key === "avatarFile" && value) {
-          payload.append("avatar", value);
-        } else if (key !== "avatarPreview" && key !== "avatarFile" && value != null) {
-          payload.append(key, value);
-        }
-      });
+     Object.entries(formData).forEach(([key, value]) => {
+  if (key === "avatarFile" && value) {
+    payload.append("avatar", value);
+  } else if (key === "salaryBreakdown" && value != null) {
+    // Objects must be JSON-stringified before appending to FormData
+    payload.append(key, JSON.stringify(value));
+  } else if (key !== "avatarPreview" && key !== "avatarFile" && value != null) {
+    payload.append(key, value);
+  }
+});
 
       const response = await updateEmployeeApi(id, payload);
 
