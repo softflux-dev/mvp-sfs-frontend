@@ -127,7 +127,7 @@ export const useEmployee = () => {
 
       if (response?.status === 200 || response?.status === 201) {
         await fetchEmployees();
-        return { success: true, message: "Employee updated successfully." };
+        return { success: true, message: "Employee updated successfully.", data: response.data.data };
       } else {
         const msg = response?.data?.message || "Failed to update employee.";
         setError(msg);

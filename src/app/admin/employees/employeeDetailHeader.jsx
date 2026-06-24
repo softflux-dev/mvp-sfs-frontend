@@ -1,24 +1,29 @@
-// employees/employeeDetailHeader.jsx
 import { Box, Typography, Chip, Avatar } from "@mui/material";
 import CustomButton from "../../../components/customButton";
 import editIcon from "../../../assets/icons/edit-icon.svg";
+import { baseUrl } from "../../../api/index";
+
+const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
+
+const resolveAvatarUrl = (avatarUrl) => {
+  if (!avatarUrl) return "";
+  if (avatarUrl.startsWith("http") || avatarUrl.startsWith("blob:")) return avatarUrl;
+  return `${getBackendOrigin()}${avatarUrl}`;
+};
 
 const EmployeeDetailHeader = ({ employee = {}, onEditClick }) => {
   const isActive = employee.status === "Active";
 
   return (
     <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: "20px 24px", mb: 3 }}>
-      {/* ── Top row: avatar block + Edit button ──────────────────────────── */}
       <Box display="flex" alignItems="flex-start" justifyContent="space-between" flexWrap="wrap" gap={1}>
-
-        {/* Left — avatar + name + meta ── */}
         <Box display="flex" alignItems="center" gap={2}>
           <Avatar
-            src={employee.avatar || ""}
+            src={resolveAvatarUrl(employee.avatar)}  
             alt={employee.name}
             sx={{
               width: 72, height: 72,
-              background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+             
               fontSize: "24px", fontWeight: 700,
             }}
           >
@@ -26,7 +31,6 @@ const EmployeeDetailHeader = ({ employee = {}, onEditClick }) => {
           </Avatar>
 
           <Box>
-            {/* Name + status chip */}
             <Box display="flex" alignItems="center" gap={1} mb={0.5}>
               <Typography fontSize="22px" fontWeight={700} color="text.primary">
                 {employee.name || "—"}
@@ -41,13 +45,9 @@ const EmployeeDetailHeader = ({ employee = {}, onEditClick }) => {
                 }}
               />
             </Box>
-
-            {/* Role · Department */}
             <Typography fontSize="13px" color="text.secondary" mb={0.25}>
               {[employee.role, employee.department].filter(Boolean).join(" · ")}
             </Typography>
-
-            {/* Emp ID */}
             <Typography fontSize="12px" color="text.secondary" fontWeight={500}>
               {employee.empId || "EMP001"}
             </Typography>

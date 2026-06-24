@@ -53,6 +53,9 @@ const EmployeeDetail = () => {
       workingHours:   formData.workingHours    ?? prev.workingHours,
       monthlySalary:  formData.monthlySalary   ?? prev.monthlySalary,
       machineId:      formData.machineId       || prev.machineId,
+      avatar: formData.avatarFile
+        ? result.data?.employee?.avatar || prev.avatar
+        : prev.avatar,
     }));
     setEditOpen(false);
     setApiError("");
