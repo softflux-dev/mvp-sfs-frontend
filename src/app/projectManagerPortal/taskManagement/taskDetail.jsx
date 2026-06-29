@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import UnifiedTaskDetail from "../../../shared/taskDetail/UnifiedTaskDetail";
+import UnifiedTaskDetail from "../../shared/taskDetail/UnifiedTaskDetail";
 import AddTaskDialog     from "./addTaskDialog";
 
 const TaskDetail = () => {

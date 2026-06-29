@@ -1,6 +1,6 @@
 // RecentActivity.jsx
 import React from "react";
-import { Box, Typography, Stack, styled } from "@mui/material";
+import { Box, Typography, Stack, CircularProgress, styled } from "@mui/material";
 import RecentActivityCard from "../../../components/cards/recentActivityCard";
 
 const ScrollContainer = styled(Box)({
@@ -12,30 +12,14 @@ const ScrollContainer = styled(Box)({
   scrollbarWidth: "none",
 });
 
-const activityData = [
-  { id: 1, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 2, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 3, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 4, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 5, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 6, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 7, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 8, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 9, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 10, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 11, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-  { id: 12, name: "Ali Hassan", action: "marked Build API as Completed", target: "E-Commerce Platform", time: "2 hours ago", avatar: "" },
-
-];
-
-const RecentActivity = () => {
+const RecentActivity = ({ activity = [], loading = false }) => {
   return (
     <Box sx={{
       backgroundColor: "#fff",
       borderRadius: "25px",
       padding: { xs: "16px", md: "24px" },
       boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-      height: "100%",         // ← stretch to match left column
+      height: "100%",
       display: "flex",
       flexDirection: "column",
     }}>
@@ -43,17 +27,25 @@ const RecentActivity = () => {
         <Typography fontSize="18px" fontWeight={700} color="text.primary">
           Recent Activity
         </Typography>
-       
       </Box>
 
-      {/* Scrollable list grows to fill remaining height */}
-      <ScrollContainer>
-        <Stack spacing={1.5}>
-          {activityData.map((item) => (
-            <RecentActivityCard key={item.id} item={item} />
-          ))}
-        </Stack>
-      </ScrollContainer>
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" flex={1} py={4}>
+          <CircularProgress size={28} sx={{ color: "#AA2493" }} />
+        </Box>
+      ) : activity.length === 0 ? (
+        <Box display="flex" justifyContent="center" alignItems="center" flex={1} py={4}>
+          <Typography fontSize={13} color="text.secondary">No recent activity.</Typography>
+        </Box>
+      ) : (
+        <ScrollContainer>
+          <Stack spacing={1.5}>
+            {activity.map((item) => (
+              <RecentActivityCard key={item.id} item={item} />
+            ))}
+          </Stack>
+        </ScrollContainer>
+      )}
     </Box>
   );
 };

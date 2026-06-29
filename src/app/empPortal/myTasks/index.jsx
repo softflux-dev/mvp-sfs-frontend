@@ -7,7 +7,7 @@ import HeaderText     from "../../../components/headerText";
 import CustomButton   from "../../../components/customButton";
 import Filter         from "../../../components/filterBar/filter";
 import TaskKanbanView from "./taskKanbanView";
-import TaskListView   from "../../../shared/taskDetail/TaskListView";
+import TaskListView   from "../../shared/taskDetail/TaskListView";
 import { useMyTasks } from "../../../hooks/task";
 import { getProjectByIdApi } from "../../../api/modules/project";
 

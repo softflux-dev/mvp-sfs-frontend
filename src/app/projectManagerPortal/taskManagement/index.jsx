@@ -7,7 +7,7 @@ import HeaderText         from "../../../components/headerText";
 import CustomButton       from "../../../components/customButton";
 import Filter             from "../../../components/filterBar/filter";
 import KanbanView         from "./kanbanView";
-import TaskListView       from "../../../shared/taskDetail/TaskListView";
+import TaskListView       from "../../shared/taskDetail/TaskListView";
 import AddTask            from "../../admin/projects/projectDetailTabs/addTask";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";

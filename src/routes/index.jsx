@@ -39,7 +39,7 @@ import BonusIncrement from "../app/hrPortal/bonusIncrement";
 import EmpDashboard from "../app/empPortal/dashboard";
 import MyTasks from "../app/empPortal/myTasks";
 import EmpTaskDetail from "../app/empPortal/myTasks/empTaskDetail";
-import UnifiedTaskDetail from "../shared/taskDetail/UnifiedTaskDetail";
+import UnifiedTaskDetail from "../app/shared/taskDetail/UnifiedTaskDetail";
 
 //import TimeTracking from "../app/empPortal/timeTracking";
 import EmpAttendance from "../app/empPortal/myAttendance";
@@ -601,7 +601,7 @@ const EMP_ROUTES = [
     } */
    {
     id: 4,
-    nameKey: "My Attendance",
+    nameKey: "My Attendance & Leaves",
     component: <EmpAttendance/>,
     exact: "exact",
     path: "/emp-attendance",

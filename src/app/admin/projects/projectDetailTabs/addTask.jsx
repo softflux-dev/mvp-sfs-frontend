@@ -242,6 +242,16 @@ const AddTask = ({
     if (!formData.priority)                          e.priority    = "Priority is required";
     if (!formData.status)                            e.status      = "Task status is required";
     if (showProjectSelector && !selectedProject)     e.project     = "Project is required";
+      if (formData.endDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const end = new Date(formData.endDate);
+        end.setHours(0, 0, 0, 0);
+        if (end < today) e.endDate = "End date cannot be in the past.";
+        if (formData.startDate && end <= new Date(formData.startDate)) {
+          e.endDate = "End date must be after the start date.";
+        }
+      }
     return e;
   };
 
@@ -490,7 +500,14 @@ const AddTask = ({
               </Box>
               <Box>
                 <CustomInputLabel label="End Date" />
-                <DatePicker value={formData.endDate} onChange={(v) => setFormData((prev) => ({ ...prev, endDate: v }))} slotProps={{ textField: { size: "small", fullWidth: true } }} sx={GlobalStyle.datePickerStyle} />
+                <DatePicker
+                  value={formData.endDate}
+                  onChange={(v) => setFormData((prev) => ({ ...prev, endDate: v }))}
+                  minDate={formData.startDate ? new Date(formData.startDate) : new Date()}
+                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.endDate } }}
+                  sx={GlobalStyle.datePickerStyle}
+                />
+                {errors.endDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.endDate}</Typography>}
               </Box>
             </Box>
 

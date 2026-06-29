@@ -62,6 +62,7 @@ const STATUS_CONFIG = {
    "New":         { bg: "#E9D5FF", color: "#7C3AED" },
   "In Progress": { bg: "#FEF3C7", color: "#D97706" },
   "Paused":      { bg: "#FEF9C3", color: "#CA8A04" },
+  
 };
 
 // ── Priority color map ────────────────────────────────────────────────────
@@ -284,6 +285,7 @@ case "employee_details": {
 
       // ── Status chip (generic + project) ──────────────────────────────────
       case "status_chip":
+        
 case "project_status": {
   const stageLabel = stages?.find((s) => s.id === row.status)?.label
     || row.status || "—";

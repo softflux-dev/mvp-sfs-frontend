@@ -4,22 +4,22 @@ import { Box, IconButton, Typography, Avatar, Grid, CircularProgress } from "@mu
 import { useNavigate, useLocation } from "react-router-dom";
 import { Send } from "lucide-react";
 
-import CustomButton        from "../../components/customButton";
-import TextInput           from "../../components/textInput";
-import AttachmentCard      from "../../components/cards/attachmentCard";
-import SuccessPopup        from "../../components/popups/confirmationDialog";
-import EmpTaskDetailHeader from "../../app/empPortal/myTasks/empTaskDetailHeader";
-import EmpTaskSidebar      from "../../app/empPortal/myTasks/empTaskSidebar";
-import AddTask             from "../../app/admin/projects/projectDetailTabs/addTask";
-import { useTaskDetail }   from "../../hooks/task";
-import { useModule }       from "../../hooks/module";
-import { useDepartment }   from "../../hooks/department";
-import { updateTaskApi }   from "../../api/modules/task";
-import { getProjectTeamApi, getProjectByIdApi, getPMProjectsApi } from "../../api/modules/project";
-import { downloadTaskAttachmentApi } from "../../api/modules/task";
+import CustomButton        from "../../../components/customButton";
+import TextInput           from "../../../components/textInput";
+import AttachmentCard      from "../../../components/cards/attachmentCard";
+import SuccessPopup        from "../../../components/popups/confirmationDialog";
+import EmpTaskDetailHeader from "../../empPortal/myTasks/empTaskDetailHeader";
+import EmpTaskSidebar      from "../../empPortal/myTasks/empTaskSidebar";
+import AddTask             from "../../admin/projects/projectDetailTabs/addTask";
+import { useTaskDetail }   from "../../../hooks/task";
+import { useModule }       from "../../../hooks/module";
+import { useDepartment }   from "../../../hooks/department";
+import { updateTaskApi }   from "../../../api/modules/task";
+import { getProjectTeamApi, getProjectByIdApi, getPMProjectsApi } from "../../../api/modules/project";
+import { downloadTaskAttachmentApi } from "../../../api/modules/task";
 
-import backIcon from "../../assets/icons/downlaod-back-btn.svg";
-import editIcon from "../../assets/icons/edit-icon.svg";
+import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
+import editIcon from "../../../assets/icons/edit-icon.svg";
 
 const DEFAULT_STAGES = [
   { id: "stage_1", label: "Stage 1" },

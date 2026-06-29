@@ -1,8 +1,8 @@
 // src/components/shared/TaskListView.jsx
 
 import { Box } from "@mui/material";
-import PaginatedTable from "../../components/dynamicTable";
-import ViewIcon from "../../assets/icons/view.svg";
+import PaginatedTable from "../../../components/dynamicTable";
+import ViewIcon from "../../../assets/icons/view.svg";
 
 // Employee columns (view only)
 const EMP_HEADERS = [
