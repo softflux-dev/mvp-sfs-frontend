@@ -130,29 +130,29 @@ const Dashboard = () => {
       {/* Stats Row */}
 
    <Grid container spacing={3} sx={{ mt: 2 }}>
-  {statsData.map((stat) => (
-    <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={stat.id}>
-      {loading ? (
-        <Box sx={{ backgroundColor: "#fff", borderRadius: "30px", p: 2, height: "130px" }}>
-          <Box display="flex" alignItems="center" gap={2} mb={2}>
-            <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: "10px" }} />
-            <Skeleton variant="text" width="60%" height={20} />
-          </Box>
-          <Skeleton variant="text" width="40%" height={36} sx={{ mb: 1 }} />
-          <Skeleton variant="text" width="55%" height={16} />
-        </Box>
-      ) : (
-        <StatsCard
-          title={stat.title}
-          value={stat.value}
-          description={stat.description}
-          icon={stat.icon}
-          onClick={stat.onClick}
-        />
-      )}
+      {statsData.map((stat) => (
+        <Grid item size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={stat.id}>
+          {loading ? (
+            <Box sx={{ backgroundColor: "#fff", borderRadius: "30px", p: 2, height: "130px" }}>
+              <Box display="flex" alignItems="center" gap={2} mb={2}>
+                <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: "10px" }} />
+                <Skeleton variant="text" width="60%" height={20} />
+              </Box>
+              <Skeleton variant="text" width="40%" height={36} sx={{ mb: 1 }} />
+              <Skeleton variant="text" width="55%" height={16} />
+            </Box>
+          ) : (
+            <StatsCard
+              title={stat.title}
+              value={stat.value}
+              description={stat.description}
+              icon={stat.icon}
+              onClick={stat.onClick}
+            />
+          )}
+        </Grid>
+      ))}
     </Grid>
-  ))}
-</Grid>
 
       {/* Project Progress */}
       <Grid container spacing={3} sx={{ mt: 2 }}>

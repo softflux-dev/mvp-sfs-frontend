@@ -1,69 +1,97 @@
-import { Grid } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+// app/projectManager/dashboard/index.jsx — FULL REPLACEMENT
+import { useState, useEffect } from "react";
+import { Grid, Box, Skeleton } from "@mui/material";
+import { useNavigate }         from "react-router-dom";
 
 import HeaderText        from "../../../components/headerText";
 import StatsCard         from "../../../components/cards/statsCard";
 import UpcomingDeadlines from "../../../components/cards/upcomingDeadlinesCard";
 import MyProjectsList    from "./myProjectsList";
-import TeamWorkload from "./teamWorkload";
+import TeamWorkload      from "./teamWorkload";
+
+import {
+  getPMDashboardStatsApi,
+  getPMProjectsApi,
+  getPMUpcomingDeadlinesApi,
+} from "../../../api/modules/pmDashboard";
 
 import projectIcon  from "../../../assets/icons/projects-active-icon.svg";
 import taskIcon     from "../../../assets/icons/tasks.svg";
 import completeIcon from "../../../assets/icons/attendance-icon.svg";
 import overdueIcon  from "../../../assets/icons/overdue-time.svg";
 
-const statsData = [
-  { id: 1, title: "My Active Projects",  value: "5",  icon: projectIcon                    },
-  { id: 2, title: "Total Tasks",         value: "10", icon: taskIcon  },
-  { id: 3, title: "Completed This Week", value: "1",  icon: completeIcon                   },
-  { id: 4, title: "Overdue Tasks",       value: "0",  icon: overdueIcon                    },
-];
-
-const deadlinesData = [
-  { id: 1, title: "Implement payment gateway",        assignee: "Marcus Webb",   project: "E-Commerce Platform", priority: "High",   date: "2026-09-20" },
-  { id: 2, title: "Design product listing page",      assignee: "Priya Patel",   project: "E-Commerce Platform", priority: "Medium", date: "2026-09-20" },
-  { id: 3, title: "Patient records API",              assignee: "Jake Morrison",  project: "Healthcare Portal",   priority: "High",   date: "2026-09-20" },
-  { id: 4, title: "Write unit tests for auth module", assignee: "Emily Ross",    project: "Mobile Banking App",  priority: "High",   date: "2026-09-30" },
-  { id: 5, title: "Setup CI/CD pipeline",             assignee: "David Kim",     project: "Healthcare Portal",   priority: "Medium", date: "2026-09-30" },
-];
-
 const PMDashboard = () => {
   const navigate = useNavigate();
 
+  const [stats,     setStats]     = useState(null);
+  const [projects,  setProjects]  = useState([]);
+  const [deadlines, setDeadlines] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      getPMDashboardStatsApi(),
+      getPMProjectsApi(10),
+      getPMUpcomingDeadlinesApi(10),
+    ]).then(([statsRes, projRes, dlRes]) => {
+      if (statsRes?.status === 200 || statsRes?.status === 201) setStats(statsRes.data.data);
+      if (projRes?.status  === 200 || projRes?.status  === 201) setProjects(projRes.data.data.projects || []);
+      if (dlRes?.status    === 200 || dlRes?.status    === 201) setDeadlines(dlRes.data.data.deadlines || []);
+    }).finally(() => setLoading(false));
+  }, []);
+
+  const statsData = [
+    { id: 1, title: "My Active Projects",  value: String(stats?.activeProjects    ?? "0"), icon: projectIcon  },
+    { id: 2, title: "Total Tasks",         value: String(stats?.totalTasks         ?? "0"), icon: taskIcon     },
+    { id: 3, title: "Completed This Week", value: String(stats?.completedThisWeek ?? "0"), icon: completeIcon },
+    { id: 4, title: "Overdue Tasks",       value: String(stats?.overdueTasks       ?? "0"), icon: overdueIcon  },
+  ];
+
   return (
     <>
-      <HeaderText title="Dashboard" subtitle="Dashboard overview" />
+      <HeaderText title="Dashboard" subtitle="Project manager overview" />
 
-      {/* ── Stats Row ──────────────────────────────────────────────────── */}
+      {/* Stats Row */}
       <Grid container spacing={2} sx={{ mt: 2 }}>
         {statsData.map((stat) => (
           <Grid item size={{ xs: 12, sm: 6, md: 3 }} key={stat.id}>
-            <StatsCard
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              isHighlighted={stat.isHighlighted}
-            />
+            {loading ? (
+              <Box sx={{ backgroundColor: "#fff", borderRadius: "30px", p: 2, height: "130px" }}>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: "10px" }} />
+                  <Skeleton variant="text" width="60%" height={20} />
+                </Box>
+                <Skeleton variant="text" width="40%" height={36} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="55%" height={16} />
+              </Box>
+            ) : (
+              <StatsCard title={stat.title} value={stat.value} icon={stat.icon} />
+            )}
           </Grid>
         ))}
       </Grid>
 
-      {/* ── My Projects + Upcoming Deadlines ───────────────────────────── */}
+      {/* My Projects + Upcoming Deadlines */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid item size={{ xs: 12, md: 6 }}>
-          <MyProjectsList onViewAll={() => navigate("/pm-projects")} />
+          <MyProjectsList
+            projects={projects}
+            loading={loading}
+            onViewAll={() => navigate("/my-projects")}
+          />
         </Grid>
         <Grid item size={{ xs: 12, md: 6 }}>
           <UpcomingDeadlines
-            deadlines={deadlinesData}
-            onViewAll={() => navigate("/pm-tasks")}
+            deadlines={deadlines}
+            onViewAll={() => navigate("/task-management")}
           />
         </Grid>
       </Grid>
 
+      {/* Team Workload — fetches its own data with project filter */}
       <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid item size={{ xs: 12 }}>
-            <TeamWorkload />
+          <TeamWorkload />
         </Grid>
       </Grid>
     </>
