@@ -1,66 +1,72 @@
-// EmployeeProductivityChart.jsx 
+// EmployeeProductivityChart.jsx — FULL REPLACEMENT
+// Metric: Tasks Assigned vs Completed On Time per employee
+// Dropdown filters to show all or a single employee
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Menu, MenuItem, CircularProgress } from "@mui/material";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { Box, Typography, CircularProgress, Menu, MenuItem } from "@mui/material";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
 import { ChevronDown } from "lucide-react";
 import { getEmployeeProductivityApi } from "../../../api/modules/dashboard";
 
-const CustomLegend = ({ employees }) => (
-  <Box display="flex" gap={3} justifyContent="center" mt={2} flexWrap="wrap">
-    {employees.map((e) => (
-      <Box key={e._id} display="flex" alignItems="center" gap={0.75}>
-        <Box sx={{ width: 24, height: 3, backgroundColor: e.color, borderRadius: 2 }} />
-        <Typography fontSize="12px" color="text.secondary" fontWeight={500}>{e.name}</Typography>
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const assigned        = payload.find((p) => p.dataKey === "Assigned")?.value ?? 0;
+    const completedOnTime = payload.find((p) => p.dataKey === "Completed On Time")?.value ?? 0;
+    const rate = assigned > 0 ? Math.round((completedOnTime / assigned) * 100) : 0;
+    return (
+      <Box sx={{ backgroundColor: "#fff", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px 14px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", minWidth: 160 }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#1F2937", mb: 0.5, fontFamily: '"Poppins", sans-serif' }}>{label}</Typography>
+        <Typography sx={{ fontSize: 12, color: "#022179", fontFamily: '"Poppins", sans-serif' }}>Assigned: {assigned}</Typography>
+        <Typography sx={{ fontSize: 12, color: "#04C373", fontFamily: '"Poppins", sans-serif' }}>Completed On Time: {completedOnTime}</Typography>
+        <Typography sx={{ fontSize: 12, color: "#AA2493", fontWeight: 600, mt: 0.5, fontFamily: '"Poppins", sans-serif' }}>On-Time Rate: {rate}%</Typography>
       </Box>
-    ))}
-  </Box>
-);
+    );
+  }
+  return null;
+};
 
 const EmployeeProductivityChart = () => {
-  const [allEmployees,    setAllEmployees]    = useState([]); // full list for dropdown
-  const [selectedEmployee, setSelectedEmployee] = useState(null); // null = all
-  const [chartData,       setChartData]       = useState([]);
-  const [activeEmployees, setActiveEmployees] = useState([]); // employees in current view
-  const [anchorEl,        setAnchorEl]        = useState(null);
-  const [loading,         setLoading]         = useState(true);
+  const [allData,          setAllData]          = useState([]); // full dataset
+  const [allEmployees,     setAllEmployees]      = useState([]); // for dropdown
+  const [selectedEmployee, setSelectedEmployee]  = useState(null); // null = all
+  const [anchorEl,         setAnchorEl]          = useState(null);
+  const [loading,          setLoading]           = useState(true);
 
-  // Fetch on mount and when filter changes
   useEffect(() => {
     setLoading(true);
-    getEmployeeProductivityApi(selectedEmployee?._id || "").then((res) => {
+    getEmployeeProductivityApi().then((res) => {
       if (res?.status === 200 || res?.status === 201) {
-        const { data, employees } = res.data.data;
-        setChartData(data || []);
-        setActiveEmployees(employees || []);
-        // Populate dropdown list on first load
-        if (!selectedEmployee && employees?.length) {
-          setAllEmployees(employees);
-        }
+        const data      = res.data.data.data      || [];
+        const employees = res.data.data.employees || [];
+        setAllData(data);
+        setAllEmployees(employees);
       }
     }).finally(() => setLoading(false));
-  }, [selectedEmployee?._id]);
+  }, []);
 
+  // Filter chart data based on selected employee
+  const chartData = selectedEmployee
+    ? allData.filter((d) => d.name === selectedEmployee.name)
+    : allData;
+
+  const hasData = chartData.some((d) => d["Assigned"] > 0 || d["Completed On Time"] > 0);
   const selectedLabel = selectedEmployee?.name || "All Employees";
-
-  // Which employees to show lines for
-  const linesToShow = selectedEmployee
-    ? activeEmployees.filter((e) => e._id?.toString() === selectedEmployee._id?.toString())
-    : activeEmployees;
-
-  const maxVal = Math.max(
-    ...chartData.flatMap((d) => linesToShow.map((e) => d[e.key] || 0)),
-    4
-  );
-  const yMax   = Math.ceil(maxVal / 2) * 2;
-  const yTicks = Array.from({ length: yMax / 2 + 1 }, (_, i) => i * 2);
 
   return (
     <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", padding: { xs: "16px", md: "24px" }, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography fontSize="20px" fontWeight={600} color="text.primary">
-          Employee Productivity
-        </Typography>
+        <Box>
+          <Typography fontSize="20px" fontWeight={600} color="text.primary">
+            Employee Productivity
+          </Typography>
+          <Typography fontSize="12px" color="text.secondary" mt={0.3}>
+            Tasks assigned vs completed on time
+          </Typography>
+        </Box>
 
+        {/* Employee selector */}
         <Box
           onClick={(e) => setAnchorEl(e.currentTarget)}
           sx={{ display: "flex", alignItems: "center", gap: 1, backgroundColor: "#F5F5F5", borderRadius: "12px", padding: "8px 16px", cursor: "pointer", minWidth: "150px", justifyContent: "space-between", "&:hover": { backgroundColor: "#EDEDED" } }}
@@ -77,7 +83,6 @@ const EmployeeProductivityChart = () => {
           transformOrigin={{ horizontal: "right", vertical: "top" }}
           anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         >
-          {/* All Employees option */}
           <MenuItem
             onClick={() => { setSelectedEmployee(null); setAnchorEl(null); }}
             sx={{
@@ -110,50 +115,32 @@ const EmployeeProductivityChart = () => {
         <Box display="flex" justifyContent="center" alignItems="center" height={300}>
           <CircularProgress size={28} sx={{ color: "#AA2493" }} />
         </Box>
-      ) : chartData.length === 0 || linesToShow.length === 0 ? (
+      ) : !hasData ? (
         <Box display="flex" justifyContent="center" alignItems="center" height={300}>
-          <Typography fontSize={13} color="text.secondary">No productivity data this week.</Typography>
+          <Typography fontSize={13} color="text.secondary">No task data available.</Typography>
         </Box>
       ) : (
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+          <BarChart data={chartData} barSize={32} barGap={4} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
             <XAxis
-              dataKey="day"
-              tick={{ fontSize: 12, fill: "#67768B", fontFamily: '"Poppins", sans-serif' }}
-              axisLine={{ stroke: "#F5F5F5" }}
+              dataKey="name"
+              tick={{ fontSize: 11, fill: "#6B7280", fontFamily: '"Poppins", sans-serif' }}
+              axisLine={{ stroke: "#E5E7EB" }}
               tickLine={false}
             />
             <YAxis
-              domain={[0, yMax]}
-              ticks={yTicks}
-              tick={{ fontSize: 12, fill: "#67768B", fontFamily: '"Poppins", sans-serif' }}
+              tick={{ fontSize: 12, fill: "#6B7280", fontFamily: '"Poppins", sans-serif' }}
               axisLine={false}
               tickLine={false}
-              width={50}
-              label={{ value: "Tasks", angle: -90, position: "insideLeft", offset: 10, style: { fontSize: 12, fill: "#67768B", fontFamily: '"Poppins", sans-serif' } }}
+              allowDecimals={false}
             />
-            <Tooltip
-              contentStyle={{ backgroundColor: "#fff", border: "1px solid #F5F5F5", borderRadius: "10px", fontSize: "12px", fontFamily: '"Poppins", sans-serif' }}
-            />
-            {linesToShow.map((emp) => (
-              <Line
-                key={emp._id}
-                type="monotone"
-                dataKey={emp.key}
-                stroke={emp.color}
-                strokeWidth={3}
-                dot={{ fill: emp.color, r: 4 }}
-                activeDot={{ r: 6 }}
-                name={emp.name}
-              />
-            ))}
-          </LineChart>
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
+            <Legend wrapperStyle={{ fontSize: "12px", fontFamily: '"Poppins", sans-serif', paddingTop: "16px" }} />
+            <Bar dataKey="Assigned"           fill="#022179" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="Completed On Time"  fill="#04C373" radius={[6, 6, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
-      )}
-
-      {!loading && linesToShow.length > 0 && (
-        <CustomLegend employees={linesToShow} />
       )}
     </Box>
   );

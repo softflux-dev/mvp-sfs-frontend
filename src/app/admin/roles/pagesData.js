@@ -20,8 +20,7 @@ export const hrPages = [
   { id: "hr-leaves",      title: "Leave Management",      path: "/leave-management"      },
   { id: "hr-holidays",    title: "Holiday Management",     path: "/holiday-management"    },
   { id: "hr-payroll",     title: "Payroll",               path: "/payroll-management"    },
-  { id: "hr-messages",    title: "Messages",              path: "/hr-messages"           },
-  { id: "hr-documents",   title: "Documents",             path: "/hr-documents"          },
+ 
 ];
 
 export const projectManagerPages = [
@@ -29,8 +28,7 @@ export const projectManagerPages = [
   { id: "pm-projects",    title: "My Projects",      path: "/my-projects"      },
   { id: "pm-tasks",       title: "Task Management",  path: "/task-management"  },
   { id: "pm-performance", title: "Team Performance", path: "/team-performance" },
-  { id: "pm-messages",    title: "Messages",         path: "/pm-messages"      },
-  { id: "pm-documents",   title: "Documents",        path: "/pm-documents"     },
+  
 ];
 
 export const employeePages = [

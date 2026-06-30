@@ -279,23 +279,6 @@ const PayrollManagement = () => {
           </Box>
         )}
 
-        {hasGenerated && tableData.length > 0 && (
-          <Grid container spacing={2} mb={2}>
-            {[
-              { label: "Total Base Salary", value: totals.baseSalary, color: "text.primary" },
-              { label: "Total Bonus",        value: totals.bonus,      color: "#04C373"      },
-              { label: "Total Deductions",   value: totals.deductions, color: "#FF0000"      },
-              { label: "Total Net Pay",      value: totals.netPay,     color: "#AA2493"      },
-            ].map(({ label, value, color }) => (
-              <Grid key={label} size={{ xs: 12, sm: 6, md: 3 }}>
-                <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 2 }}>
-                  <Typography fontSize="12px" color="text.secondary" mb={0.5}>{label}</Typography>
-                  <Typography fontSize="18px" fontWeight={700} color={color}>Rs {value.toLocaleString()}</Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        )}
 
         {(error || apiError) && (
           <Box mb={2} px={2} py={1.5} sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}>
