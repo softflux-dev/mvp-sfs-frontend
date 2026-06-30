@@ -69,7 +69,7 @@ const handleLogin = async ({ email, password }) => {
       jwtRole = JSON.parse(atob(base64 + padding)).role || "EMPLOYEE";
     } catch (e) {}
 
-      const rolePages = user?.role?.pages || [];
+const rolePages = user?.rolePages || user?.role?.pages || [];
 
     
      const loggedInUser = {

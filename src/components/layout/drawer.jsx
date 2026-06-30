@@ -53,15 +53,14 @@ export default function Drawer({ drawerOpen, handleNavigation, toggleDrawer }) {
 
   const isRouteActive = (path) => location.pathname === path;
 
-  const isAdmin = user?.role === "ADMIN";
+const isAdmin = false;
 
   // ── Build the set of allowed paths from user.rolePages ──────────────────
   // rolePages is stored on login: user.role.pages populated by backend
- const allowedPathSet = React.useMemo(() => {
-  if (isAdmin) return null;
+const allowedPathSet = React.useMemo(() => {
   const pages = user?.rolePages || [];
   return new Set(pages.map((p) => p.path));
-}, [user?.rolePages, isAdmin]);
+}, [user?.rolePages]);
 
 const { label: roleLabel } = ROLE_ROUTE_MAP[user?.role] || { label: "" };
 
