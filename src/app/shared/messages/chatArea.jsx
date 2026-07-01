@@ -1,4 +1,4 @@
-// src/app/shared/messages/chatArea.jsx — FULL REPLACEMENT
+// src/app/shared/messages/chatArea.jsx — 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Box, Typography, Avatar, IconButton, CircularProgress, Menu, MenuItem } from "@mui/material";
 import { Users, MoreVertical, Trash2, X } from "lucide-react";
@@ -13,6 +13,7 @@ import ChatBubble from "./chatBubble";
 import GroupInfoPanel from "./groupInfoPanel";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import { useMessages, useConversationActions } from "../../../hooks/messages";
+import { clearGroupMessagesApi } from "../../../api/modules/messages";
 import { getSocket } from "../../../utils/socketManager";
 
 const DateDivider = ({ label }) => (
@@ -51,29 +52,30 @@ const ChatArea = ({
   onlineUsers = new Set(),
   onMessageSent,
   onDeleteConversation,
+  onConversationRenamed,
+  onMembersAdded,
 }) => {
   const [input,          setInput]          = useState("");
-  const [typingUsers,    setTypingUsers]    = useState([]);   // [{userId, userName}]
+  const [typingUsers,    setTypingUsers]    = useState([]);
   const [groupPanelOpen, setGroupPanelOpen] = useState(false);
   const [menuAnchor,     setMenuAnchor]     = useState(null);
   const [pendingFiles,   setPendingFiles]   = useState([]);
 
-  const bottomRef   = useRef(null);
-  const topRef      = useRef(null);
-  const typingTimer = useRef(null);
-  const confirmRef  = useRef();
+  const bottomRef    = useRef(null);
+  const topRef       = useRef(null);
+  const typingTimer  = useRef(null);
+  const confirmRef   = useRef();
   const fileInputRef = useRef(null);
 
   const {
     messages, loading, sending, hasMore,
-    loadMore, fetchMissed, sendMessage, sendWithAttachments,
+    loadMore, fetchMissed, fetchMessages, sendMessage, sendWithAttachments,
     editMessage, deleteMessage,
     addIncomingMessage, applyMessageEdit, applyMessageDelete,
   } = useMessages(conversation?._id, currentUser?._id);
 
   const { renameGroup, deleteConversation, kickMember } = useConversationActions();
 
-  // Clear transient state when switching conversation — fixes typing leak
   useEffect(() => {
     setTypingUsers([]);
     setInput("");
@@ -82,7 +84,6 @@ const ChatArea = ({
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
 
-  // ── Socket listeners — scoped to this conversation ───────────────────────
   useEffect(() => {
     if (!conversation?._id) return;
     const socket = getSocket();
@@ -91,8 +92,12 @@ const ChatArea = ({
 
     const handleNew     = ({ conversationId, message }) => { if (String(conversationId) === convId) addIncomingMessage(message); };
     const handleEdited  = ({ conversationId, message }) => { if (String(conversationId) === convId) applyMessageEdit({ message }); };
-    const handleDeleted = ({ conversationId, messageId }) => { if (String(conversationId) === convId) applyMessageDelete({ messageId }); };
-
+    const handleDeleted = ({ conversationId, messageId }) => {
+      if (String(conversationId) !== convId) return;
+      applyMessageDelete({ messageId });
+      // Update sidebar — fetch latest non-deleted message
+      onMessageSent?.(conversationId, { text: "", sender: "", sentAt: null });
+    };
     const handleTypingStart = ({ conversationId, userId, userName }) => {
       if (String(conversationId) !== convId) return;
       if (String(userId) === String(currentUser?._id)) return;
@@ -119,14 +124,12 @@ const ChatArea = ({
     };
   }, [conversation?._id, currentUser?._id]);
 
-  // Infinite scroll
   useEffect(() => {
     const observer = new IntersectionObserver(([e]) => { if (e.isIntersecting && hasMore) loadMore(); }, { threshold: 1 });
     if (topRef.current) observer.observe(topRef.current);
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
-  // ── Send ──────────────────────────────────────────────────────────────────
   const handleSend = useCallback(async () => {
     if ((!input.trim() && !pendingFiles.length) || !conversation?._id || sending) return;
     const text   = input.trim();
@@ -162,23 +165,21 @@ const ChatArea = ({
     typingTimer.current = setTimeout(() => socket.emit("typing_stop", { conversationId: conversation._id }), 2000);
   };
 
-  // ── File selection ────────────────────────────────────────────────────────
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files || []).slice(0, 5);
     setPendingFiles((prev) => [...prev, ...files].slice(0, 5));
     e.target.value = "";
   };
 
-  // ── Delete conversation ───────────────────────────────────────────────────
   const handleDeleteConversation = () => {
     setMenuAnchor(null);
     const isGroupChat = conversation?.type === "project";
     confirmRef.current?.open({
-      title:       isGroupChat ? "Delete Group Chat?" : "Delete Chat?",
+      title:       isGroupChat ? "Archive Group Chat?" : "Delete Chat?",
       description: isGroupChat
-        ? "This will permanently delete the group and all messages."
+        ? "This group chat will be hidden from all members. Messages are preserved and can be restored from Archived Groups."
         : "This chat will be removed from your view.",
-      confirmText: "Yes, Delete",
+      confirmText: isGroupChat ? "Yes, Archive" : "Yes, Delete",
       cancelText:  "Cancel",
       onConfirm: async () => {
         const result = await deleteConversation(conversation._id);
@@ -195,8 +196,14 @@ const ChatArea = ({
     );
   }
 
-  const isGroup   = conversation.type === "project";
+  const isGroup  = conversation.type === "project";
   const isCreator = String(conversation.createdBy) === String(currentUser?._id);
+
+  // Admin and PM can manage any group, not just ones they created
+  const canManage = isCreator
+    || currentUser?.role === "ADMIN"
+    || currentUser?.role === "PROJECT_MANAGER";
+
   const otherParticipant = !isGroup
     ? conversation.participants?.find((p) => String(p.user?._id || p.user) !== String(currentUser?._id))
     : null;
@@ -242,7 +249,8 @@ const ChatArea = ({
                 <Users size={18} color="#67768B" />
               </IconButton>
             )}
-            {(conversation.type === "direct" || isCreator) && (
+            {/* Show 3-dot menu for direct chats always, for groups only if canManage */}
+            {(conversation.type === "direct" || canManage) && (
               <>
                 <IconButton onClick={(e) => setMenuAnchor(e.currentTarget)} sx={{ width: 36, height: 36, backgroundColor: "#F5F5F5", borderRadius: "10px" }}>
                   <MoreVertical size={18} color="#67768B" />
@@ -253,13 +261,13 @@ const ChatArea = ({
                   onClose={() => setMenuAnchor(null)}
                   PaperProps={{ sx: { borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", minWidth: 180 } }}
                 >
-                  {isGroup && isCreator && (
+                  {isGroup && canManage && (
                     <MenuItem onClick={() => { setMenuAnchor(null); setGroupPanelOpen(true); }} sx={{ fontSize: "13px", gap: 1.5, py: 1 }}>
                       <Users size={14} color="#67768B" /> Manage Group
                     </MenuItem>
                   )}
                   <MenuItem onClick={handleDeleteConversation} sx={{ fontSize: "13px", gap: 1.5, py: 1, color: "#FF3B30" }}>
-                    <Trash2 size={14} /> {isGroup ? "Delete Group" : "Delete Chat"}
+                    <Trash2 size={14} /> {isGroup ? "Archive Group" : "Delete Chat"}
                   </MenuItem>
                 </Menu>
               </>
@@ -313,7 +321,6 @@ const ChatArea = ({
             <Box component="img" src={EmojiIcon} alt="emoji" sx={{ width: 20, height: 20 }} />
           </Box>
 
-          {/* Attach — opens file picker */}
           <Box
             onClick={() => fileInputRef.current?.click()}
             sx={{ width: 44, height: 44, borderRadius: "14px", backgroundColor: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, "&:hover": { backgroundColor: "#EBEBEB" } }}
@@ -343,9 +350,24 @@ const ChatArea = ({
           onClose={() => setGroupPanelOpen(false)}
           conversation={conversation}
           currentUserId={currentUser?._id}
-          onRename={async (name) => await renameGroup(conversation._id, name)}
-          onDelete={async () => { await deleteConversation(conversation._id); onDeleteConversation?.(conversation._id); }}
+          currentUserRole={currentUser?.role}
+          onRename={async (name) => {
+            const result = await renameGroup(conversation._id, name);
+            if (result.success) onConversationRenamed?.(conversation._id, name);
+            return result;
+          }}
+          onDelete={async () => {
+            await deleteConversation(conversation._id);
+            onDeleteConversation?.(conversation._id);
+          }}
+          onClearMessages={async () => {
+            try {
+              await clearGroupMessagesApi(conversation._id);
+              await fetchMessages();
+            } catch { /* silent */ }
+          }}
           onKickMember={async (memberId) => await kickMember(conversation._id, memberId)}
+          onMembersAdded={onMembersAdded}
         />
       )}
 

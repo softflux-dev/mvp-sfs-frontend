@@ -241,7 +241,14 @@ export const useConversationActions = () => {
     setLoading(true);
     try {
       const res = await updateConversationApi(id, { name });
-      return res?.status === 200 ? { success: true } : { success: false, message: res?.data?.message };
+      if (res?.status === 200 || res?.status === 201) {
+        const socket = getSocket();
+        if (socket?.connected) {
+          socket.emit("conversation_updated", { conversationId: id, name });
+        }
+        return { success: true, name };
+      }
+      return { success: false, message: res?.data?.message };
     } catch { return { success: false }; }
     finally { setLoading(false); }
   }, []);

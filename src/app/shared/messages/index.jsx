@@ -9,9 +9,6 @@ import { useConversations } from "../../../hooks/messages";
 import { connectSocket, getSocket } from "../../../utils/socketManager";
 import { createConversationApi, markAsReadApi } from "../../../api/modules/messages";
 
-// ── base64url-safe JWT decode ────────────────────────────────────────────────
-// JWTs use base64url ('-' and '_'); plain atob() throws on them.
-// This was why employees couldn't edit/delete — currentUser came back null.
 const getCurrentUser = () => {
   try {
     const token = localStorage.getItem("token");
@@ -25,9 +22,7 @@ const getCurrentUser = () => {
       role:  payload.role,
       name:  payload.name || payload.fullName || "",
     };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 };
 
 const Messages = () => {
@@ -50,12 +45,10 @@ const Messages = () => {
     if (!token) return;
     const socket = connectSocket(token);
 
-    const onConnect = () => fetchConversations();
-
+    const onConnect    = () => fetchConversations();
     const onNewMessage = ({ conversationId, message }) => {
       setActiveConversation((prev) => {
         if (prev?._id === conversationId) {
-          // Active chat — mark read immediately so unread doesn't accumulate
           markAsReadApi(conversationId).catch(() => {});
           return prev;
         }
@@ -69,10 +62,16 @@ const Messages = () => {
       });
     };
 
-    // Keep sidebar preview in sync (covers edits of last message too)
-    const onConvUpdated = ({ conversationId, lastMessage }) => {
-      bumpConversationToTop(conversationId, lastMessage);
-    };
+   const onConvUpdated = ({ conversationId, lastMessage, name }) => {
+  
+  if (lastMessage !== undefined) bumpConversationToTop(conversationId, lastMessage);
+  if (name) {
+    updateConversation(conversationId, { name });
+    setActiveConversation((prev) =>
+      prev?._id === conversationId ? { ...prev, name } : prev
+    );
+  }
+};
 
     const onUserOnline  = ({ userId }) => setOnlineUsers((prev) => new Set([...prev, userId]));
     const onUserOffline = ({ userId }) => setOnlineUsers((prev) => { const s = new Set(prev); s.delete(userId); return s; });
@@ -101,26 +100,31 @@ const Messages = () => {
 
   const handleStartConversation = useCallback(async (participant) => {
     try {
-      const res = await createConversationApi({
-        participantId:    participant._id,
-        participantModel: participant.userModel,
-      });
+      let payload;
+      if (participant.isGroup) {
+        payload = { isGroup: true, participantIds: participant.participantIds, name: participant.name };
+      } else {
+        payload = { participantId: participant._id, participantModel: participant.userModel };
+      }
+      const res = await createConversationApi(payload);
       if (res?.status === 200 || res?.status === 201) {
         const conv = res.data.data.conversation;
         await fetchConversations();
         setModalOpen(false);
-        // join the new room immediately so messages flow both ways
         getSocket()?.emit("join_conversation", { conversationId: conv._id });
         handleSelectConversation(conv);
       }
     } catch (err) { console.error("Create conversation error:", err); }
   }, [fetchConversations, handleSelectConversation]);
 
-  // ── Delete chat — clears active chat + removes from sidebar ───────────────
   const handleConversationDeleted = useCallback((conversationId) => {
     removeConversation(conversationId);
     setActiveConversation((prev) => (prev?._id === conversationId ? null : prev));
   }, [removeConversation]);
+
+  const handleConversationRestored = useCallback(() => {
+    fetchConversations();
+  }, [fetchConversations]);
 
   const filtered = useMemo(() => {
     if (!search) return conversations;
@@ -149,8 +153,10 @@ const Messages = () => {
           onSearchChange={setSearch}
           loading={convsLoading}
           currentUserId={currentUser?._id}
+          currentUserRole={currentUser?.role}        // ← passes role to show dots for PM
           onlineUsers={onlineUsers}
           onConversationDeleted={handleConversationDeleted}
+          onConversationRestored={handleConversationRestored}
         />
         <ChatArea
           conversation={activeConversation}
@@ -158,6 +164,13 @@ const Messages = () => {
           onlineUsers={onlineUsers}
           onMessageSent={(convId, lastMsg) => bumpConversationToTop(convId, lastMsg)}
           onDeleteConversation={handleConversationDeleted}
+          onConversationRenamed={(convId, name) => {
+            updateConversation(convId, { name });
+            setActiveConversation((prev) =>
+              prev?._id === convId ? { ...prev, name } : prev
+            );
+          }}
+          onMembersAdded={() => fetchConversations()}
         />
       </Box>
 

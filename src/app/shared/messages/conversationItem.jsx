@@ -2,8 +2,7 @@
 import { useState, useRef } from "react";
 import { Box, Typography, Avatar, Badge, IconButton, Menu, MenuItem } from "@mui/material";
 import { MoreVertical, Trash2 } from "lucide-react";
-
-import ConfirmationDialog from "../../../components/popups/confirmation";
+import ConfirmationDialog        from "../../../components/popups/confirmation";
 import { useConversationActions } from "../../../hooks/messages";
 
 const ConversationItem = ({
@@ -11,13 +10,14 @@ const ConversationItem = ({
   isActive,
   onClick,
   currentUserId,
+  currentUserRole,
   onlineUsers = new Set(),
   onDeleted,
 }) => {
   const { type, name, lastMessage, unreadCount, participants = [], createdBy } = conversation;
   const [hovered,    setHovered]    = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
-  const confirmRef = useRef();
+  const confirmRef    = useRef();
   const menuButtonRef = useRef();
 
   const { deleteConversation } = useConversationActions();
@@ -31,8 +31,13 @@ const ConversationItem = ({
   const otherUserId   = otherParticipant?.user?._id || otherParticipant?.user || "";
   const isOnline      = type === "direct" && onlineUsers.has(String(otherUserId));
   const isCreator     = String(createdBy) === String(currentUserId);
-  // Group chats can only be deleted by creator; direct chats by anyone
-  const canDelete     = type === "direct" || isCreator;
+  const isGroup       = type === "project";
+
+  // Admin and PM can manage any group, not just ones they created
+  const canDelete = type === "direct"
+    || isCreator
+    || currentUserRole === "ADMIN"
+    || currentUserRole === "PROJECT_MANAGER";
 
   const timeStr = lastMessage?.sentAt
     ? (() => {
@@ -48,14 +53,27 @@ const ConversationItem = ({
     ? lastMessage.text.length > 32 ? lastMessage.text.slice(0, 32) + "..." : lastMessage.text
     : "No messages yet";
 
-  const handleDelete = (e) => {
+  const handleDeleteGroup = (e) => {
     e.stopPropagation();
     setMenuAnchor(null);
     confirmRef.current?.open({
-      title:       type === "project" ? "Delete Group Chat?" : "Delete Chat?",
-      description: type === "project"
-        ? "This will permanently delete the group and all messages."
-        : "This chat will be removed from your view.",
+      title:       "Archive Group Chat?",
+      description: "This group chat will be hidden from all members. Messages and history are preserved. You can restore it from the Archived Groups section.",
+      confirmText: "Yes, Archive",
+      cancelText:  "Cancel",
+      onConfirm: async () => {
+        const result = await deleteConversation(conversation._id);
+        if (result.success) onDeleted?.(conversation._id);
+      },
+    });
+  };
+
+  const handleDeleteDirect = (e) => {
+    e.stopPropagation();
+    setMenuAnchor(null);
+    confirmRef.current?.open({
+      title:       "Delete Chat?",
+      description: "This chat will be removed from your view. The other person can still see it.",
       confirmText: "Yes, Delete",
       cancelText:  "Cancel",
       onConfirm: async () => {
@@ -93,32 +111,35 @@ const ConversationItem = ({
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography fontSize="13px" fontWeight={isActive || unreadCount > 0 ? 600 : 500} color={isActive ? "#AA2493" : "text.primary"} noWrap>
+            <Typography fontSize="13px" fontWeight={isActive || unreadCount > 0 ? 600 : 500}
+              color={isActive ? "#AA2493" : "text.primary"} noWrap>
               {displayName}
             </Typography>
             <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0, ml: 1, gap: 0.25 }}>
-             <Typography fontSize="11px" color="text.secondary" 
-              sx={{ visibility: hovered ? "hidden" : "visible" }}>
-              {timeStr}
-            </Typography>
-              <IconButton
-                ref={menuButtonRef}
-                size="small"
-                onClick={(e) => { e.stopPropagation(); setMenuAnchor(menuButtonRef.current); }}
-                sx={{
-                  p: 0.25,
-                  color: "#9CA3AF",
-                  visibility: hovered && canDelete ? "visible" : "hidden",  // ← visibility not display
-                  "&:hover": { color: "#AA2493" },
-                }}
-              >
-                <MoreVertical size={14} />
-              </IconButton>
+              <Typography fontSize="11px" color="text.secondary"
+                sx={{ visibility: hovered ? "hidden" : "visible" }}>
+                {timeStr}
+              </Typography>
+              {canDelete && (
+                <IconButton
+                  ref={menuButtonRef}
+                  size="small"
+                  onClick={(e) => { e.stopPropagation(); setMenuAnchor(menuButtonRef.current); }}
+                  sx={{
+                    p: 0.25, color: "#9CA3AF",
+                    visibility: hovered ? "visible" : "hidden",
+                    "&:hover": { color: "#AA2493" },
+                  }}
+                >
+                  <MoreVertical size={14} />
+                </IconButton>
+              )}
             </Box>
           </Box>
 
           <Box display="flex" justifyContent="space-between" alignItems="center" mt={0.25}>
-            <Typography fontSize="12px" color="text.secondary" noWrap sx={{ flex: 1, fontWeight: unreadCount > 0 ? 600 : 400 }}>
+            <Typography fontSize="12px" color="text.secondary" noWrap
+              sx={{ flex: 1, fontWeight: unreadCount > 0 ? 600 : 400 }}>
               {lastText}
             </Typography>
             {unreadCount > 0 && (
@@ -132,17 +153,23 @@ const ConversationItem = ({
         </Box>
       </Box>
 
-        <Menu
-          anchorEl={menuAnchor}
-          open={Boolean(menuAnchor)}
-          onClose={(e) => { e?.stopPropagation?.(); setMenuAnchor(null); }}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-          transformOrigin={{ vertical: "top", horizontal: "right" }}
-          PaperProps={{ sx: { borderRadius: "10px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", minWidth: 140 } }}
-        >
-        <MenuItem onClick={handleDelete} sx={{ fontSize: "13px", gap: 1.5, py: 1, color: "#FF3B30" }}>
-          <Trash2 size={14} /> Delete Chat
-        </MenuItem>
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={(e) => { e?.stopPropagation?.(); setMenuAnchor(null); }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        PaperProps={{ sx: { borderRadius: "10px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)", minWidth: 180 } }}
+      >
+        {isGroup ? (
+          <MenuItem onClick={handleDeleteGroup} sx={{ fontSize: "13px", gap: 1.5, py: 1, color: "#FF3B30" }}>
+            <Trash2 size={14} /> Archive Group
+          </MenuItem>
+        ) : (
+          <MenuItem onClick={handleDeleteDirect} sx={{ fontSize: "13px", gap: 1.5, py: 1, color: "#FF3B30" }}>
+            <Trash2 size={14} /> Delete Chat
+          </MenuItem>
+        )}
       </Menu>
 
       <ConfirmationDialog ref={confirmRef} />

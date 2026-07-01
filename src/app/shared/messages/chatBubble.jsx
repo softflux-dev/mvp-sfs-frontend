@@ -61,16 +61,7 @@ const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
     setEditing(false);
   };
 
-  if (isDeleted) {
-    return (
-      <Box sx={{ display: "flex", flexDirection: isOwn ? "row-reverse" : "row", alignItems: "flex-end", gap: 1, mb: 1.5 }}>
-        {!isOwn && <Box sx={{ width: 34 }} />}
-        <Box sx={{ px: 2, py: 1, borderRadius: "12px", backgroundColor: "#F5F5F5", border: "1px dashed #D1D5DB" }}>
-          <Typography fontSize="12px" color="text.secondary" fontStyle="italic">Message deleted</Typography>
-        </Box>
-      </Box>
-    );
-  }
+ if (isDeleted) return null;
 
   return (
     <Box

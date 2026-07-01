@@ -31,3 +31,7 @@ export const deleteMessageRestApi = (id, msgId)          => api(`${BASE}/${id}/m
 // Attachments — multipart upload (4th arg true = FormData)
 export const uploadAttachmentsApi = (id, formData) =>
   api(`${BASE}/${id}/attachments`, formData, "post", true);
+
+export const getArchivedConversationsApi = ()    => api(`${BASE}/archived`, null, "get");
+export const restoreConversationApi      = (id)  => api(`${BASE}/${id}/restore`, null, "patch");
+export const clearGroupMessagesApi = (id) => api(`${BASE}/${id}/clear-messages`, null, "delete");
