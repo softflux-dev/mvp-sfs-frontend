@@ -1,4 +1,4 @@
-// app/auth/login/index.jsx — FULL REPLACEMENT
+// src/app/auth/login/index.jsx — 
 import { useState } from "react";
 import {
   Box, Typography, Checkbox, FormControlLabel,
@@ -10,34 +10,23 @@ import CustomInputLabel from "../../../components/customInputLabel";
 import TextInput        from "../../../components/textInput";
 import CustomButton     from "../../../components/customButton";
 import AuthLayout       from "../../../components/authLayout";
-import { useAuth }      from "../../../hooks/auth";          // ← hook
+import { useAuth }      from "../../../hooks/auth";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const {
-    loading, apiError, clearError,
-    handleLogin, handleForgotPassword,
-  } = useAuth();
+  const { loading, apiError, clearError, handleLogin, handleCheckEmail } = useAuth();
 
   const [form,       setForm]       = useState({ email: "", password: "" });
   const [errors,     setErrors]     = useState({});
   const [keepSigned, setKeepSigned] = useState(false);
-  const [fpLoading,  setFpLoading]  = useState(false);   // separate loading state for the forgot-password check
+  const [fpLoading,  setFpLoading]  = useState(false);
 
   const validate = () => {
     const e = {};
     const trimmedEmail = form.email.trim();
-
-    if (!trimmedEmail) {
-      e.email = "Please enter your email address first.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      e.email = "You have entered an invalid email.";
-    }
-
-    if (!form.password) {
-      e.password = "Please enter your password.";
-    }
-
+    if (!trimmedEmail)                                          e.email    = "Please enter your email address first.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) e.email    = "You have entered an invalid email.";
+    if (!form.password)                                         e.password = "Please enter your password.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -47,16 +36,9 @@ const LoginPage = () => {
     await handleLogin({ email: form.email.trim(), password: form.password });
   };
 
-  // ── "Forgot Password?" click — reuses the SAME email field on this page ───
-  // 1. Must have something typed in the email field first.
-  // 2. Must be a valid email format.
-  // 3. We check with the backend whether this email is actually registered
-  //    (this also sends the OTP if it is). Only on success do we navigate
-  //    to /forgot-password — carrying the email forward so that page can
-  //    skip straight to the OTP step instead of asking for the email again.
+  // Check if email exists (no OTP sent), then navigate to forgot password page
   const onForgotPasswordClick = async () => {
     const trimmedEmail = form.email.trim();
-
     if (!trimmedEmail) {
       setErrors((p) => ({ ...p, email: "Please enter your email address first." }));
       return;
@@ -65,21 +47,17 @@ const LoginPage = () => {
       setErrors((p) => ({ ...p, email: "You have entered an invalid email." }));
       return;
     }
-
     setErrors((p) => ({ ...p, email: "" }));
     if (apiError) clearError();
 
     setFpLoading(true);
-    const result = await handleForgotPassword(trimmedEmail);
+    const result = await handleCheckEmail(trimmedEmail);
     setFpLoading(false);
 
     if (result.success) {
-      // Email is registered + OTP already sent — go straight to OTP step.
-      navigate("/forgot-password", { state: { skipEmailStep: true } });
+      // Email exists — navigate to forgot password page to enter email + send OTP
+      navigate("/forgot-password");
     }
-    // On failure, handleForgotPassword already sets apiError (e.g.
-    // "This email is not registered.") — shown via the existing apiError
-    // banner on THIS page. No navigation happens.
   };
 
   return (
@@ -139,22 +117,23 @@ const LoginPage = () => {
           }
           label={<Typography fontSize="13px" color="text.secondary">Keep me signed in</Typography>}
         />
-        <Link component="button" fontSize="13px" fontWeight={500}
+        <Link
+          component="button" fontSize="13px" fontWeight={500}
           onClick={onForgotPasswordClick}
           disabled={fpLoading}
-          sx={{ color: "#030229", textDecoration: "underline",
-                fontFamily: '"Poppins", sans-serif', cursor: fpLoading ? "default" : "pointer",
-                opacity: fpLoading ? 0.6 : 1 }}
+          sx={{
+            color: "#030229", textDecoration: "underline",
+            fontFamily: '"Poppins", sans-serif',
+            cursor: fpLoading ? "default" : "pointer",
+            opacity: fpLoading ? 0.6 : 1,
+          }}
         >
           {fpLoading ? "Checking..." : "Forgot Password?"}
         </Link>
       </Box>
 
       <CustomButton
-        btnLabel={loading
-          ? <CircularProgress size={20} sx={{ color: "#fff" }} />
-          : "Login"
-        }
+        btnLabel={loading ? <CircularProgress size={20} sx={{ color: "#fff" }} /> : "Login"}
         variant="authbutton"
         handlePressBtn={onLogin}
         fullWidth sx={{ width: "100%" }}

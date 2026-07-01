@@ -5,6 +5,8 @@ import api from "../index";
 export const loginUser = (payload) =>
   api(ENDPOINTS.login, payload, "post");
 
+export const checkEmailApi      = (payload) => api(ENDPOINTS.checkEmail,     payload, "post"); 
+
 export const forgotPasswordApi = (payload) =>
   api(ENDPOINTS.forgotPassword, payload, "post");
 

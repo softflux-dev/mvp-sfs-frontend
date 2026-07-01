@@ -2,6 +2,7 @@ const ENDPOINTS = {
 
   // Auth
   login:          "auth/login",
+  checkEmail: "auth/check-email",
   forgotPassword: "auth/forgot-password",
   verifyOtp:      "auth/verify-otp",
   resetPassword:  "auth/reset-password",
@@ -179,8 +180,8 @@ finalizePayroll:  "hr/payroll",
 sendPayslipEmail: "hr/payroll/send-payslip",
 
 empGetMySalary: "employee/salary",
- 
- 
+
+
 };
 
 
