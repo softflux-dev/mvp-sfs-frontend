@@ -7,12 +7,26 @@ import {
 } from "../../api/modules/project";
 
 const defaultFilters = {
-  search:      "",
-  status:      "",
-  projectType: "",
-  manager:     "",
-  page:        1,
-  limit:       10,
+  search:        "",
+  status:        "",
+  projectType:   "",
+  manager:       "",
+  dueDateFilter: "",
+  dueDateFrom:   "",
+  dueDateTo:     "",
+  page:          1,
+  limit:         10,
+};
+
+// MUI DatePicker gives back a Date object — API wants "yyyy-MM-dd"
+const toDateParam = (d) => {
+  if (!d) return "";
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return "";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 };
 
 export const useProject = () => {
@@ -30,19 +44,21 @@ export const useProject = () => {
     setLoading(true);
     setError("");
     try {
-      const params = {
-        page:        customParams.page        ?? filters.page,
-        limit:       customParams.limit       ?? filters.limit,
-        search:      customParams.search      ?? filters.search,
-        status:      customParams.status      ?? filters.status,
-        projectType: customParams.projectType ?? filters.projectType,
-        manager:     customParams.manager     ?? filters.manager,
-      };
+    const params = {
+      page:          customParams.page          ?? filters.page,
+      limit:         customParams.limit         ?? filters.limit,
+      search:        customParams.search        ?? filters.search,
+      status:        customParams.status        ?? filters.status,
+      projectType:   customParams.projectType   ?? filters.projectType,
+      manager:       customParams.manager       ?? filters.manager,
+      dueDateFilter: customParams.dueDateFilter ?? filters.dueDateFilter,
+      dueDateFrom:   toDateParam(customParams.dueDateFrom ?? filters.dueDateFrom),
+      dueDateTo:     toDateParam(customParams.dueDateTo   ?? filters.dueDateTo),
+    };
 
       Object.keys(params).forEach((k) => {
-        if (params[k] === "" || params[k] == null) delete params[k];
-      });
-
+      if (params[k] === "" || params[k] == null) delete params[k];
+    });
       const response = await getProjectsApi(params);
 
       if (response?.status === 200 || response?.status === 201) {

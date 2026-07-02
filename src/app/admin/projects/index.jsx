@@ -204,16 +204,19 @@ const Projects = () => {
         </Box>
       )}
 
-      <Filter
+        <Filter
         mode="projects"
         projectTypes={projectTypes}  
         managers={managers}          
         onFilterChange={(f) => {
           handleFilterChange({
-            search:      f.search      || "",
-            status:      f.status      || "",
-            projectType: f.projectType || "",
-            manager:     f.manager     || "",
+            search:        f.search        || "",
+            status:        f.status        || "",
+            projectType:   f.projectType   || "",
+            manager:       f.manager       || "",
+            dueDateFilter: f.dueDateFilter || "",
+            dueDateFrom:   f.dueDateFrom   || "",
+            dueDateTo:     f.dueDateTo     || "",
           });
         }}
       />

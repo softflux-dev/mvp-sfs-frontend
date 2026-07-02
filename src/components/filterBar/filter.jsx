@@ -40,7 +40,27 @@ const Filter = ({
   }, [resetKey, onFilterChange]);
 
   const setVal = (key, val) => {
-    const newValues = { ...values, [key]: val };
+    let newValues = { ...values, [key]: val };
+
+    // ── Due-date-filter specific guards (projects mode) ───────────────────
+    if (key === "dueDateFilter") {
+      // Switching away from "custom" clears any picked custom dates so
+      // stale dates never leak into a non-custom filter request.
+      if (val !== "custom") {
+        newValues = { ...newValues, dueDateFrom: null, dueDateTo: null };
+      }
+    }
+
+    if (key === "dueDateFrom") {
+      // If the new "From" date is after the currently selected "To" date,
+      // clear "To" so the range can never be inverted.
+      const to = values.dueDateTo ? new Date(values.dueDateTo) : null;
+      const from = val ? new Date(val) : null;
+      if (to && from && to < from) {
+        newValues = { ...newValues, dueDateTo: null };
+      }
+    }
+
     setValues(newValues);
     if (onFilterChange) onFilterChange(newValues);
   };
@@ -88,10 +108,33 @@ const Filter = ({
       ],
     },
     {
-      type: "date",
-      key: "dateRange",
-      placeholder: "Date Range",
+      type: "select",
+      key: "dueDateFilter",
+      placeholder: "Due Date",
       grid: { xs: 12, md: 2 },
+      options: [
+        { v: "",            l: "All Due Dates"  },
+        { v: "this_week",   l: "Due This Week"  },
+        { v: "this_month",  l: "Due This Month" },
+        { v: "overdue",     l: "Overdue"        },
+        { v: "custom",      l: "Custom Range"   },
+      ],
+    },
+    // ── Only rendered when "Custom Range" is selected ─────────────────────
+    {
+      type: "date",
+      key: "dueDateFrom",
+      placeholder: "From",
+      grid: { xs: 12, md: 2 },
+      showIf: (v) => v.dueDateFilter === "custom",
+    },
+    {
+      type: "date",
+      key: "dueDateTo",
+      placeholder: "To",
+      grid: { xs: 12, md: 2 },
+      showIf: (v) => v.dueDateFilter === "custom",
+      minDateKey: "dueDateFrom", // disables all days before the chosen "From" date
     },
   ],
 
@@ -800,12 +843,15 @@ holidays: [
       ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM,isEmployee, stages })
       : configs[mode] || configs.full;
 
+  // ── Only render fields whose showIf (if present) passes for current values ──
+  const visibleFields = fields.filter((f) => !f.showIf || f.showIf(values));
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box display="flex" gap={2} alignItems="center">
         <Grid container spacing={2} width="100%">
-          {fields.map((f, i) => (
-            <Grid key={i} item size={f.grid}>
+          {visibleFields.map((f, i) => (
+            <Grid key={f.key || i} item size={f.grid}>
               {f.type === "search" && (
                 <TextInput
                   placeholder={f.placeholder}
@@ -838,6 +884,7 @@ holidays: [
               <DatePicker
                 value={values[f.key] || null}
                 onChange={(v) => setVal(f.key, v)}
+                minDate={f.minDateKey && values[f.minDateKey] ? new Date(values[f.minDateKey]) : undefined}
                 sx={{
                   ...GlobalStyle.datePickerStyle,
                   "& input": {
