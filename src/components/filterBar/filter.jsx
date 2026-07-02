@@ -569,10 +569,10 @@ leave_management: [
       { v: "rejected", l: "Rejected"   },
     ],
   },
-  {
+ {
     type: "date",
-    key: "dateRange",
-    placeholder: "Date Range",
+    key: "date",                   
+    placeholder: "Filter by Submitted Date",
     grid: { xs: 12, md: 2 },
   },
 ],

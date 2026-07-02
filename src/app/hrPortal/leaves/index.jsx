@@ -48,11 +48,23 @@ const LEAVE_TYPE_LABELS = {
   full_day:   "Full Day Leave",
 };
 
+// Format a Date as "yyyy-MM-dd" using LOCAL time — avoids the UTC day-shift
+// that toISOString() introduces for timezones ahead of UTC.
+const formatLocalDate = (d) => {
+  const date = d instanceof Date ? d : new Date(d);
+  if (isNaN(date.getTime())) return "";
+  const yyyy = date.getFullYear();
+  const mm   = String(date.getMonth() + 1).padStart(2, "0");
+  const dd   = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 const LeaveManagement = () => {
   const {
     leaves, loading, actionLoading,
     reviewLeave, handleFilterChange,
     pagination, handlePageChange,
+    handleRowsPerPageChange,
   } = useHRLeaves();
 
   const [actionSuccess, setActionSuccess] = useState({ open: false, message: "" });
@@ -194,14 +206,15 @@ const handleExportPDF = () => {
         </Grid>
       </Grid>
 
-      <Filter
-        mode="leave_management"
-        onFilterChange={(f) => handleFilterChange({
-          search: f.search || "",
-          status: f.status || "",
-          leaveType: f.leaveType || "",
-        })}
-      />
+     <Filter
+      mode="leave_management"
+      onFilterChange={(f) => handleFilterChange({
+        search:    f.search    || "",
+        status:    f.status    || "",
+        leaveType: f.leaveType || "",
+        date:      f.date ? formatLocalDate(f.date) : "",
+      })}
+    />
 
       <Box mt={2} bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable
@@ -218,6 +231,7 @@ const handleExportPDF = () => {
           rowsPerPage={pagination.limit}
           totalCount={pagination.total}
           onPageChange={handlePageChange}
+           onRowsPerPageChange={handleRowsPerPageChange}
         />
       </Box>
 

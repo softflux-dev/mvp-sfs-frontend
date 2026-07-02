@@ -7,6 +7,7 @@ import DialogActionButtons from "../../../components/dialog/dialogAction";
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
 
 const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ bonus: "", deductions: "", reason: "" });
   const [successOpen, setSuccessOpen] = useState(false);
 
@@ -28,11 +29,15 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
   const handleChange = (field) => (e) =>
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const handleSave = () => {
-    onSave?.({ ...payroll, ...formData, netPay });
+ const handleSave = async () => {
+  setSaving(true);
+  const result = await onSave?.({ ...payroll, ...formData, netPay });
+  setSaving(false);
+  // Only close on actual success; leave dialog open with data intact on failure
+  if (!result || result.success !== false) {
     onClose();
-    setSuccessOpen(true);
-  };
+  }
+};
 
   return (
     <>

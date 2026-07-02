@@ -16,3 +16,6 @@ export const sendPayslipEmailApi = (payload) =>
 
 export const sendPayslipWithPdfApi = (payload) =>
   api("hr/payroll/send-payslip-pdf", payload, "post");
+
+export const updatePayrollApi = (id, payload) =>
+  api(`${ENDPOINTS.updatePayroll}/${id}`, payload, "patch");

@@ -57,13 +57,19 @@ const AttendanceMonitoring = () => {
     });
   };
 
-  const handleImport = async ({ month, year, file, records }) => {
-    const result = await importRecords({ month, year, fileName: file.name, fileSize: `${(file.size / 1024).toFixed(0)} KB`, records });
-    if (result?.success) {
-      fetchSummary();
-      checkPartial();
-    }
-  };
+  const handleImport = async ({ month, year, file, records, fileBase64 }) => {
+  const result = await importRecords({
+    month, year,
+    fileName: file.name,
+    fileSize: `${(file.size / 1024).toFixed(0)} KB`,
+    records,
+    fileBase64,   
+  });
+  if (result?.success) {
+    fetchSummary();
+    checkPartial();
+  }
+};
 
   // ── Export currently visible summary rows to PDF ──────────────────────────
   const handleExportPdf = () => {

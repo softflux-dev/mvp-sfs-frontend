@@ -178,6 +178,7 @@ generatePayroll:  "hr/payroll/generate",
 getPayroll:       "hr/payroll",
 finalizePayroll:  "hr/payroll",
 sendPayslipEmail: "hr/payroll/send-payslip",
+updatePayroll: "hr/payroll",
 
 empGetMySalary: "employee/salary",
 

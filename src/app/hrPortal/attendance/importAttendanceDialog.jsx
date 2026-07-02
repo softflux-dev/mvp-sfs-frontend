@@ -31,6 +31,17 @@ const MONTHS = [
 
 const normalize = (str) => String(str || "").trim().toLowerCase().replace(/\s+/g, " ");
 
+// Convert ArrayBuffer → base64 in chunks to avoid call-stack overflow on large files
+const arrayBufferToBase64 = (buffer) => {
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000; // 32KB chunks
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+};
+
 const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
   const [month,    setMonth]    = useState(new Date().getMonth());
   const [yearDate, setYearDate] = useState(dayjs());
@@ -93,6 +104,7 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
 
     try {
       const data = await file.arrayBuffer();
+      const fileBase64 = arrayBufferToBase64(data); 
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
@@ -161,6 +173,7 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
       onImport?.({
         month, year: yearDate.year(), file,
         records: parsedRecords,
+        fileBase64,
       });
       handleClose();
     } catch (err) {

@@ -150,12 +150,12 @@ export const useAttendanceImport = () => {
     finally { setLogsLoading(false); }
   }, []);
 
-  const importRecords = useCallback(async ({ month, year, fileName, fileSize, records }) => {
+  const importRecords = useCallback(async ({ month, year, fileName, fileSize, records,fileBase64 }) => {
     setImporting(true);
     setImportWarning("");
     setError("");
     try {
-      const res = await importAttendanceApi({ month, year, fileName, fileSize, records });
+      const res = await importAttendanceApi({ month, year, fileName, fileSize, records,fileBase64 });
       if (res?.status === 200 || res?.status === 201) {
         const { unmatchedCount, unmatchedIds, partialCount, importLog } = res.data.data;
 

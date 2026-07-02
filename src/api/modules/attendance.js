@@ -37,7 +37,7 @@ export const getPartialRecordsApi = () =>
   api(ENDPOINTS.getAttendancePartial, null, "get");
 
 export const downloadImportFileApi = (id) =>
-  api(`${ENDPOINTS.getAttendanceImports}/${id}/download`, null, "get", { responseType: "blob" });
+  api(`${ENDPOINTS.getAttendanceImports}/${id}/download`, null, "get", false, { responseType: "blob" });
 
 export const deleteImportBatchApi = (id) =>
   api(`${ENDPOINTS.getAttendanceImports}/${id}`, null, "delete");

@@ -46,7 +46,7 @@ const menuOptions = [
 ];
 
 const PayrollManagement = () => {
-  const { payrolls, loading, actionLoading, error, fetchPayroll, generatePayroll } = usePayroll();
+  const { payrolls, loading, actionLoading, error, fetchPayroll, generatePayroll,updatePayroll } = usePayroll();
 
   const [selectedDate,    setSelectedDate]    = useState(new Date());
   const [hasGenerated,    setHasGenerated]    = useState(false);
@@ -316,8 +316,25 @@ const PayrollManagement = () => {
 
         <ViewPayslipDialog open={viewOpen} onClose={() => { setViewOpen(false); setSelectedPayroll(null); }}
           payroll={selectedPayroll || {}} month={currentMonth} year={currentYear} />
-        <EditPayrollDialog open={editOpen} onClose={() => { setEditOpen(false); setSelectedPayroll(null); }}
-          payroll={selectedPayroll || {}} onSave={() => { setSuccessMsg("Payroll updated."); setShowSuccess(true); }} />
+        <EditPayrollDialog
+          open={editOpen}
+          onClose={() => { setEditOpen(false); setSelectedPayroll(null); }}
+          payroll={selectedPayroll || {}}
+          onSave={async (formData) => {
+            const result = await updatePayroll(selectedPayroll.id, {
+              bonus:      Number(formData.bonus) || 0,
+              deductions: Number(formData.deductions) || 0,
+              reason:     formData.reason || "",
+            });
+            if (result.success) {
+              setSuccessMsg("Payroll updated successfully.");
+              setShowSuccess(true);
+            } else {
+              setApiError(result.message);
+            }
+            return result;
+          }}
+        />
         <ConfirmationDialog ref={confirmRef} />
         <SuccessPopup open={showSuccess} onClose={() => setShowSuccess(false)} message={successMsg} autoClose autoCloseDelay={2000} />
       </>

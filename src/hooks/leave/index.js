@@ -87,8 +87,7 @@ export const useHRLeaves = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
   const [pagination,    setPagination]    = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
-  const [filters,       setFilters]       = useState({ status: "", search: "", leaveType: "", page: 1, limit: 10 });
- 
+ const [filters, setFilters] = useState({ status: "", search: "", leaveType: "", date: "", page: 1, limit: 10 });
   // Keep a ref to latest filters so fetchLeaves always uses current values
   const filtersRef = useRef(filters);
   useEffect(() => { filtersRef.current = filters; }, [filters]);
@@ -142,11 +141,18 @@ const reviewLeave = useCallback(async (leaveId, status, hrNotes = "") => {
   const handlePageChange = useCallback((event, newPage) => {
     setFilters((prev) => ({ ...prev, page: newPage + 1 }));
   }, []);
+  const handleRowsPerPageChange = useCallback((event) => {
+  setFilters((prev) => ({
+    ...prev,
+    limit: parseInt(event.target.value, 10),
+    page:  1,
+  }));
+}, []);
  
   useEffect(() => { fetchLeaves(); }, [filters]);
  
   return {
     leaves, loading, actionLoading, error, pagination,
-    fetchLeaves, reviewLeave, handleFilterChange, handlePageChange,
+    fetchLeaves, reviewLeave, handleFilterChange, handlePageChange, handleRowsPerPageChange,
   };
 };

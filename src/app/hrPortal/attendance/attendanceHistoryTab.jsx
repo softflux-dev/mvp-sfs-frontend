@@ -47,6 +47,9 @@ const AttendanceHistoryTab = ({ logs = [], loading = false, onLogsChange }) => {
         link.click();
         link.remove();
         window.URL.revokeObjectURL(url);
+
+        setSuccessMsg(`"${row.fileName || "File"}" downloaded successfully.`);
+        setShowSuccess(true);
       } else {
         setApiError("Could not download the original file for this import.");
       }

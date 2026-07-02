@@ -5,6 +5,7 @@ import {
   getPayrollApi,
   finalizePayrollApi,
   sendPayslipEmailApi,
+  updatePayrollApi,
 } from "../../api/modules/payroll";
 
 export const usePayroll = () => {
@@ -98,6 +99,29 @@ export const usePayroll = () => {
     }
   }, []);
 
+  // ── Update payroll (manual bonus/deduction override) ────────────────────
+const updatePayroll = useCallback(async (id, payload) => {
+  setActionLoading(true);
+  setError("");
+  try {
+    const response = await updatePayrollApi(id, payload);
+    if (response?.status === 200 || response?.status === 201) {
+      const updated = response.data.data.payroll;
+      setPayrolls((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      return { success: true, message: response.data.message || "Payroll updated successfully.", data: updated };
+    }
+    const msg = response?.data?.message || "Failed to update payroll.";
+    setError(msg);
+    return { success: false, message: msg };
+  } catch {
+    const msg = "Something went wrong.";
+    setError(msg);
+    return { success: false, message: msg };
+  } finally {
+    setActionLoading(false);
+  }
+}, []);
+
   return {
     payrolls,
     loading,
@@ -108,5 +132,6 @@ export const usePayroll = () => {
     generatePayroll,
     isMonthGenerated,
     sendPayslipEmails,
+    updatePayroll, 
   };
 };
