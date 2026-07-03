@@ -26,6 +26,16 @@ import leaveIcon     from "../../../assets/icons/time-icon.svg";
 import overdueIcon   from "../../../assets/icons/overdue-time.svg";
 import projectIcon   from "../../../assets/icons/projects-active-icon.svg";
 import taskIcon      from "../../../assets/icons/tasks.svg";
+import employeeIconWhite    from "../../../assets/icons/employee-active.svg";
+import projectIconWhite     from "../../../assets/icons/projects-active.svg";
+import taskIconWhite        from "../../../assets/icons/tasks-active.svg";
+import completionIconWhite  from "../../../assets/icons/completion-white.svg";
+import completedIconWhite   from "../../../assets/icons/completed-white.svg";
+import attendanceIconWhite  from "../../../assets/icons/attendance-active.svg";
+import leaveIconWhite       from "../../../assets/icons/pending-white.svg";
+import overdueIconWhite     from "../../../assets/icons/overdue-white.svg";
+
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -61,46 +71,46 @@ const Dashboard = () => {
     {
       id: 1, title: "Total Employees",
      value: String(stats?.totalEmployees ?? "0"),  
-      description: "Active employees", icon: enrollIcon,
+      description: "Active employees", icon: enrollIcon, iconHover: employeeIconWhite,
       onClick: () => navigate("/employees"),
     },
     {
       id: 2, title: "Active Projects",
       value:  String(stats?.activeProjects ?? "0"),
-      description: "Not yet completed", icon: projectIcon,
+      description: "Not yet completed", icon: projectIcon, iconHover: projectIconWhite,
       onClick: () => navigate("/projects"),
     },
     {
       id: 3, title: "Total Tasks",
       value: String(stats?.totalTasks ?? "0"),
-      description: "Across all projects", icon: taskIcon,
+      description: "Across all projects", icon: taskIcon, iconHover: taskIconWhite,
     },
     {
       id: 4, title: "Task Completion Rate",
       value:  (stats?.taskCompletionRate ?? "0"),
-      description: "Completed vs total", icon: completeIcon,
+      description: "Completed vs total", icon: completeIcon, iconHover: completionIconWhite,
     },
     {
       id: 5, title: "Completed Projects",
       value: String(stats?.completedProjects ?? "0"),
-      description: "All time", icon: progressIcon,
+      description: "All time", icon: progressIcon, iconHover: completedIconWhite,
       onClick: () => navigate("/projects"),
     },
     {
       id: 6, title: "Avg Attendance Rate",
       value:  (stats?.avgAttendanceRate ?? "0"),
-      description: "This month", icon: attendanceIcon,
+      description: "This month", icon: attendanceIcon, iconHover: attendanceIconWhite,
     },
     {
       id: 7, title: "Pending Leave Requests",
       value:  String(stats?.pendingLeaves ?? "0"),
-      description: "Awaiting review", icon: leaveIcon,
+      description: "Awaiting review", icon: leaveIcon, iconHover: leaveIconWhite,
       onClick: () => navigate("/leave-management"),
     },
     {
       id: 8, title: "Overdue Tasks",
       value: String(stats?.overdueTasks ?? "0"),
-      description: "Needs attention", icon: overdueIcon,
+      description: "Needs attention", icon: overdueIcon, iconHover: overdueIconWhite,
     },
   ];
   const skeletonSx = {
@@ -147,6 +157,7 @@ const Dashboard = () => {
               value={stat.value}
               description={stat.description}
               icon={stat.icon}
+              iconHover={stat.iconHover}
               onClick={stat.onClick}
             />
           )}

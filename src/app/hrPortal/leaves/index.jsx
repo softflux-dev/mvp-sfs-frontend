@@ -206,13 +206,15 @@ const handleExportPDF = () => {
         </Grid>
       </Grid>
 
-     <Filter
+    <Filter
       mode="leave_management"
       onFilterChange={(f) => handleFilterChange({
-        search:    f.search    || "",
-        status:    f.status    || "",
-        leaveType: f.leaveType || "",
-        date:      f.date ? formatLocalDate(f.date) : "",
+        search:     f.search     || "",
+        status:     f.status     || "",
+        leaveType:  f.leaveType  || "",
+        dateFilter: f.dateFilter || "",
+        dateFrom:   f.dateFrom ? formatLocalDate(f.dateFrom) : "",
+        dateTo:     f.dateTo   ? formatLocalDate(f.dateTo)   : "",
       })}
     />
 

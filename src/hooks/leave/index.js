@@ -87,7 +87,7 @@ export const useHRLeaves = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
   const [pagination,    setPagination]    = useState({ total: 0, page: 1, limit: 10, totalPages: 0 });
- const [filters, setFilters] = useState({ status: "", search: "", leaveType: "", date: "", page: 1, limit: 10 });
+ const [filters, setFilters] = useState({ status: "", search: "", leaveType: "", dateFilter: "", dateFrom: "", dateTo: "", page: 1, limit: 10 });
   // Keep a ref to latest filters so fetchLeaves always uses current values
   const filtersRef = useRef(filters);
   useEffect(() => { filtersRef.current = filters; }, [filters]);

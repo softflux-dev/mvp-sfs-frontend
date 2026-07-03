@@ -6,6 +6,7 @@ import taskIcon     from "../../../../assets/icons/tasks.svg";
 import completeIcon from "../../../../assets/icons/complete-active.svg";
 import progressIcon from "../../../../assets/icons/time-icon.svg";
 import overdueIcon  from "../../../../assets/icons/overdue-time.svg";
+import completedIcon from "../../../../assets/icons/completed-icon-white.svg";
 import { getProjectStatsApi }  from "../../../../api/modules/project";
 
 
@@ -48,7 +49,7 @@ const OverviewTab = ({ project = {}, role = "admin" }) => {
 
     const statsData = [
     { id: 1, title: "Total Tasks",  value: String(stats.total),      icon: taskIcon     },
-    { id: 2, title: "Completed",    value: String(stats.completed),   icon: completeIcon },
+    { id: 2, title: "Completed",    value: String(stats.completed),   icon: completeIcon, iconHover: completedIcon },
     { id: 3, title: "In Progress",  value: String(stats.inProgress),  icon: progressIcon },
     { id: 4, title: "Overdue",      value: String(stats.overdue),     icon: overdueIcon  },
   ];
@@ -65,6 +66,7 @@ const OverviewTab = ({ project = {}, role = "admin" }) => {
               value={stat.value}
               icon={stat.icon}
               isHighlighted={stat.isHighlighted}
+              iconHover={stat.iconHover}
             />
           </Grid>
         ))}

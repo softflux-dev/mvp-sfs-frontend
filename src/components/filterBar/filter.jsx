@@ -61,6 +61,21 @@ const Filter = ({
       }
     }
 
+    // ── Submitted-date-filter guards (leave_management mode) ──────────────
+    if (key === "dateFilter") {
+      if (val !== "custom") {
+        newValues = { ...newValues, dateFrom: null, dateTo: null };
+      }
+    }
+
+    if (key === "dateFrom") {
+      const to = values.dateTo ? new Date(values.dateTo) : null;
+      const from = val ? new Date(val) : null;
+      if (to && from && to < from) {
+        newValues = { ...newValues, dateTo: null };
+      }
+    }
+
     setValues(newValues);
     if (onFilterChange) onFilterChange(newValues);
   };
@@ -570,11 +585,34 @@ leave_management: [
     ],
   },
  {
-    type: "date",
-    key: "date",                   
-    placeholder: "Filter by Submitted Date",
-    grid: { xs: 12, md: 2 },
-  },
+  type: "select",
+  key: "dateFilter",
+  placeholder: "Submitted Date",
+  grid: { xs: 12, md: 2 },
+  options: [
+    { v: "",            l: "All Dates"       },
+    { v: "this_week",   l: "This Week"       },
+    { v: "this_month",  l: "This Month"      },
+    { v: "last_3_months", l: "Last 3 Months" },
+    { v: "custom",      l: "Custom Range"    },
+  ],
+},
+// ── Only rendered when "Custom Range" is selected ─────────────────────
+{
+  type: "date",
+  key: "dateFrom",
+  placeholder: "From",
+  grid: { xs: 12, md: 2 },
+  showIf: (v) => v.dateFilter === "custom",
+},
+{
+  type: "date",
+  key: "dateTo",
+  placeholder: "To",
+  grid: { xs: 12, md: 2 },
+  showIf: (v) => v.dateFilter === "custom",
+  minDateKey: "dateFrom",
+},
 ],
 
 payroll_management: [

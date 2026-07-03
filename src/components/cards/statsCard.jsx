@@ -1,144 +1,115 @@
-// components/cards/statsCard.jsx — full file replacement
-import { Box, Chip, Typography } from "@mui/material";
-import ProgressBar from "../progressBar";
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+// src/components/cards/statsCard.jsx — 
+import { useState } from "react";
+import { Box, Typography } from "@mui/material";
 
-const StatsCard = ({ title, value, description, icon, changePercentage, onClick, isSelected = false, isHighlighted = false, restrictedAccess, progress, validationStatus, valueFontSize, titleFontSize, valueFontWeight }) => {
-  const hasChipsLayout = restrictedAccess && restrictedAccess.length > 0;
-  const highlighted = isSelected || isHighlighted;
+const StatsCard = ({
+  title,
+  value,
+  icon,
+  iconHover,
+  isHighlighted = false,
+  subtitle,
+  subtitleIcon,
+  subtitleColor,
+  onClick,
+}) => {
+  const [hovered, setHovered] = useState(false);
+
+  const active = isHighlighted || hovered;
 
   return (
     <Box
       onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       sx={{
-        background: highlighted ? "linear-gradient(90deg, #AA2493 0%, #022179 100%)" : "#fff",
+        backgroundColor: "#fff",
         borderRadius: "30px",
-        color: highlighted ? "#fff" : "#000",
+        p: 2,
         height: "100%",
-        padding: "16px",
+        minHeight: "130px",
         display: "flex",
         flexDirection: "column",
-        gap: 1,
-        border: onClick ? "1px solid #AA2493" : "none",
-        boxShadow: "none",
+        justifyContent: "space-between",
         cursor: onClick ? "pointer" : "default",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
-        "&:hover": {
-          transform: "translateY(-2px)",
-          boxShadow: "0 4px 12px rgba(170, 36, 147, 0.15)",
-          background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-          "& .stats-text": { color: "#fff" },
-          "& .stats-icon-box": { backgroundColor: "rgba(255,255,255,0.2)" },
-        },
+        background: active
+          ? "linear-gradient(135deg, #AA2493 0%, #022179 100%)"
+          : "#fff",
+        boxShadow: active
+          ? "0 8px 24px rgba(170, 36, 147, 0.25)"
+          : "0 1px 3px rgba(0,0,0,0.05)",
+        transition: "all 0.3s ease",
       }}
     >
-      {/* Icon and Title */}
-      <Box display="flex" alignItems="center" gap={2}>
-        {icon && !hasChipsLayout && (
-          <Box
-            className="stats-icon-box"
-            sx={{
-              backgroundColor: highlighted ? "rgba(255,255,255,0.2)" : "#F5F5F5",
-              borderRadius: "10px",
-              width: 40,
-              height: 40,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+      {/* Top row — icon + title */}
+      <Box display="flex" alignItems="center" gap={1.5} mb={1}>
+        <Box
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: "10px",
+            backgroundColor: active ? "rgba(255,255,255,0.2)" : "#F5F5F5",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            transition: "background-color 0.3s ease",
+          }}
+        >
+          <img
+            src={active && iconHover ? iconHover : icon}
+            alt={title}
+            style={{
+              width: 20,
+              height: 20,
+              objectFit: "contain",
+              filter: active && !iconHover ? "brightness(0) invert(1)" : "none",
+              transition: "filter 0.3s ease",
             }}
-          >
-            {typeof icon === "string" ? (
-              <img src={icon} alt={title} style={{ width: 20, height: 20 }} />
-            ) : (
-              icon
-            )}
-          </Box>
-        )}
+          />
+        </Box>
+
         <Typography
-          className="stats-text"
-          fontSize={titleFontSize || "14px"}
-          fontWeight={600}
-          color={highlighted ? "#fff" : "#000"}
+          fontSize="13px"
+          fontWeight={500}
+          color={active ? "#fff" : "text.secondary"}
+          sx={{ transition: "color 0.3s ease", lineHeight: 1.3 }}
         >
           {title}
         </Typography>
       </Box>
 
       {/* Value */}
-      {!hasChipsLayout && (
-        <Typography
-          className="stats-text"
-          fontSize={valueFontSize || "28px"}
-          fontWeight={valueFontWeight || 700}
-          color={highlighted ? "#fff" : "#000"}
-          lineHeight={1}
-          mt={1}
-        >
-          {value}
-        </Typography>
-      )}
+      <Typography
+        fontSize="28px"
+        fontWeight={700}
+        color={active ? "#fff" : "text.primary"}
+        sx={{ transition: "color 0.3s ease", lineHeight: 1.2, mb: 0.5 }}
+      >
+        {value}
+      </Typography>
 
-      {/* Chips layout */}
-      {hasChipsLayout && (
-        <Box display="flex" alignItems="center" justifyContent="space-between" gap={1} mt={0.5}>
-          <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
-            {restrictedAccess.map((item) => (
-              <Chip
-                key={item.label}
-                label={item.label}
-                size="small"
-                variant={item.variant || "filled"}
-                sx={{
-                  ...(item.bg && {
-                    backgroundColor: item.bg,
-                    color: "#fff",
-                    "& .MuiChip-label": { color: "#fff" },
-                  }),
-                }}
-                color={!item.bg ? (item.color || "default") : undefined}
-              />
-            ))}
-          </Box>
-          {icon && (
-            <Box sx={{ display: "flex", alignItems: "center" }}>
-              {typeof icon === "string" ? (
-                <img src={icon} alt={title} style={{ width: 20, height: 20 }} />
-              ) : icon}
-            </Box>
-          )}
-        </Box>
-      )}
-
-      {/* Description + change percentage */}
-      <Box display="flex" alignItems="center" gap={0.5} mt={0.5}>
-        {changePercentage && (
-          <Typography
-            fontSize="12px"
-            fontWeight={500}
-            sx={{ color: highlighted ? "#fff" : "#4CAF50" }}
-          >
-            ▲ {changePercentage}
-          </Typography>
-        )}
-        {description && (
-          <Typography
-            className="stats-text"
-            fontSize="12px"
-            fontWeight={400}
-            sx={{ color: highlighted ? "rgba(255,255,255,0.8)" : "text.disabled" }}
-          >
-            {description}
-          </Typography>
-        )}
-      </Box>
-
-      {progress && <ProgressBar value={progress} />}
-
-      {validationStatus && (
+      {/* Subtitle */}
+      {subtitle && (
         <Box display="flex" alignItems="center" gap={0.5}>
-          <CheckCircleIcon fontSize="12px" style={{ color: "#04C373" }} />
-          <Typography fontSize="12px" fontWeight={400} color="primary.main">
-            {validationStatus}
+          {subtitleIcon && (
+            <img
+              src={subtitleIcon}
+              alt=""
+              style={{
+                width: 14,
+                height: 14,
+                filter: active ? "brightness(0) invert(1)" : "none",
+                transition: "filter 0.3s ease",
+              }}
+            />
+          )}
+          <Typography
+            fontSize="12px"
+            color={active ? "rgba(255,255,255,0.8)" : subtitleColor || "text.secondary"}
+            sx={{ transition: "color 0.3s ease" }}
+          >
+            {subtitle}
           </Typography>
         </Box>
       )}
