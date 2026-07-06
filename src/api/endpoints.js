@@ -179,8 +179,10 @@ getPayroll:       "hr/payroll",
 finalizePayroll:  "hr/payroll",
 sendPayslipEmail: "hr/payroll/send-payslip",
 updatePayroll: "hr/payroll",
-
+getEmployeePayrollHistory: "hr/payroll/employee",
 empGetMySalary: "employee/salary",
+
+getPerformanceOverview: "admin/performance",
 
 
 };

@@ -1,16 +1,13 @@
-import { useState } from "react";
+// src/app/admin/reports/tabs/leaveReportTab.jsx — 
+import { forwardRef, useImperativeHandle, useState, useEffect, useMemo } from "react";
 import { Box, IconButton, Typography } from "@mui/material";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
-import Filter         from "../../../../components/filterBar/filter";
-import PaginatedTable from "../../../../components/dynamicTable";
-
-const mockLeaves = [
-  { id: 1, name: "Ali Hassan",  leaveType: "Annual",    fromDate: "Oct 1, 2025", toDate: "Jun 30, 2026", days: 3, approvedBy: "—",           leaveStatus: "Pending"  },
-  { id: 2, name: "Sara Ahmed",  leaveType: "Sick",      fromDate: "Oct 1, 2025", toDate: "Jun 30, 2026", days: 1, approvedBy: "Ayesha Malik", leaveStatus: "Approved" },
-  { id: 3, name: "Omar Farooq", leaveType: "Emergency", fromDate: "Oct 1, 2025", toDate: "Jun 30, 2026", days: 2, approvedBy: "—",           leaveStatus: "Pending"  },
-  { id: 4, name: "Fatima Khan", leaveType: "Annual",    fromDate: "Oct 1, 2025", toDate: "Jun 30, 2026", days: 5, approvedBy: "—",           leaveStatus: "Rejected" },
-];
+import Filter          from "../../../../components/filterBar/filter";
+import PaginatedTable  from "../../../../components/dynamicTable";
+import { useHRLeaves } from "../../../../hooks/leave";
+import { getEmployeesApi } from "../../../../api/modules/employee";
+import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
 
 const tableHeader = [
   { id: "name",       label: "Employee"    },
@@ -32,19 +29,111 @@ const displayRows = [
   "leave_report_status",
 ];
 
-const LeaveReportTab = () => {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 10, 1));
+const LEAVE_TYPE_LABELS = {
+  sick:      "Sick Leave",
+  casual:    "Casual Leave",
+  annual:    "Annual Leave",
+  maternity: "Maternity Leave",
+  emergency: "Emergency Leave",
+};
+
+const REVIEWER_LABEL_OVERRIDES = {
+  "6a056b5fc2585be29bcd8027": "Super Admin",
+};
+
+const fmtDate = (d) =>
+  d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+
+const startOfCurrentMonth = () => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+};
+
+const LeaveReportTab = forwardRef((props, ref) => {
+  const { leaves, loading, fetchLeaves } = useHRLeaves();
+
+  useEffect(() => {
+    fetchLeaves({ limit: 500, page: 1 });
+  }, []);
+
+  const [employees, setEmployees] = useState([]);
+  useEffect(() => {
+    getEmployeesApi({ limit: 500 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setEmployees(res.data.data.employees || []);
+      }
+    });
+  }, []);
+
+  const [currentDate, setCurrentDate] = useState(startOfCurrentMonth());
+  const [uiFilters,   setUiFilters]   = useState({});
 
   const year      = currentDate.getFullYear();
   const month     = currentDate.getMonth();
   const monthName = currentDate.toLocaleString("default", { month: "long" });
 
+  const tableData = useMemo(() => {
+    const monthStart = new Date(year, month, 1);
+    const monthEnd   = new Date(year, month + 1, 0, 23, 59, 59);
+
+    return leaves
+      .filter((l) => {
+        if (!l.fromDate) return false;
+        const from = new Date(l.fromDate);
+        const to   = l.toDate ? new Date(l.toDate) : from;
+        const inMonth = from <= monthEnd && to >= monthStart;
+
+        const matchEmp    = !uiFilters.employee  || l.employee?._id === uiFilters.employee;
+        const matchType   = !uiFilters.leaveType || l.leaveType === uiFilters.leaveType;
+        const matchStatus = !uiFilters.status    || l.status === uiFilters.status;
+
+        return inMonth && matchEmp && matchType && matchStatus;
+      })
+      .map((l) => ({
+        id:          l._id,
+        name:        l.employee?.fullName || "—",
+        leaveType:   LEAVE_TYPE_LABELS[l.leaveType] || l.leaveType || "—",
+        fromDate:    fmtDate(l.fromDate),
+        toDate:      fmtDate(l.toDate),
+        days:        l.totalDays ?? 1,
+        approvedBy:  REVIEWER_LABEL_OVERRIDES[l.reviewedBy?._id]
+          || l.reviewedBy?.name
+          || l.reviewedBy?.fullName
+          || "—",
+        leaveStatus: l.status ? l.status.charAt(0).toUpperCase() + l.status.slice(1) : "Pending",
+      }));
+  }, [leaves, year, month, uiFilters]);
+
+  useImperativeHandle(ref, () => ({
+    exportData: () => {
+      const doc = createReportDoc("Leave Report", `${monthName} ${year}`);
+
+      const approved = tableData.filter((l) => l.leaveStatus === "Approved").length;
+      const pending  = tableData.filter((l) => l.leaveStatus === "Pending").length;
+      const rejected = tableData.filter((l) => l.leaveStatus === "Rejected").length;
+
+      let y = addSummaryCards(doc, [
+        { label: "Total Requests", value: tableData.length },
+        { label: "Approved",       value: approved, color: [4, 195, 115] },
+        { label: "Pending",        value: pending,  color: [249, 151, 47] },
+        { label: "Rejected",       value: rejected, color: [255, 0, 0] },
+      ]);
+
+      addReportTable(doc, {
+        head: ["Employee", "Type", "From", "To", "Days", "Approved By", "Status"],
+        body: tableData.map((l) => [
+          l.name, l.leaveType, l.fromDate, l.toDate, String(l.days), l.approvedBy, l.leaveStatus,
+        ]),
+        startY: y,
+      });
+
+      savePdf(doc, `leave-report-${monthName}-${year}.pdf`.toLowerCase());
+    },
+  }));
+
   return (
     <Box>
-      {/* ── Month Navigator + Filters ─────────────────────────────────── */}
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-
-        {/* Month nav */}
         <Box display="flex" alignItems="center" gap={1.5}>
           <IconButton
             onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
@@ -70,21 +159,23 @@ const LeaveReportTab = () => {
           </IconButton>
         </Box>
 
-        {/* Filters */}
-        <Filter mode="leave_report" onFilterChange={(f) => console.log(f)} />
+        <Filter
+          mode="leave_report"
+          employees={employees}
+          onFilterChange={(f) => setUiFilters(f)}
+        />
       </Box>
 
-      {/* ── Table ────────────────────────────────────────────────────────── */}
       <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", p: 1 }}>
         <PaginatedTable
           tableHeader={tableHeader}
-          tableData={mockLeaves}
+          tableData={tableData}
           displayRows={displayRows}
-          isLoading={false}
+          isLoading={loading}
         />
       </Box>
     </Box>
   );
-};
+});
 
 export default LeaveReportTab;

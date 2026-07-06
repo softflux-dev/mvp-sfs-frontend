@@ -1,7 +1,7 @@
 // employees/employeeDetail.jsx
-import { useState } from "react";
-import { Box, IconButton, Typography } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Box, IconButton, Typography, CircularProgress } from "@mui/material";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import CustomTabs           from "../../../components/tabs";
 import AddEmployee          from "./addEmployee";
@@ -13,6 +13,7 @@ import TasksTab             from "./employeeDetailTabs/tasksTab";
 import DocumentsTab         from "./employeeDetailTabs/documentsTab";
 import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
 import { useEmployee } from "../../../hooks/employee";
+import { getEmployeeByIdApi } from "../../../api/modules/employee";
 
 
 const tabs = [
@@ -22,16 +23,64 @@ const tabs = [
   { id: 3, label: "Tasks"         },
   { id: 4, label: "Documents"     },
 ];
-
+const mapEmployee = (emp) => ({
+  id:             emp._id,
+  empId:          emp.empId,
+  machineId:      emp.machineId || "",
+  name:           emp.fullName,
+  avatar:         emp.avatar || "",
+  email:          emp.email,
+  department:     emp.department?.name || "—",
+  departmentId:   emp.department?._id  || "",
+  designation:    emp.designation      || "—",
+  joiningDate: emp.joiningDate
+    ? new Date(emp.joiningDate).toLocaleDateString("en-US", {
+        month: "short", day: "numeric", year: "numeric",
+      })
+    : "—",
+  role:           emp.role?.roleName || "—",
+  roleId:         emp.role?._id      || "",
+  type:           emp.employmentType || "—",
+  status:         emp.isActive ? "Active" : "Inactive",
+  phone:          emp.phone,
+  workingHours:   emp.workingHours,
+  monthlySalary:  emp.monthlySalary,
+  hourlyRate:     emp.hourlyRate,
+  salaryBreakdown: emp.salaryBreakdown,
+  mustChangePassword: emp.mustChangePassword,
+});
 const EmployeeDetail = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const [employee, setEmployee] = useState(location.state?.employee || {});
+  const { id }    = useParams();
+
+  const [employee,    setEmployee]    = useState(location.state?.employee || null);
+  const [loading,     setLoading]     = useState(!location.state?.employee);
+  const [fetchError,  setFetchError]  = useState("");
 
 
   const [activeTab, setActiveTab] = useState(1);
   const [editOpen,  setEditOpen]  = useState(false);
   const { updateEmployee, actionLoading } = useEmployee();
+
+  useEffect(() => {
+    if (location.state?.employee) return;
+    if (!id) return;
+
+    setLoading(true);
+    setFetchError("");
+    getEmployeeByIdApi(id).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setEmployee(mapEmployee(res.data.data.employee));
+      } else {
+        setFetchError(res?.data?.message || "Failed to load employee.");
+      }
+    }).catch(() => {
+      setFetchError("Something went wrong.");
+    }).finally(() => setLoading(false));
+  }, [id]);
+
+
   const [apiError, setApiError] = useState("");
 
   const handleSave = async (formData) => {
@@ -63,6 +112,30 @@ const EmployeeDetail = () => {
     setApiError(result.message);
   }
 };
+
+if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" py={10}>
+        <CircularProgress size={32} sx={{ color: "#AA2493" }} />
+      </Box>
+    );
+  }
+
+  if (fetchError || !employee) {
+    return (
+      <Box display="flex" flexDirection="column" alignItems="center" py={10} gap={1}>
+        <Typography fontSize={15} color="text.secondary">
+          {fetchError || "Employee not found."}
+        </Typography>
+        <Typography
+          fontSize={13} color="#AA2493" sx={{ cursor: "pointer" }}
+          onClick={() => navigate(-1)}
+        >
+          Go back
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <>

@@ -1,18 +1,11 @@
-import { useState } from "react";
-import { Box, IconButton, Typography } from "@mui/material";
+// src/app/admin/reports/tabs/payrollReportTab.jsx — FULL REPLACEMENT
+import { forwardRef, useImperativeHandle, useState, useEffect, useMemo } from "react";
+import { Box, IconButton, Typography, CircularProgress } from "@mui/material";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
 import PaginatedTable from "../../../../components/dynamicTable";
-
-const mockPayroll = [
-  { id: 1, name: "Ali Hassan",  baseSalary: 120000, bonus: 6106,  deductions: 5000, netPay: 126090 },
-  { id: 2, name: "Sara Ahmed",  baseSalary: 150000, bonus: 9133,  deductions: 5000, netPay: 155267 },
-  { id: 3, name: "Omar Farooq", baseSalary: 100000, bonus: 2878,  deductions: 5000, netPay: 101523 },
-  { id: 4, name: "Fatima Khan", baseSalary: 110000, bonus: 13633, deductions: 5000, netPay: 115379 },
-  { id: 5, name: "Sara Ahmed",  baseSalary: 80000,  bonus: 4183,  deductions: 5000, netPay: 81789  },
-  { id: 6, name: "Omar Farooq", baseSalary: 140000, bonus: 3956,  deductions: 5000, netPay: 140195 },
-  { id: 7, name: "Fatima Khan", baseSalary: 130000, bonus: 7377,  deductions: 5000, netPay: 129345 },
-];
+import { usePayroll }  from "../../../../hooks/payroll";
+import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
 
 const tableHeader = [
   { id: "name",       label: "Employee"   },
@@ -30,21 +23,139 @@ const displayRows = [
   "payroll_net_pay",
 ];
 
-const PayrollReportTab = () => {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 10, 1));
+const MAX_MONTHS_BACK = 24;
 
-  const year      = currentDate.getFullYear();
-  const month     = currentDate.getMonth();
-  const monthName = currentDate.toLocaleString("default", { month: "long" });
+const PayrollReportTab = forwardRef((props, ref) => {
+  const { payrolls, loading, fetchPayroll } = usePayroll();
 
-  const total = mockPayroll.reduce((sum, r) => sum + r.netPay, 0);
+  const [currentDate, setCurrentDate] = useState(null);
+  const [resolving,   setResolving]   = useState(true);
+  const [hasAnyData,  setHasAnyData]  = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setResolving(true);
+      const now = new Date();
+      let found = null;
+
+      for (let i = 0; i <= MAX_MONTHS_BACK; i++) {
+        const probe = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const result = await fetchPayroll(probe.getMonth(), probe.getFullYear());
+        if (cancelled) return;
+        if (result?.data?.length > 0) {
+          found = { month: probe.getMonth(), year: probe.getFullYear() };
+          break;
+        }
+      }
+
+      if (!cancelled) {
+        if (found) {
+          setCurrentDate(found);
+          setHasAnyData(true);
+        } else {
+          setCurrentDate({ month: now.getMonth(), year: now.getFullYear() });
+          setHasAnyData(false);
+        }
+        setResolving(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!currentDate || resolving) return;
+    fetchPayroll(currentDate.month, currentDate.year);
+  }, [currentDate?.month, currentDate?.year]);
+
+  const year      = currentDate?.year;
+  const month     = currentDate?.month;
+  const monthName = currentDate
+    ? new Date(year, month, 1).toLocaleString("default", { month: "long" })
+    : "";
+
+  const handlePrev = () =>
+    setCurrentDate((prev) => ({
+      month: prev.month - 1 < 0 ? 11 : prev.month - 1,
+      year:  prev.month - 1 < 0 ? prev.year - 1 : prev.year,
+    }));
+
+  const handleNext = () =>
+    setCurrentDate((prev) => ({
+      month: prev.month + 1 > 11 ? 0 : prev.month + 1,
+      year:  prev.month + 1 > 11 ? prev.year + 1 : prev.year,
+    }));
+
+  const now = new Date();
+  const isAtCurrentMonth = currentDate && year === now.getFullYear() && month === now.getMonth();
+
+  const tableData = useMemo(() => {
+    return payrolls.map((p) => ({
+      id:         p.id || p._id,
+      name:       p.name || "—",
+      baseSalary: p.monthlySalary ?? 0,
+      bonus:      p.bonusAmount   ?? 0,
+      deductions: p.deductionAmount ?? 0,
+      netPay:     p.netSalary     ?? 0,
+    }));
+  }, [payrolls]);
+
+  const total = tableData.reduce((sum, r) => sum + (r.netPay || 0), 0);
+
+  useImperativeHandle(ref, () => ({
+    exportData: () => {
+      if (!hasAnyData || !currentDate) return;
+
+      const doc = createReportDoc("Payroll Report", `${monthName} ${year}`);
+
+      const totalBase       = tableData.reduce((s, r) => s + r.baseSalary, 0);
+      const totalBonus      = tableData.reduce((s, r) => s + r.bonus, 0);
+      const totalDeductions = tableData.reduce((s, r) => s + r.deductions, 0);
+
+      let y = addSummaryCards(doc, [
+        { label: "Employees",         value: tableData.length },
+        { label: "Total Base",        value: `Rs${totalBase.toLocaleString()}` },
+        { label: "Total Bonus",       value: `Rs${totalBonus.toLocaleString()}`, color: [4, 195, 115] },
+        { label: "Total Deductions",  value: `Rs${totalDeductions.toLocaleString()}`, color: [255, 0, 0] },
+      ]);
+
+      y = addReportTable(doc, {
+        head: ["Employee", "Base Salary", "Bonus", "Deductions", "Net Pay"],
+        body: tableData.map((p) => [
+          p.name,
+          `Rs${p.baseSalary.toLocaleString()}`,
+          `Rs${p.bonus.toLocaleString()}`,
+          `Rs${p.deductions.toLocaleString()}`,
+          `Rs${p.netPay.toLocaleString()}`,
+        ]),
+        startY: y,
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+      });
+
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(30, 30, 30);
+      doc.text(`Total Net Pay: Rs${total.toLocaleString()}`, 196, y + 10, { align: "right" });
+
+      savePdf(doc, `payroll-report-${monthName}-${year}.pdf`.toLowerCase());
+    },
+  }));
+
+  if (resolving || !currentDate) {
+    return (
+      <Box display="flex" justifyContent="center" py={8}>
+        <CircularProgress size={28} sx={{ color: "#AA2493" }} />
+      </Box>
+    );
+  }
 
   return (
     <Box>
-      {/* ── Month Navigator ───────────────────────────────────────────── */}
       <Box display="flex" alignItems="center" gap={1.5} mb={2}>
         <IconButton
-          onClick={() => setCurrentDate(new Date(year, month - 1, 1))}
+          onClick={handlePrev}
           size="small"
           sx={{ bgcolor: "#F5F5F5", borderRadius: "8px", width: 32, height: 32, "&:hover": { bgcolor: "#E0E0E0" } }}
         >
@@ -59,41 +170,56 @@ const PayrollReportTab = () => {
         </Box>
 
         <IconButton
-          onClick={() => setCurrentDate(new Date(year, month + 1, 1))}
+          onClick={handleNext}
           size="small"
-          sx={{ background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)", borderRadius: "8px", width: 32, height: 32, "&:hover": { opacity: 0.9 } }}
+          disabled={isAtCurrentMonth}
+          sx={{
+            background: isAtCurrentMonth ? "#E0E0E0" : "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
+            borderRadius: "8px", width: 32, height: 32,
+            "&:hover": { opacity: isAtCurrentMonth ? 1 : 0.9 },
+          }}
         >
           <ChevronRight size={16} color="#fff" />
         </IconButton>
       </Box>
 
-      {/* ── Table ────────────────────────────────────────────────────────── */}
-      <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", p: 1 }}>
-        <PaginatedTable
-          tableHeader={tableHeader}
-          tableData={mockPayroll}
-          displayRows={displayRows}
-          isLoading={false}
-          hidepagination
-        />
-
-        {/* ── Total row ──────────────────────────────────────────────────── */}
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ px: 2, py: 2, borderTop: "1px solid #F5F5F5" }}
-        >
-          <Typography fontSize="14px" fontWeight={700} color="text.primary">
-            Total
+      {!hasAnyData && !loading ? (
+        <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={8}
+          bgcolor="#fff" borderRadius="25px">
+          <Typography fontSize="15px" color="text.secondary" mb={0.5}>
+            No payroll has been generated in the last {MAX_MONTHS_BACK} months.
           </Typography>
-          <Typography fontSize="14px" fontWeight={700} color="text.primary">
-            Rs{total.toLocaleString()}
+          <Typography fontSize="13px" color="text.secondary">
+            Generate payroll from the Payroll Management page to see it here.
           </Typography>
         </Box>
-      </Box>
+      ) : (
+        <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", p: 1 }}>
+          <PaginatedTable
+            tableHeader={tableHeader}
+            tableData={tableData}
+            displayRows={displayRows}
+            isLoading={loading}
+            hidepagination
+          />
+
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ px: 2, py: 2, borderTop: "1px solid #F5F5F5" }}
+          >
+            <Typography fontSize="14px" fontWeight={700} color="text.primary">
+              Total
+            </Typography>
+            <Typography fontSize="14px" fontWeight={700} color="text.primary">
+              Rs{total.toLocaleString()}
+            </Typography>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
-};
+});
 
 export default PayrollReportTab;

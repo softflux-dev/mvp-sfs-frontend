@@ -19,3 +19,6 @@ export const sendPayslipWithPdfApi = (payload) =>
 
 export const updatePayrollApi = (id, payload) =>
   api(`${ENDPOINTS.updatePayroll}/${id}`, payload, "patch");
+
+export const getEmployeePayrollHistoryApi = (employeeId) =>
+  api(`${ENDPOINTS.getEmployeePayrollHistory}/${employeeId}`, null, "get");

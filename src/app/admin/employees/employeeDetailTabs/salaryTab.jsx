@@ -1,14 +1,11 @@
-// employees/employeeDetailTabs/salaryTab.jsx
-import { Box, Grid, Typography } from "@mui/material";
+// employees/employeeDetailTabs/salaryTab.jsx — FULL REPLACEMENT
+import { useState, useEffect } from "react";
+import { Box, Typography, CircularProgress } from "@mui/material";
 import PaginatedTable from "../../../../components/dynamicTable";
 import downloadIcon   from "../../../../assets/icons/download.svg";
-
-// ── Mock payslip history ──────────────────────────────────────────────────────
-const mockPayslips = [
-  { id: 1, month: "February 2026", base: "Rs120000", bonus: "Rs10000", deductions: "Rs5000", netPay: "Rs125000", payslipStatus: "Paid" },
-  { id: 2, month: "January 2026",  base: "Rs120000", bonus: "Rs0",     deductions: "Rs5000", netPay: "Rs115000", payslipStatus: "Paid" },
-  { id: 3, month: "December 2025", base: "Rs120000", bonus: "Rs15000", deductions: "Rs5000", netPay: "Rs130000", payslipStatus: "Paid" },
-];
+import { getEmployeePayrollHistoryApi } from "../../../../api/modules/payroll";
+import { captureToPdfBase64, getLogo } from "../../../hrPortal/payroll/viewPayslipDialog";
+import PayslipTemplate from "../../../hrPortal/payroll/payslipTemplate";
 
 const tableHeader = [
   { id: "month",      label: "Month"      },
@@ -51,11 +48,83 @@ const SalaryStatCard = ({ label, value }) => (
 );
 
 const SalaryTab = ({ employee = {} }) => {
-  const monthlySalary  = employee.monthlySalary ?? 120000;
-  const employmentType = employee.type          || "Full-time";
+  const [payslips,     setPayslips]     = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
 
-  const handleDownload = (row) => {
-    console.log("Download payslip:", row.month);
+  useEffect(() => {
+    if (!employee.id) return;
+    setLoading(true);
+    getEmployeePayrollHistoryApi(employee.id).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setPayslips(res.data.data.payslips || []);
+      }
+    }).finally(() => setLoading(false));
+  }, [employee.id]);
+
+  const monthlySalary  = employee.monthlySalary ?? 0;
+  const employmentType = employee.type          || "—";
+
+  // ── Table rows — most recent month/year first ────────────────────────────
+  const sortedPayslips = [...payslips].sort((a, b) => b.year - a.year || b.monthIndex - a.monthIndex);
+
+  const tableData = sortedPayslips.map((p) => ({
+    id:            p.id,
+    month:         `${p.month} ${p.year}`,
+    base:          `Rs${(p.baseSalary || 0).toLocaleString()}`,
+    bonus:         p.bonus,
+    deductions:    p.deductions,
+    netPay:        `Rs${(p.netPay || 0).toLocaleString()}`,
+    payslipStatus: p.status === "finalized" ? "Paid" : "Draft",
+  }));
+
+  // ── Download — renders the same PayslipTemplate off-screen, captures it
+  // via html2canvas, exactly like ViewPayslipDialog's handleDownload ────────
+  const handleDownload = async (row) => {
+    const full = sortedPayslips.find((p) => p.id === row.id);
+    if (!full) return;
+
+    setDownloadingId(row.id);
+    try {
+      const logoDataUrl = await getLogo();
+
+      // Off-screen container — same pattern as HiddenPayslipCapture
+      const container = document.createElement("div");
+      container.style.position = "fixed";
+      container.style.top = "-9999px";
+      container.style.left = "-9999px";
+      document.body.appendChild(container);
+
+      const { createRoot } = await import("react-dom/client");
+      const root = createRoot(container);
+
+      await new Promise((resolve) => {
+        root.render(
+          <PayslipTemplate
+            payroll={full}
+            month={full.monthIndex}
+            year={full.year}
+            logoDataUrl={logoDataUrl}
+          />
+        );
+        // Wait a tick for paint before capturing
+        setTimeout(resolve, 300);
+      });
+
+      const base64 = await captureToPdfBase64(container.firstChild);
+
+      const link = document.createElement("a");
+      link.href = `data:application/pdf;base64,${base64}`;
+      link.download = `payslip-${(full.name || employee.name || "employee").replace(/\s+/g, "-")}-${full.month}-${full.year}.pdf`;
+      link.click();
+
+      root.unmount();
+      document.body.removeChild(container);
+    } catch (err) {
+      console.error("Payslip download failed:", err);
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -79,14 +148,20 @@ const SalaryTab = ({ employee = {} }) => {
       </Typography>
 
       <Box bgcolor="#fff" borderRadius="25px" p={1}>
-        <PaginatedTable
-          tableHeader={tableHeader}
-          tableData={mockPayslips}
-          displayRows={displayRows}
-          downloadIcon={downloadIcon}
-          onDownloadClick={handleDownload}
-          isLoading={false}
-        />
+        {loading ? (
+          <Box display="flex" justifyContent="center" py={6}>
+            <CircularProgress size={28} sx={{ color: "#AA2493" }} />
+          </Box>
+        ) : (
+          <PaginatedTable
+            tableHeader={tableHeader}
+            tableData={tableData}
+            displayRows={displayRows}
+            downloadIcon={downloadIcon}
+            onDownloadClick={handleDownload}
+            isLoading={false}
+          />
+        )}
       </Box>
 
     </Box>

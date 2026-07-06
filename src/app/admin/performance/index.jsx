@@ -1,6 +1,6 @@
-// app/admin/performance/index.jsx
-import { Box, Grid, Typography } from "@mui/material";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Box, Grid, Typography, Skeleton } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 import HeaderText                from "../../../components/headerText";
 import StatsCard                 from "../../../components/cards/statsCard";
@@ -9,34 +9,17 @@ import PaginatedTable            from "../../../components/dynamicTable";
 import CustomButton              from "../../../components/customButton";
 import WorkloadDistributionChart from "./workloadDistributionChart";
 import TaskCompletionSpeedChart  from "./taskCompletionSpeedChart";
+import { usePerformance }        from "../../../hooks/performance";
+import { useDepartment }         from "../../../hooks/department";
+import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../utils/reportPdfExport";
 
 import completionIcon from "../../../assets/icons/task-completion.svg";
 import overdueIcon    from "../../../assets/icons/overdue-time.svg";
 import performerIcon  from "../../../assets/icons/employees.svg";
 import balanceIcon    from "../../../assets/icons/attendance-icon.svg";
 import viewIcon       from "../../../assets/icons/view.svg";
-import exportIcon    from "../../../assets/icons/upload-doc-icon.svg";
+import exportIcon     from "../../../assets/icons/upload-doc-icon.svg";
 
-// ── Mock performance data ─────────────────────────────────────────────────────
-const mockPerformance = [
-  { id: 1, name: "Ali Hassan",   avatar: "", department: "Engineering",    assigned: 2, completed: 1, inProgress: 1, delayed: 0, avgTime: "1.6d", completionRate: 87 },
-  { id: 2, name: "Sara Ahmed",   avatar: "", department: "Engineering",    assigned: 0, completed: 0, inProgress: 0, delayed: 0, avgTime: "2.5d", completionRate: 87 },
-  { id: 3, name: "Omar Farooq",  avatar: "", department: "Design",         assigned: 3, completed: 1, inProgress: 0, delayed: 2, avgTime: "1.4d", completionRate: 87 },
-  { id: 4, name: "Fatima Khan",  avatar: "", department: "QA",             assigned: 2, completed: 0, inProgress: 1, delayed: 0, avgTime: "2.4d", completionRate: 87 },
-  { id: 5, name: "Bilal Raza",   avatar: "", department: "Engineering",    assigned: 1, completed: 0, inProgress: 0, delayed: 0, avgTime: "2.0d", completionRate: 0  },
-  { id: 6, name: "Ali Azeem",    avatar: "", department: "UI/UX Designer", assigned: 0, completed: 0, inProgress: 0, delayed: 0, avgTime: "1.0d", completionRate: 0  },
-  { id: 7, name: "Usman Shah",   avatar: "", department: "HR",             assigned: 2, completed: 0, inProgress: 1, delayed: 1, avgTime: "3.6d", completionRate: 87 },
-];
-
-// ── Mock delayed tasks data ───────────────────────────────────────────────────
-const mockDelayedTasks = [
-  { id: 1, taskName: "Build API Endpoints",       assigneeName: "Ali Hassan",  assigneeAvatar: "", project: "E-Commerce Platform",  deadline: "2026-03-15", daysOverdue: 2 },
-  { id: 2, taskName: "Design Product Pages",      assigneeName: "Omar Farooq", assigneeAvatar: "", project: "E-Commerce Platform",  deadline: "2026-03-12", daysOverdue: 5 },
-  { id: 3, taskName: "Database Schema Design",    assigneeName: "Usman Shah",  assigneeAvatar: "", project: "Mobile Banking App",    deadline: "2026-03-10", daysOverdue: 7 },
-  { id: 4, taskName: "Mobile Responsive Design",  assigneeName: "Omar Farooq", assigneeAvatar: "", project: "CMS Website Redesign",  deadline: "2026-03-09", daysOverdue: 8 },
-];
-
-// ── Performance table config ──────────────────────────────────────────────────
 const perfTableHeader = [
   { id: "name",           label: "Employee"    },
   { id: "department",     label: "Department"  },
@@ -61,7 +44,6 @@ const perfDisplayRows = [
   "perf_view",
 ];
 
-// ── Delayed tasks table config ────────────────────────────────────────────────
 const delayedTableHeader = [
   { id: "taskName",    label: "Task"         },
   { id: "assignee",    label: "Assignee"     },
@@ -72,117 +54,166 @@ const delayedTableHeader = [
 
 const delayedDisplayRows = [
   "task_name",
-  "task_assignee",
+  "task_assignees",
   "task_project",
-  "deadline",
+  "task_due_date",
   "perf_days_overdue",
 ];
 
 const Performance = () => {
+  const navigate = useNavigate();
+  const { departments, fetchDepartments } = useDepartment();
+  const { data, loading, fetchPerformance } = usePerformance();
+
   const [filters, setFilters] = useState({});
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    fetchDepartments({ limit: 100 });
+  }, []);
+
+  const handleFilterChange = (f) => {
+    setFilters(f);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchPerformance({ search: f.search || "", department: f.department || "" });
+    }, 350);
+  };
+
+  const stats = data?.stats || { avgCompletionRate: "0%", overdueTasks: 0, topPerformer: "—", workloadBalance: "—" };
+  const members = data?.members || [];
+  const delayed = data?.delayed || [];
+  const workload = data?.workload || [];
+  const speedChart = data?.speedChart || { data: [], lineConfig: [] };
 
   const statsData = [
-    {
-      id: 1,
-      title: "Avg Completion Rate",
-      value: "12%",
-      description: "↑ 12% from last month",
-      icon: completionIcon,
-    },
-    {
-      id: 2,
-      title: "Overdue Tasks",
-      value: "3",
-      description: "Needs attention",
-      icon: overdueIcon,
-      isHighlighted: true,
-    },
-    {
-      id: 3,
-      title: "Top Performer",
-      value: "Ali Hassan",
-      description: "↑ 50% completion",
-      icon: performerIcon,
-    },
-    {
-      id: 4,
-      title: "Workload Balance",
-      value: "Good",
-      description: "Evenly distributed",
-      icon: balanceIcon,
-    },
+    { id: 1, title: "Avg Completion Rate", value: stats.avgCompletionRate, description: "Across all employees", icon: completionIcon },
+    { id: 2, title: "Overdue Tasks",       value: String(stats.overdueTasks), description: "Needs attention", icon: overdueIcon, isHighlighted: stats.overdueTasks > 0 },
+    { id: 3, title: "Top Performer",       value: stats.topPerformer, description: "Highest completion rate", icon: performerIcon },
+    { id: 4, title: "Workload Balance",    value: stats.workloadBalance, description: stats.workloadBalance === "Good" ? "Evenly distributed" : "Some employees overloaded", icon: balanceIcon },
   ];
 
-  const filteredData = mockPerformance.filter((emp) => {
-    const search = filters.search?.toLowerCase() || "";
-    const dept   = filters.department || "";
-    const matchSearch = !search || emp.name.toLowerCase().includes(search);
-    const matchDept   = !dept   || emp.department.toLowerCase() === dept.toLowerCase();
-    return matchSearch && matchDept;
-  });
+  // ── Export ────────────────────────────────────────────────────────────
+  const handleExport = () => {
+    if (loading || !data) return;
+
+    const doc = createReportDoc("Performance Monitoring Report");
+
+    let y = addSummaryCards(doc, [
+      { label: "Avg Completion Rate", value: stats.avgCompletionRate },
+      { label: "Overdue Tasks",       value: String(stats.overdueTasks), color: [255, 0, 0] },
+      { label: "Top Performer",       value: stats.topPerformer },
+      { label: "Workload Balance",    value: stats.workloadBalance, color: stats.workloadBalance === "Good" ? [4, 195, 115] : [255, 151, 47] },
+    ]);
+
+    // ── Employee performance table ──────────────────────────────────────
+    y = addReportTable(doc, {
+      head: ["Employee", "Department", "Assigned", "Completed", "In Progress", "Overdue", "Avg Time", "Rate"],
+      body: members.map((m) => [
+        m.name, m.department, String(m.assigned), String(m.completed),
+        String(m.inProgress), String(m.delayed), m.avgTime, `${m.completionRate}%`,
+      ]),
+      startY: y,
+    });
+
+    // ── Workload distribution table ─────────────────────────────────────
+    if (workload.length) {
+      doc.setFontSize(12);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(30, 30, 30);
+      doc.text("Workload Distribution", 14, y + 10);
+
+      y = addReportTable(doc, {
+        head: ["Employee", "Active Tasks"],
+        body: workload.map((w) => [w.name, String(w.activeTasks)]),
+        startY: y + 14,
+      });
+    }
+
+    // ── Delayed tasks table ──────────────────────────────────────────────
+    if (delayed.length) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.setFont(undefined, "bold");
+      doc.setTextColor(30, 30, 30);
+      doc.text("Delayed Tasks", 14, 20);
+
+      addReportTable(doc, {
+        head: ["Task", "Assignee(s)", "Project", "Deadline", "Days Overdue"],
+        body: delayed.map((t) => [
+          t.taskName,
+          (t.assigneeNames || []).join(", ") || "Unassigned",
+          t.project,
+          t.dueDate,
+          String(t.daysOverdue),
+        ]),
+        startY: 26,
+      });
+    }
+
+    savePdf(doc, `performance-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   return (
     <>
-      {/* ── Header ───────────────────────────────────────────────────────── */}
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid item size={{ xs: 12, md: 8 }}>
-          <HeaderText
-            title="Performance Monitoring"
-            subtitle="Track employee productivity and project delivery"
-          />
+          <HeaderText title="Performance Monitoring" subtitle="Track employee productivity and project delivery" />
         </Grid>
         <Grid item size={{ xs: 12, md: 4 }}>
           <Box display="flex" justifyContent="flex-end">
             <CustomButton
               btnLabel="Export Report"
               variant="gradient"
-             startIcon={<img src={exportIcon} alt="Export" />}
-              handlePressBtn={() => console.log("Export")}
+              startIcon={<img src={exportIcon} alt="Export" />}
+              handlePressBtn={handleExport}
+              isDisabled={loading || !data}
             />
           </Box>
         </Grid>
       </Grid>
 
-      {/* ── Stats Row ────────────────────────────────────────────────────── */}
       <Grid container spacing={2} mb={3}>
         {statsData.map((stat) => (
           <Grid item size={{ xs: 12, sm: 6, md: 3 }} key={stat.id}>
-            <StatsCard
-              title={stat.title}
-              value={stat.value}
-              description={stat.description}
-              icon={stat.icon}
-              isHighlighted={stat.isHighlighted}
-            />
+            {loading ? (
+              <Box sx={{ backgroundColor: "#fff", borderRadius: "30px", p: 2, height: "130px" }}>
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: "10px" }} />
+                  <Skeleton variant="text" width="60%" height={20} />
+                </Box>
+                <Skeleton variant="text" width="40%" height={36} sx={{ mb: 1 }} />
+                <Skeleton variant="text" width="55%" height={16} />
+              </Box>
+            ) : (
+              <StatsCard title={stat.title} value={stat.value} description={stat.description} icon={stat.icon} isHighlighted={stat.isHighlighted} />
+            )}
           </Grid>
         ))}
       </Grid>
 
-      {/* ── Filter ───────────────────────────────────────────────────────── */}
-      <Filter mode="performance" onFilterChange={setFilters} />
+      <Filter mode="performance" departments={departments} onFilterChange={handleFilterChange} />
 
-      {/* ── Employee Performance Table ────────────────────────────────────── */}
       <Box mt={2} bgcolor="#fff" borderRadius="25px" p={1}>
         <PaginatedTable
           tableHeader={perfTableHeader}
-          tableData={filteredData}
+          tableData={members}
           displayRows={perfDisplayRows}
           viewIcon={viewIcon}
-          isLoading={false}
+          onViewClick={(row) => navigate(`/employees/${row.id}`)}
+          isLoading={loading}
         />
       </Box>
 
-      {/* ── Charts Row — Workload + Task Completion Speed ─────────────────── */}
       <Grid container spacing={3} sx={{ mt: 2 }} alignItems="stretch">
         <Grid item size={{ xs: 12, md: 6 }}>
-          <WorkloadDistributionChart />
+          <WorkloadDistributionChart data={workload} loading={loading} />
         </Grid>
         <Grid item size={{ xs: 12, md: 6 }}>
-          <TaskCompletionSpeedChart />
+          <TaskCompletionSpeedChart data={speedChart.data} lineConfig={speedChart.lineConfig} loading={loading} />
         </Grid>
       </Grid>
 
-      {/* ── Delayed Tasks Table ───────────────────────────────────────────── */}
       <Box mt={3}>
         <Typography fontSize="20px" fontWeight={600} color="text.primary" mb={2}>
           Delayed Tasks
@@ -190,10 +221,10 @@ const Performance = () => {
         <Box bgcolor="#fff" borderRadius="25px" p={1}>
           <PaginatedTable
             tableHeader={delayedTableHeader}
-            tableData={mockDelayedTasks}
+            tableData={delayed}
             displayRows={delayedDisplayRows}
-            isLoading={false}
-            showPagination={false}
+            isLoading={loading}
+            showPagination={true}
           />
         </Box>
       </Box>

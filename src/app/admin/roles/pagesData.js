@@ -20,6 +20,7 @@ export const hrPages = [
   { id: "hr-leaves",      title: "Leave Management",      path: "/leave-management"      },
   { id: "hr-holidays",    title: "Holiday Management",     path: "/holiday-management"    },
   { id: "hr-payroll",     title: "Payroll",               path: "/payroll-management"    },
+  { id: "hr-bonus-increment",   title: "Bonus & Increment",     path: "/bonus-increment"       },
  
 ];
 

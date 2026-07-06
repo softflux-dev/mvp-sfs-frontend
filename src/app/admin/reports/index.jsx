@@ -1,5 +1,5 @@
-// Reports.jsx
-import { useState } from "react";
+// Reports.jsx — FULL REPLACEMENT
+import { useRef, useState } from "react";
 import { Box, Grid } from "@mui/material";
 
 import HeaderText  from "../../../components/headerText";
@@ -25,10 +25,14 @@ const tabs = [
 
 const Reports = () => {
   const [activeTab, setActiveTab] = useState(1);
+  const tabRefs = useRef({}); // { 1: ref, 2: ref, ... }
+
+  const handleExport = () => {
+    tabRefs.current[activeTab]?.exportData?.();
+  };
 
   return (
     <>
-      {/* ── Header ─────────────────────────────────────────────────────── */}
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid size={{ xs: 12, md: 6 }}>
           <HeaderText
@@ -39,29 +43,24 @@ const Reports = () => {
         <Grid size={{ xs: 12, md: 6 }}>
           <Box display="flex" justifyContent="flex-end">
             <CustomButton
-            
               btnLabel="Export Report"
-              handlePressBtn={() => console.log("Export")}
+              handlePressBtn={handleExport}
               variant="gradient"
-              startIcon={
-                          <img src={ExportIcon} alt="export" style={{ width: 15, height: 15 }} />
-                        }
+              startIcon={<img src={ExportIcon} alt="export" style={{ width: 15, height: 15 }} />}
             />
           </Box>
         </Grid>
       </Grid>
 
-      {/* ── Tabs ───────────────────────────────────────────────────────── */}
       <CustomTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* ── Tab Content ────────────────────────────────────────────────── */}
       <Box mt={2}>
-        {activeTab === 1 && <EmployeeProductivityTab />}
-        {activeTab === 2 && <TaskCompletionTab />}
-        {activeTab === 3 && <ProjectPerformanceTab />}
-        {activeTab === 4 && <AttendanceReportTab />}
-        {activeTab === 5 && <LeaveReportTab />}
-        {activeTab === 6 && <PayrollReportTab />}
+        {activeTab === 1 && <EmployeeProductivityTab ref={(r) => (tabRefs.current[1] = r)} />}
+        {activeTab === 2 && <TaskCompletionTab       ref={(r) => (tabRefs.current[2] = r)} />}
+        {activeTab === 3 && <ProjectPerformanceTab   ref={(r) => (tabRefs.current[3] = r)} />}
+        {activeTab === 4 && <AttendanceReportTab     ref={(r) => (tabRefs.current[4] = r)} />}
+        {activeTab === 5 && <LeaveReportTab          ref={(r) => (tabRefs.current[5] = r)} />}
+        {activeTab === 6 && <PayrollReportTab        ref={(r) => (tabRefs.current[6] = r)} />}
       </Box>
     </>
   );

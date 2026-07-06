@@ -302,34 +302,25 @@ employee_tasks: ({ projects = [], stages = [] }) => [
   },
 ],
 
-   performance: [
-     {
-       type: "search",
-       key: "search",
-       placeholder: "Search Employee...",
-       grid: { xs: 12, md: 6 },
-     },
-    {
-      type: "select",
-      key: "department",
-      placeholder: "All Department",
-      grid: { xs: 12, md: 3 },
-      options: [
-        { v: "",               l: "All Department"  },
-        { v: "Engineering",    l: "Engineering"     },
-        { v: "Design",         l: "Design"          },
-        { v: "QA",             l: "QA"              },
-        { v: "HR",             l: "HR"              },
-        { v: "UI/UX Designer", l: "UI/UX Designer"  },
-      ],
-    },
-    {
-      type: "date",
-      key: "dateRange",
-      placeholder: "Date Range",
-      grid: { xs: 12, md: 3 },
-    },
-  ],
+performance: ({ departments = [] }) => [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search Employee...",
+    grid: { xs: 12, md: 6 },
+  },
+  {
+    type: "select",
+    key: "department",
+    placeholder: "All Department",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "", l: "All Department" },
+      ...departments.map((d) => ({ v: d._id, l: d.name })),
+    ],
+  },
+],
+
 documents: ({ isPM = false, isEmployee = false } = {}) => [
   {
     type: "search",
@@ -392,29 +383,26 @@ employee_productivity: [
     grid: { xs: "auto" },
   },
 ],
-task_completion: [
+task_completion: ({ projects = [] }) => [
   {
     type: "select",
     key: "project",
     placeholder: "All Projects",
-    grid: { xs:"auto"},
+    grid: { xs: "auto" },
     options: [
-      { v: "",            l: "All Projects" },
-        { v: "ecommerce", l: "E-Commerce Platform" },
-        { v: "hr",        l: "HR Management System" },
-        { v: "mobile",    l: "Mobile Banking App" },
-        { v: "cms",       l: "CMS Website Redesign" },
+      { v: "", l: "All Projects" },
+      ...projects.map((p) => ({ v: p._id, l: p.projectName })),
     ],
   },
-  
-  {
-    type: "date",
-    key: "dateRange",
-    placeholder: "Date Range",
-    grid: { xs: "auto" },
-  },
+ 
 ],
 project_performance: [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search projects...",
+    grid: { xs: "auto" },
+  },
   {
     type: "select",
     key: "status",
@@ -422,32 +410,23 @@ project_performance: [
     grid: { xs: "auto" },
     options: [
       { v: "",            l: "All Status"   },
-      { v: "development", l: "Development"  },
-      { v: "testing",     l: "Testing"      },
-      { v: "review",      l: "Review"       },
+      { v: "new",         l: "New"          },
+      { v: "in_progress", l: "In Progress"  },
+      { v: "paused",      l: "Paused"       },
       { v: "completed",   l: "Completed"    },
     ],
   },
-  {
-    type: "date",
-    key: "dateRange",
-    placeholder: "Date Range",
-    grid: { xs: "auto" },
-  },
 ],
 
-leave_report: [
+leave_report: ({ employees = [] }) => [
   {
     type: "select",
     key: "employee",
     placeholder: "All Employee",
     grid: { xs: "auto" },
     options: [
-      { v: "",        l: "All Employee" },
-      { v: "ali",     l: "Ali Hassan"   },
-      { v: "sara",    l: "Sara Ahmed"   },
-      { v: "omar",    l: "Omar Farooq"  },
-      { v: "fatima",  l: "Fatima Khan"  },
+      { v: "", l: "All Employee" },
+      ...employees.map((e) => ({ v: e._id, l: e.fullName })),
     ],
   },
   {
@@ -459,6 +438,8 @@ leave_report: [
       { v: "",          l: "All Leave Type" },
       { v: "annual",    l: "Annual"         },
       { v: "sick",      l: "Sick"           },
+      { v: "casual",    l: "Casual"         },
+      { v: "maternity", l: "Maternity"      },
       { v: "emergency", l: "Emergency"      },
     ],
   },
@@ -475,6 +456,7 @@ leave_report: [
     ],
   },
 ],
+
 integrations: [
   {
     type: "search",

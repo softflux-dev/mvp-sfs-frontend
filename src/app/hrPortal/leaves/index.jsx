@@ -103,7 +103,7 @@ const LeaveManagement = () => {
       ? l.status.charAt(0).toUpperCase() + l.status.slice(1)
       : "Pending",
     hrNotes:       l.hrNotes || "",
-     rejectionReason:  l.rejectionReason || "",   // ← ADD
+     rejectionReason:  l.rejectionReason || "",   
      isUnpaid:         l.isUnpaid        || false,
   }));
 
