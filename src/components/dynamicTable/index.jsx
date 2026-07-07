@@ -1702,6 +1702,31 @@ case "att_mon_hours":
     </TableCell>
   );
 
+  case "att_mon_onsite_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.onSiteHours || "0h 0m"}</Typography>
+    </TableCell>
+  );
+
+case "att_mon_offsite_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color={row.offSiteHours && row.offSiteHours !== "0h 0m" ? "#2B6EFF" : "text.secondary"}>
+        {row.offSiteHours || "0h 0m"}
+      </Typography>
+    </TableCell>
+  );
+
+case "att_mon_extra_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color={row.extraHours && row.extraHours !== "0h 0m" ? "#F97316" : "text.secondary"}>
+        {row.extraHours || "0h 0m"}
+      </Typography>
+    </TableCell>
+  );
+
 // ── Attendance monitoring — status chip ───────────────────────────────────
 // In dynamicTable.jsx — att_mon_status case, replace the existing one:
 case "att_mon_status": {
@@ -2799,7 +2824,26 @@ case "att_summary_hours":
       </Typography>
     </TableCell>
   );
- 
+ case "att_summary_onsite_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">{row.onSiteHours}</Typography>
+    </TableCell>
+  );
+
+case "att_summary_offsite_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="#2B6EFF">{row.offSiteHours}</Typography>
+    </TableCell>
+  );
+
+case "att_summary_extra_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="#F97316">{row.extraHours}</Typography>
+    </TableCell>
+  );
 // ── Attendance Records (monthly summary) — view-only action ───────────────
 case "att_summary_actions":
   return (

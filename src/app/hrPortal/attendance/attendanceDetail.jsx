@@ -34,12 +34,14 @@ const AttendanceDetail = () => {
     records, loading, actionLoading, updateRecord, createManualEntry, setRecords,
   } = useAttendanceDetail(employeeId, month, year);
 
-  const handleEditSave = async (updated) => {
+const handleEditSave = async (updated) => {
     return await updateRecord(updated.id, {
       checkIn:          updated.checkIn,
       checkOut:         updated.checkOut,
       attendanceStatus: updated.attendanceStatus,
       notes:            updated.notes,
+      offSiteHours:     updated.offSiteHours,
+      extraHours:       updated.extraHours,
     });
   };
 

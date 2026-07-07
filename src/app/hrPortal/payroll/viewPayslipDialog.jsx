@@ -100,10 +100,12 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
 
         <Box sx={{ backgroundColor: "#F5F5F5", borderRadius: "16px", p: 2.5 }}>
           <Box sx={{ backgroundColor: "#fff", borderRadius: "14px", px: 3, py: 2 }}>
-            {[
+           {[
               { label: "Required Hours",  value: `${payroll.requiredHours  || 0} hrs` },
               { label: "Actual Hours",    value: `${payroll.actualHours    || 0} hrs` },
-              { label: "Shortfall Hours", value: `${payroll.shortfallHours || 0} hrs`, color: (payroll.shortfallHours||0) > 0 ? "#FF3B30" : "text.primary" },
+              (payroll.extraHours || 0) > 0
+                ? { label: "Extra Hours (Paid)", value: `${payroll.extraHours} hrs`, color: "#04C373" }
+                : { label: "Shortfall Hours", value: `${payroll.shortfallHours || 0} hrs`, color: (payroll.shortfallHours||0) > 0 ? "#FF3B30" : "text.primary" },
               { label: "Hourly Rate",     value: `Rs ${Number(payroll.hourlyRate||0).toFixed(2)}/hr` },
             ].map((r) => (
               <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
@@ -114,7 +116,8 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
             <Divider sx={{ my: 1.5, borderColor: "#E5E7EB" }} />
             {[
               { label: "Base Salary", value: `Rs ${Number(payroll.baseSalary  ||0).toLocaleString()}` },
-              { label: "Bonus",       value: `+ Rs ${Number(payroll.bonus     ||0).toLocaleString()}`, color: "#04C373" },
+             { label: "Bonus",       value: `+ Rs ${Number(payroll.bonus     ||0).toLocaleString()}`, color: "#04C373" },
+              ...(payroll.extraAmount > 0 ? [{ label: "Overtime Pay", value: `+ Rs ${Number(payroll.extraAmount||0).toLocaleString()}`, color: "#04C373" }] : []),
               { label: "Deductions",  value: `- Rs ${Number(payroll.deductions||0).toLocaleString()}`, color: "#FF3B30" },
             ].map((r) => (
               <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>

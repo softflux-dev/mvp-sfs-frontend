@@ -71,7 +71,7 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "" }) => {
     { label: "Housing Allowance",   value: bd.housingAllowance   ?? 0 },
   ];
 
-  const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0);
+const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payroll.extraAmount || 0);
 
   const empType =
     payroll.employmentType === "full_time" ? "Full-time"  :
@@ -137,6 +137,14 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "" }) => {
               {(payroll.bonus || 0) > 0 && (
                 <TblRow label="Bonus / Incentive" value={fmt(payroll.bonus)} color="#059669" bg="#f0fdf4" />
               )}
+               {(payroll.extraAmount || 0) > 0 && (
+                <TblRow
+                  label="Overtime Pay"
+                  value={fmt(payroll.extraAmount)}
+                  color="#059669" bg="#f0fdf4"
+                  sub={`${payroll.extraHours}h × Rs ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`}
+                />
+              )}
               <TblFoot label="Gross Earnings" value={fmt(grossEarnings)} color="#AA2493" />
             </Box>
           </Box>
@@ -165,11 +173,15 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "" }) => {
               />
             </Box>
 
-            <SectionLabel>Hours Summary</SectionLabel>
+           <SectionLabel>Hours Summary</SectionLabel>
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
               <HourCard label="Required"    value={`${payroll.requiredHours  || 0}h`} color="#022179" />
               <HourCard label="Actual"      value={`${payroll.actualHours    || 0}h`} color="#059669" />
-              <HourCard label="Shortfall"   value={`${payroll.shortfallHours || 0}h`} color="#DC2626" />
+              {(payroll.extraHours || 0) > 0 ? (
+                <HourCard label="Extra Hours" value={`${payroll.extraHours}h`} color="#059669" />
+              ) : (
+                <HourCard label="Shortfall" value={`${payroll.shortfallHours || 0}h`} color="#DC2626" />
+              )}
               <HourCard label="Hourly Rate" value={`Rs ${Number(payroll.hourlyRate || 0).toFixed(0)}`} color="#AA2493" />
             </Box>
           </Box>

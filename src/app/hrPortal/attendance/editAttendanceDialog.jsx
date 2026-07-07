@@ -26,7 +26,8 @@ const STATUS_OPTIONS = [
   { value: "Holiday", label: "Holiday" },
 ];
 
-const INITIAL = { date: null, checkIn: null, checkOut: null, attendanceStatus: "", notes: "" };
+// ── Added offSiteHours/extraHours to initial form state ──────────────────
+const INITIAL = { date: null, checkIn: null, checkOut: null, attendanceStatus: "", notes: "", offSiteHours: "", extraHours: "" };
 
 // ── Parse time string — handles both 24hr ("09:24") and 12hr ("09:24 AM") ────
 const parseTime = (timeStr) => {
@@ -73,6 +74,9 @@ const EditAttendanceDialog = ({
         checkOut:         parseTime(record.checkOut),
         attendanceStatus: status,
         notes:            record.notes || "",
+        // ── Pre-fill off-site/extra hours from the existing record, if present ──
+        offSiteHours:     record.offSiteHoursRaw != null ? String(record.offSiteHoursRaw) : "",
+        extraHours:       record.extraHoursRaw   != null ? String(record.extraHoursRaw)   : "",
       });
     } else if (manualEntry) {
       setForm({
@@ -97,6 +101,10 @@ const EditAttendanceDialog = ({
       hoursStr = `${h}h ${m}m`;
     }
 
+    // ── Parse off-site/extra hours — blank/invalid input safely becomes 0 ────
+    const offSiteHours = Math.max(0, parseFloat(form.offSiteHours) || 0);
+    const extraHours   = Math.max(0, parseFloat(form.extraHours)   || 0);
+
     if (isCreateMode) {
       onSave?.({
         employeeId:       manualEntry.employeeId,
@@ -105,6 +113,8 @@ const EditAttendanceDialog = ({
         checkOut,
         attendanceStatus: form.attendanceStatus || undefined,
         notes:            form.notes,
+        offSiteHours,
+        extraHours,
       });
     } else {
       onSave?.({
@@ -114,6 +124,8 @@ const EditAttendanceDialog = ({
         hours:            hoursStr,
         attendanceStatus: form.attendanceStatus,
         notes:            form.notes,
+        offSiteHours,
+        extraHours,
       });
     }
   };
@@ -178,6 +190,34 @@ const EditAttendanceDialog = ({
                       "& fieldset": { border: "none" },
                     },
                   }}
+                />
+              </Box>
+            </Box>
+
+            {/* ── NEW: Off-Site / Extra Hours ─────────────────────────────── */}
+            <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
+              <Box>
+                <CustomInputLabel label="Off-Site / Remote Hours" />
+                <TextInput
+                  placeholder="0"
+                  type="number"
+                  inputProps={{ min: 0, step: 0.5 }}
+                  value={form.offSiteHours}
+                  onChange={(e) => setForm((prev) => ({ ...prev, offSiteHours: e.target.value }))}
+                  inputBgColor="#fff"
+                  fullWidth
+                />
+              </Box>
+              <Box>
+                <CustomInputLabel label="Extra Hours" />
+                <TextInput
+                  placeholder="0"
+                  type="number"
+                  inputProps={{ min: 0, step: 0.5 }}
+                  value={form.extraHours}
+                  onChange={(e) => setForm((prev) => ({ ...prev, extraHours: e.target.value }))}
+                  inputBgColor="#fff"
+                  fullWidth
                 />
               </Box>
             </Box>

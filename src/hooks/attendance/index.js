@@ -9,6 +9,26 @@ import {
   getImportHistoryApi,
 } from "../../api/modules/attendance";
 
+// ── Small local helpers to keep offSite/extra/total hours in sync with the
+// backend's "Xh Ym" formatting, without needing a full refetch after every
+// edit — parses a formatted on-site hours string back to decimal, and
+// formats decimal hours the same way the backend does. ─────────────────────
+const parseHoursLabel = (str) => {
+  if (!str) return 0;
+  const match = String(str).match(/(\d+)h\s*(\d+)?m?/);
+  if (!match) return 0;
+  const h = parseInt(match[1], 10) || 0;
+  const m = parseInt(match[2], 10) || 0;
+  return h + m / 60;
+};
+
+const formatDecimalHours = (decimal) => {
+  if (!decimal || decimal <= 0) return "0h 0m";
+  const h = Math.floor(decimal);
+  const m = Math.round((decimal - h) * 60);
+  return `${h}h ${m}m`;
+};
+
 // ── useAttendanceSummary ──────────────────────────────────────────────────────
 export const useAttendanceSummary = () => {
   const [summary, setSummary] = useState([]);
@@ -74,10 +94,32 @@ export const useAttendanceDetail = (employeeId, month, year) => {
       const res = await updateAttendanceRecordApi(id, payload);
       if (res?.status === 200 || res?.status === 201) {
         const updated = res.data.data.record;
+
+        // ── Recompute off-site/extra/total display fields locally so the
+        // table reflects the edit immediately, without a full refetch. ─────
+        const onSiteDecimal = parseHoursLabel(updated.hours);
+        const offSiteRaw    = updated.offSiteHours || 0;
+        const extraRaw      = updated.extraHours   || 0;
+        const totalDecimal  = onSiteDecimal + offSiteRaw + extraRaw;
+
         setRecords((prev) =>
           prev.map((r) =>
             r.id?.toString() === id?.toString()
-              ? { ...r, checkIn: updated.checkIn, checkOut: updated.checkOut, hours: updated.hours, attendanceStatus: updated.attendanceStatus, notes: updated.notes, isIncomplete: updated.isIncomplete }
+              ? {
+                  ...r,
+                  checkIn:          updated.checkIn,
+                  checkOut:         updated.checkOut,
+                  hours:            updated.hours,
+                  onSiteHours:      updated.hours || "0h 0m",
+                  offSiteHoursRaw:  offSiteRaw,
+                  extraHoursRaw:    extraRaw,
+                  offSiteHours:     formatDecimalHours(offSiteRaw),
+                  extraHours:       formatDecimalHours(extraRaw),
+                  totalHours:       formatDecimalHours(totalDecimal),
+                  attendanceStatus: updated.attendanceStatus,
+                  notes:            updated.notes,
+                  isIncomplete:     updated.isIncomplete,
+                }
               : r
           )
         );
@@ -100,6 +142,12 @@ export const useAttendanceDetail = (employeeId, month, year) => {
       const res = await createManualEntryApi(payload);
       if (res?.status === 200 || res?.status === 201) {
         const newRecord = res.data.data.record;
+
+        const onSiteDecimal = parseHoursLabel(newRecord.hours);
+        const offSiteRaw    = newRecord.offSiteHours || 0;
+        const extraRaw      = newRecord.extraHours   || 0;
+        const totalDecimal  = onSiteDecimal + offSiteRaw + extraRaw;
+
         const formatted = {
           id:               newRecord._id,
           date:             newRecord.date, 
@@ -107,6 +155,12 @@ export const useAttendanceDetail = (employeeId, month, year) => {
           checkIn:          newRecord.checkIn  || "",
           checkOut:         newRecord.checkOut || "",
           hours:            newRecord.hours,
+          onSiteHours:      newRecord.hours || "0h 0m",
+          offSiteHoursRaw:  offSiteRaw,
+          extraHoursRaw:    extraRaw,
+          offSiteHours:     formatDecimalHours(offSiteRaw),
+          extraHours:       formatDecimalHours(extraRaw),
+          totalHours:       formatDecimalHours(totalDecimal),
           attendanceStatus: newRecord.attendanceStatus,
           notes:            newRecord.notes || "",
           isIncomplete:     newRecord.isIncomplete || false,

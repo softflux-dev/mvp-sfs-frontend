@@ -10,20 +10,26 @@ import EditIcon             from "../../../assets/icons/editIcon.svg";
 import EditAttendanceDialog from "./editAttendanceDialog";
 
 const tableHeader = [
-  { id: "date",             label: "Date"      },
-  { id: "checkIn",          label: "Check-In"  },
-  { id: "checkOut",         label: "Check-Out" },
-  { id: "hours",            label: "Hours"     },
-  { id: "attendanceStatus", label: "Status"    },
-  { id: "notes",            label: "Notes"     },
-  { id: "actions",          label: "Actions"   },
+  { id: "date",             label: "Date"           },
+  { id: "checkIn",          label: "Check-In"       },
+  { id: "checkOut",         label: "Check-Out"      },
+  { id: "onSiteHours",      label: "On-Site Hours"  },
+  { id: "offSiteHours",     label: "Off-Site Hours" },
+  { id: "extraHours",       label: "Extra Hours"    },
+  { id: "totalHours",       label: "Total Hours"    },
+  { id: "attendanceStatus", label: "Status"         },
+  { id: "notes",            label: "Notes"          },
+  { id: "actions",          label: "Actions"        },
 ];
 
 const displayRows = [
   "att_mon_date",
   "att_mon_check_in",
   "att_mon_check_out",
-  "att_mon_hours",
+  "att_mon_onsite_hours",
+  "att_mon_offsite_hours",
+  "att_mon_extra_hours",
+  "att_mon_hours",   
   "att_mon_status",
   "att_mon_notes",
   "att_detail_actions",

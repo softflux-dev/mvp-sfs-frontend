@@ -128,6 +128,7 @@ const Salary = () => {
         ["Leave Days",            String(p.leaveDays      ?? "—")],
         ["Required Hours",        `${p.requiredHours  ?? 0} hrs`],
         ["Actual Hours Worked",   `${p.actualHours    ?? 0} hrs`],
+        ["Extra Hours (Paid)",    `${p.extraHours ?? 0} hrs — Rs ${Number(p.extraAmount || 0).toLocaleString()}`],
         ["Shortfall Hours",       `${p.shortfallHours ?? 0} hrs`],
         ["Hourly Rate",           `Rs ${Number(p.hourlyRate || 0).toFixed(2)}/hr`],
         ["Base Monthly Salary",   `Rs ${Number(p.baseSalary || 0).toLocaleString()}`],
