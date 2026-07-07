@@ -12,9 +12,12 @@ import AttendanceRecordsTab   from "./attendanceRecordsTab";
 import AttendanceHistoryTab   from "./attendanceHistoryTab";
 import ImportAttendanceDialog from "./importAttendanceDialog";
 import PartialPunchDialog     from "./partialPunchDialog";
+import SuccessPopup           from "../../../components/popups/confirmationDialog";
 import { useAttendanceSummary, useAttendanceImport } from "../../../hooks/attendance";
 import { getPartialRecordsApi } from "../../../api/modules/attendance";
 import { exportAttendancePdf }  from "../../../utils/exportAttendancePdf";
+
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 const tabs = [
   { id: 1, label: "Attendance Records" },
@@ -28,6 +31,10 @@ const AttendanceMonitoring = () => {
   const [partialOpen,  setPartialOpen]  = useState(false);
   const [partialCount, setPartialCount] = useState(0);
   const [exporting,    setExporting]    = useState(false);
+
+  // ── Import result feedback ────────────────────────────────────────────
+  const [importResultOpen, setImportResultOpen] = useState(false);
+  const [importResultMsg,  setImportResultMsg]  = useState("");
 
   const { summary, loading: summaryLoading, error: summaryError, fetchSummary } = useAttendanceSummary();
   const {
@@ -58,18 +65,28 @@ const AttendanceMonitoring = () => {
   };
 
   const handleImport = async ({ month, year, file, records, fileBase64 }) => {
-  const result = await importRecords({
-    month, year,
-    fileName: file.name,
-    fileSize: `${(file.size / 1024).toFixed(0)} KB`,
-    records,
-    fileBase64,   
-  });
-  if (result?.success) {
-    fetchSummary();
-    checkPartial();
-  }
-};
+    const result = await importRecords({
+      month, year,
+      fileName: file.name,
+      fileSize: `${(file.size / 1024).toFixed(0)} KB`,
+      records,
+      fileBase64,
+    });
+    if (result?.success) {
+      fetchSummary();
+      checkPartial();
+
+      // ── Show clear feedback: first import for this month vs. an update
+      // to records that already existed for this month. ───────────────────
+      const monthLabel = `${MONTH_NAMES[result.month] ?? month} ${result.year ?? year}`;
+      setImportResultMsg(
+        result.isFirstImportForMonth
+          ? `Attendance uploaded successfully for ${monthLabel}.`
+          : `${monthLabel} already had attendance data — existing records have been updated with this new file.`
+      );
+      setImportResultOpen(true);
+    }
+  };
 
   // ── Export currently visible summary rows to PDF ──────────────────────────
   const handleExportPdf = () => {
@@ -157,6 +174,14 @@ const AttendanceMonitoring = () => {
         onCountChange={(newCount) => {
           setPartialCount(newCount);
         }}
+      />
+
+      <SuccessPopup
+        open={importResultOpen}
+        onClose={() => setImportResultOpen(false)}
+        message={importResultMsg}
+        autoClose
+        autoCloseDelay={3000}
       />
     </>
   );

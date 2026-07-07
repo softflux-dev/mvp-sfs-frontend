@@ -41,7 +41,24 @@ const AttendanceRecordsTab = ({ records = [], loading = false, onView, onFilterC
 
  const handleFilterChange = (newFilters) => {
   setFilters(newFilters);
-  onFilterChange?.({ search: newFilters.search || "", department: newFilters.department || "" });
+
+  // ── Compute how many months back the backend needs to look, so a
+  // specific older month selected in the filter is actually included in
+  // the fetched window (backend only understands "last N months"). ─────
+  let months = 3; // default rolling window
+  if (newFilters.monthYear) {
+    const now = new Date();
+    const selMonth = newFilters.monthYear.getMonth();
+    const selYear  = newFilters.monthYear.getFullYear();
+    const monthsAgo = (now.getFullYear() - selYear) * 12 + (now.getMonth() - selMonth) + 1;
+    months = Math.max(3, monthsAgo); // never shrink below the default window
+  }
+
+  onFilterChange?.({
+    search:     newFilters.search     || "",
+    department: newFilters.department || "",
+    months,
+  });
 };
 
 // In filteredData:

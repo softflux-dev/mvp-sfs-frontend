@@ -19,7 +19,7 @@ export const useAttendanceSummary = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await getAttendanceSummaryApi({ months: 2, ...filters });
+      const res = await getAttendanceSummaryApi({ months: 3, ...filters });
       if (res?.status === 200 || res?.status === 201) {
         const raw = res.data.data.summary || [];
         setSummary(raw.map((s) => ({
@@ -102,7 +102,7 @@ export const useAttendanceDetail = (employeeId, month, year) => {
         const newRecord = res.data.data.record;
         const formatted = {
           id:               newRecord._id,
-          date:             new Date(newRecord.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          date:             newRecord.date, 
           rawDate:          newRecord.date,
           checkIn:          newRecord.checkIn  || "",
           checkOut:         newRecord.checkOut || "",
@@ -131,6 +131,21 @@ export const useAttendanceDetail = (employeeId, month, year) => {
   return { records, loading, actionLoading, error, fetchDetail, updateRecord, createManualEntry, setRecords };
 };
 
+// ── Single source of truth for formatting an import log's date/time —
+// used both right after a fresh import AND when refetching history, so
+// the two paths can never disagree (previously one formatted using the
+// browser's timezone, the other using the backend's, causing the
+// timestamp to visibly change after a page refresh). ─────────────────────
+const formatImportLog = (raw) => ({
+  id:        raw._id || raw.id,
+  date:      new Date(raw.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+  timestamp: new Date(raw.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+  fileName:  raw.fileName,
+  fileSize:  raw.fileSize,
+  records:   raw.matchedRecords ?? raw.records,
+  status:    raw.status,
+});
+
 // ── useAttendanceImport ───────────────────────────────────────────────────────
 export const useAttendanceImport = () => {
   const [importLogs,    setImportLogs]    = useState([]);
@@ -139,36 +154,29 @@ export const useAttendanceImport = () => {
   const [importWarning, setImportWarning] = useState("");
   const [error,         setError]         = useState("");
 
-  const fetchImportHistory = useCallback(async () => {
+const fetchImportHistory = useCallback(async () => {
     setLogsLoading(true);
     try {
       const res = await getImportHistoryApi({ limit: 50 });
       if (res?.status === 200 || res?.status === 201) {
-        setImportLogs(res.data.data.logs || []);
+        const raw = res.data.data.logs || [];
+        setImportLogs(raw.map(formatImportLog));
       }
     } catch { /* silent */ }
     finally { setLogsLoading(false); }
   }, []);
 
-  const importRecords = useCallback(async ({ month, year, fileName, fileSize, records,fileBase64 }) => {
+ const importRecords = useCallback(async ({ month, year, fileName, fileSize, records,fileBase64 }) => {
     setImporting(true);
     setImportWarning("");
     setError("");
     try {
       const res = await importAttendanceApi({ month, year, fileName, fileSize, records,fileBase64 });
       if (res?.status === 200 || res?.status === 201) {
-        const { unmatchedCount, unmatchedIds, partialCount, importLog } = res.data.data;
+        const { unmatchedCount, unmatchedIds, partialCount, importLog, isFirstImportForMonth, month: respMonth, year: respYear } = res.data.data;
 
         if (importLog) {
-          setImportLogs((prev) => [{
-            id:        importLog._id,
-            date:      new Date(importLog.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-            timestamp: new Date(importLog.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
-            fileName:  importLog.fileName,
-            fileSize:  importLog.fileSize,
-            records:   importLog.matchedRecords,
-            status:    importLog.status,
-          }, ...prev]);
+          setImportLogs((prev) => [formatImportLog(importLog), ...prev]);
         }
 
         const warnings = [];

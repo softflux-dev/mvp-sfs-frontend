@@ -1,4 +1,4 @@
-// hrPortal/attendance/importAttendanceDialog.jsx — NEW FILE
+// hrPortal/attendance/importAttendanceDialog.jsx — FULL REPLACEMENT
 import { useState, useRef } from "react";
 import { Box, Typography, MenuItem } from "@mui/material";
 import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
@@ -30,6 +30,28 @@ const MONTHS = [
 ];
 
 const normalize = (str) => String(str || "").trim().toLowerCase().replace(/\s+/g, " ");
+
+// ── Excel date/time cells now come through as real JS Date objects
+// (because of cellDates: true below) — normalize both those AND legacy
+// plain-text cells into consistent strings. ──────────────────────────────
+const cellToDateStr = (val) => {
+  if (val instanceof Date) {
+    const y = val.getUTCFullYear();
+    const m = String(val.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(val.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+  return String(val || "").trim();
+};
+
+const cellToTimeStr = (val) => {
+  if (val instanceof Date) {
+    const hh = String(val.getUTCHours()).padStart(2, "0");
+    const mm = String(val.getUTCMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+  return String(val || "").trim();
+};
 
 // Convert ArrayBuffer → base64 in chunks to avoid call-stack overflow on large files
 const arrayBufferToBase64 = (buffer) => {
@@ -104,8 +126,8 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
 
     try {
       const data = await file.arrayBuffer();
-      const fileBase64 = arrayBufferToBase64(data); 
-      const workbook = XLSX.read(data, { type: "array" });
+      const fileBase64 = arrayBufferToBase64(data);
+      const workbook = XLSX.read(data, { type: "array", cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows  = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
 
@@ -156,9 +178,9 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
       const parsedRecords = dataRows.map((row) => ({
         empId:    String(row[mapping.empId]    || "").trim(),
         name:     String(row[mapping.name]     || "").trim(),
-        date:     String(row[mapping.date]     || "").trim(),
-        checkIn:  String(row[mapping.checkIn]  || "").trim(),
-        checkOut: String(row[mapping.checkOut] || "").trim(),
+        date:     cellToDateStr(row[mapping.date]),
+        checkIn:  cellToTimeStr(row[mapping.checkIn]),
+        checkOut: cellToTimeStr(row[mapping.checkOut]),
         duration: String(row[mapping.duration] || "").trim(),
       }))
       // Filter out subtotal/total rows (no empId or name)
@@ -166,6 +188,32 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
 
       if (parsedRecords.length === 0) {
         setError("No valid data rows found in the file.");
+        setParsing(false);
+        return;
+      }
+
+      // ── Guard: make sure the file's actual dates match the selected period.
+      // Prevents the silent "0 present / all absent" corruption caused by
+      // trusting the dropdown instead of the file's real dates. ─────────────
+      const monthCounts = {};
+      parsedRecords.forEach((r) => {
+        const d = new Date(r.date);
+        if (isNaN(d.getTime())) return;
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        monthCounts[key] = (monthCounts[key] || 0) + 1;
+      });
+
+      const totalDated = Object.values(monthCounts).reduce((a, b) => a + b, 0);
+      const selectedKey = `${yearDate.year()}-${month}`;
+      const matching = monthCounts[selectedKey] || 0;
+
+      if (totalDated > 0 && matching / totalDated < 0.5) {
+        const [dominantKey] = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
+        const [domYear, domMonth] = dominantKey.split("-").map(Number);
+        setError(
+          `This file's dates mostly belong to ${MONTHS[domMonth]} ${domYear}, but you selected ${MONTHS[month]} ${yearDate.year()}. ` +
+          `Change the Attendance Period above to ${MONTHS[domMonth]} ${domYear} and try again.`
+        );
         setParsing(false);
         return;
       }
