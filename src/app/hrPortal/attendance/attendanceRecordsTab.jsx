@@ -11,12 +11,13 @@ const tableHeader = [
   { id: "name",          label: "Employee"            },
   { id: "department",    label: "Department"          },
   { id: "month",         label: "Month"                },
+   { id: "totalPresent",  label: "Total Present"       },
+  { id: "totalAbsent",   label: "Total Absent"        },
    { id: "onSiteHours",   label: "Work Hours On-Site"  },
   { id: "offSiteHours",  label: "Work Hours Off-Site" },
   { id: "extraHours",    label: "Extra Hours"         },
   { id: "totalHours",    label: "Total Hours"         },
-  { id: "totalPresent",  label: "Total Present"       },
-  { id: "totalAbsent",   label: "Total Absent"        },
+ 
   { id: "actions",       label: "Actions"             },
 ];
 
@@ -25,12 +26,13 @@ const displayRows = [
   "employee_details",
   "department",
   "att_summary_month",
+   "att_summary_present",
+  "att_summary_absent",
   "att_summary_onsite_hours",
   "att_summary_offsite_hours",
   "att_summary_extra_hours",
   "att_summary_hours",
-  "att_summary_present",
-  "att_summary_absent",
+ 
   "att_summary_actions",
 ];
 

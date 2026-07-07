@@ -1,20 +1,19 @@
-// src/utils/socketManager.js
-// Singleton Socket.IO client — shared across all portals
-// Handles: connect, reconnect, missed message recovery
 // src/utils/socketManager.js — FULL REPLACEMENT
 import { io } from "socket.io-client";
-
-const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import { baseUrl } from "../api/index";   // ← adjust to match the actual exported name
 
 let socket = null;
+let currentToken = null;
 
 export const getSocket = () => socket;
 
 export const connectSocket = (token) => {
-  if (socket?.connected) return socket;
+  if (socket?.connected && currentToken === token) return socket;
   if (socket) { socket.disconnect(); socket = null; }
 
-  socket = io(SERVER_URL, {
+  currentToken = token;
+
+  socket = io(baseUrl, {
     auth:                 { token },
     reconnection:         true,
     reconnectionDelay:    1000,
@@ -38,6 +37,7 @@ export const connectSocket = (token) => {
 
 export const disconnectSocket = () => {
   if (socket) { socket.disconnect(); socket = null; }
+  currentToken = null;
 };
 
 // Manual ACK with timeout — used ONLY for events the server actually ACKs

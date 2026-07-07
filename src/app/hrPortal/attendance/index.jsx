@@ -16,6 +16,7 @@ import SuccessPopup           from "../../../components/popups/confirmationDialo
 import { useAttendanceSummary, useAttendanceImport } from "../../../hooks/attendance";
 import { getPartialRecordsApi } from "../../../api/modules/attendance";
 import { exportAttendancePdf }  from "../../../utils/exportAttendancePdf";
+import ExportPdfDialog from "./exportPdfDialog";
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -31,6 +32,7 @@ const AttendanceMonitoring = () => {
   const [partialOpen,  setPartialOpen]  = useState(false);
   const [partialCount, setPartialCount] = useState(0);
   const [exporting,    setExporting]    = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   // ── Import result feedback ────────────────────────────────────────────
   const [importResultOpen, setImportResultOpen] = useState(false);
@@ -88,12 +90,13 @@ const AttendanceMonitoring = () => {
     }
   };
 
-  // ── Export currently visible summary rows to PDF ──────────────────────────
-  const handleExportPdf = () => {
-    if (!summary.length) return;
+  const handleExportPdf = () => setExportDialogOpen(true);
+
+  const handleConfirmExport = ({ records, title }) => {
+    if (!records.length) return;
     setExporting(true);
     try {
-      exportAttendancePdf(summary, { title: "Attendance Records Report" });
+      exportAttendancePdf(records, { title });
     } finally {
       setExporting(false);
     }
@@ -176,6 +179,12 @@ const AttendanceMonitoring = () => {
         }}
       />
 
+      <ExportPdfDialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        onExport={handleConfirmExport}
+      />
+      
       <SuccessPopup
         open={importResultOpen}
         onClose={() => setImportResultOpen(false)}
@@ -183,6 +192,7 @@ const AttendanceMonitoring = () => {
         autoClose
         autoCloseDelay={3000}
       />
+
     </>
   );
 };

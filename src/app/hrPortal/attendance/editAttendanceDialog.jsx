@@ -1,6 +1,6 @@
-// hrPortal/attendance/editAttendanceDialog.jsx — FULL REPLACEMENT
+// hrPortal/attendance/editAttendanceDialog.jsx — 
 import { useState, useEffect } from "react";
-import { Box, MenuItem }       from "@mui/material";
+import { Box, MenuItem, Typography } from "@mui/material";
 import { TimePicker }          from "@mui/x-date-pickers/TimePicker";
 import { DatePicker }          from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider} from "@mui/x-date-pickers/LocalizationProvider";
@@ -26,7 +26,8 @@ const STATUS_OPTIONS = [
   { value: "Holiday", label: "Holiday" },
 ];
 
-// ── Added offSiteHours/extraHours to initial form state ──────────────────
+const MAX_HOURS_PER_DAY = 24;
+
 const INITIAL = { date: null, checkIn: null, checkOut: null, attendanceStatus: "", notes: "", offSiteHours: "", extraHours: "" };
 
 // ── Parse time string — handles both 24hr ("09:24") and 12hr ("09:24 AM") ────
@@ -47,6 +48,24 @@ const formatTime = (dayjsObj) => {
   return dayjsObj.format("HH:mm");
 };
 
+// ── Hours field validation — both fields are OPTIONAL, so empty is always
+// valid. Only validate when the user has actually typed something. ─────────
+const validateHoursField = (raw) => {
+  if (raw === "" || raw == null) return { valid: true, error: "" };
+
+  const trimmed = String(raw).trim();
+  if (!/^\d*\.?\d*$/.test(trimmed)) {
+    return { valid: false, error: "Numbers only" };
+  }
+
+  const num = parseFloat(trimmed);
+  if (isNaN(num)) return { valid: true, error: "" }; // e.g. just "." mid-typing, don't error yet
+  if (num < 0) return { valid: false, error: "Cannot be negative" };
+  if (num > MAX_HOURS_PER_DAY) return { valid: false, error: `Cannot exceed ${MAX_HOURS_PER_DAY}h` };
+
+  return { valid: true, error: "" };
+};
+
 /**
  * EditAttendanceDialog — dual mode:
  *
@@ -63,9 +82,11 @@ const EditAttendanceDialog = ({
 }) => {
   const isCreateMode = !record && !!manualEntry;
   const [form, setForm] = useState(INITIAL);
+  const [fieldErrors, setFieldErrors] = useState({ offSiteHours: "", extraHours: "" });
 
   useEffect(() => {
     if (!open) return;
+    setFieldErrors({ offSiteHours: "", extraHours: "" });
     if (record) {
       const status = record.attendanceStatus === "Partial" ? "Present" : (record.attendanceStatus || "");
       setForm({
@@ -74,7 +95,6 @@ const EditAttendanceDialog = ({
         checkOut:         parseTime(record.checkOut),
         attendanceStatus: status,
         notes:            record.notes || "",
-        // ── Pre-fill off-site/extra hours from the existing record, if present ──
         offSiteHours:     record.offSiteHoursRaw != null ? String(record.offSiteHoursRaw) : "",
         extraHours:       record.extraHoursRaw   != null ? String(record.extraHoursRaw)   : "",
       });
@@ -88,7 +108,30 @@ const EditAttendanceDialog = ({
     }
   }, [record, manualEntry, open]);
 
+  // ── Reject invalid keystrokes (negative sign, letters, etc.) at the
+  // input level, and surface a validation message for edge cases like
+  // "over the max" that can't be blocked by typing alone. ────────────────
+  const handleHoursChange = (field) => (e) => {
+    const raw = e.target.value;
+    // Block a leading minus sign / any non-numeric-ish character outright
+    if (raw !== "" && !/^\d*\.?\d*$/.test(raw)) return;
+
+    const { error } = validateHoursField(raw);
+    setFieldErrors((prev) => ({ ...prev, [field]: error }));
+    setForm((prev) => ({ ...prev, [field]: raw }));
+  };
+
+  const hasBlockingError = Object.values(fieldErrors).some((e) => e);
+
   const handleSave = () => {
+    // Final guard — don't let a save through if either field is invalid
+    const offSiteCheck = validateHoursField(form.offSiteHours);
+    const extraCheck    = validateHoursField(form.extraHours);
+    if (!offSiteCheck.valid || !extraCheck.valid) {
+      setFieldErrors({ offSiteHours: offSiteCheck.error, extraHours: extraCheck.error });
+      return;
+    }
+
     const checkIn  = formatTime(form.checkIn);
     const checkOut = formatTime(form.checkOut);
 
@@ -101,9 +144,10 @@ const EditAttendanceDialog = ({
       hoursStr = `${h}h ${m}m`;
     }
 
-    // ── Parse off-site/extra hours — blank/invalid input safely becomes 0 ────
-    const offSiteHours = Math.max(0, parseFloat(form.offSiteHours) || 0);
-    const extraHours   = Math.max(0, parseFloat(form.extraHours)   || 0);
+    // ── Both fields are optional — blank/whitespace safely becomes 0,
+    // and validation above already guarantees no negative or >24 values. ────
+    const offSiteHours = form.offSiteHours === "" ? 0 : Math.max(0, parseFloat(form.offSiteHours) || 0);
+    const extraHours   = form.extraHours   === "" ? 0 : Math.max(0, parseFloat(form.extraHours)   || 0);
 
     if (isCreateMode) {
       onSave?.({
@@ -194,31 +238,43 @@ const EditAttendanceDialog = ({
               </Box>
             </Box>
 
-            {/* ── NEW: Off-Site / Extra Hours ─────────────────────────────── */}
+            {/* Off-Site / Extra Hours — both optional, validated inline */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box>
-                <CustomInputLabel label="Off-Site / Remote Hours" />
+                <CustomInputLabel label="Off-Site / Remote Hours (optional)" />
                 <TextInput
                   placeholder="0"
-                  type="number"
-                  inputProps={{ min: 0, step: 0.5 }}
+                  type="text"
+                  inputMode="decimal"
                   value={form.offSiteHours}
-                  onChange={(e) => setForm((prev) => ({ ...prev, offSiteHours: e.target.value }))}
+                  onChange={handleHoursChange("offSiteHours")}
                   inputBgColor="#fff"
                   fullWidth
+                  error={!!fieldErrors.offSiteHours}
                 />
+                {fieldErrors.offSiteHours && (
+                  <Typography fontSize="11px" color="error" mt={0.5}>
+                    {fieldErrors.offSiteHours}
+                  </Typography>
+                )}
               </Box>
               <Box>
-                <CustomInputLabel label="Extra Hours" />
+                <CustomInputLabel label="Extra Hours (optional)" />
                 <TextInput
                   placeholder="0"
-                  type="number"
-                  inputProps={{ min: 0, step: 0.5 }}
+                  type="text"
+                  inputMode="decimal"
                   value={form.extraHours}
-                  onChange={(e) => setForm((prev) => ({ ...prev, extraHours: e.target.value }))}
+                  onChange={handleHoursChange("extraHours")}
                   inputBgColor="#fff"
                   fullWidth
+                  error={!!fieldErrors.extraHours}
                 />
+                {fieldErrors.extraHours && (
+                  <Typography fontSize="11px" color="error" mt={0.5}>
+                    {fieldErrors.extraHours}
+                  </Typography>
+                )}
               </Box>
             </Box>
 
@@ -262,6 +318,7 @@ const EditAttendanceDialog = ({
           confirmText={isCreateMode ? "Add Entry" : "Save Changes"}
           variant="gradient"
           confirmLoading={loading}
+          confirmDisabled={hasBlockingError}
         />
       </DialogContainer>
     </LocalizationProvider>
