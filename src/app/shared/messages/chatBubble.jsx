@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Box, Typography, Avatar, Menu, MenuItem, TextField, IconButton } from "@mui/material";
 import { MoreVertical, Edit2, Trash2, Check, X, Paperclip } from "lucide-react";
-
+import { resolveFileUrl } from "../../../utils/resolveFileUrl";
 const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const FileAttachment = ({ attachment, isOwn }) => {
@@ -70,7 +70,7 @@ const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
       onMouseLeave={() => setHovered(false)}
     >
       {!isOwn && (
-        <Avatar src={senderAvatar} sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600, flexShrink: 0 }}>
+        <Avatar src={resolveFileUrl(senderAvatar)} sx={{ width: 34, height: 34, fontSize: "13px", fontWeight: 600, flexShrink: 0 }}>
           {senderName?.charAt(0)}
         </Avatar>
       )}

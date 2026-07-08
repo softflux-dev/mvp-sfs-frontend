@@ -4,6 +4,7 @@ import { Box, Typography, Avatar, Badge, IconButton, Menu, MenuItem } from "@mui
 import { MoreVertical, Trash2 } from "lucide-react";
 import ConfirmationDialog        from "../../../components/popups/confirmation";
 import { useConversationActions } from "../../../hooks/messages";
+import { resolveFileUrl } from "../../../utils/resolveFileUrl";
 
 const ConversationItem = ({
   conversation,
@@ -27,7 +28,7 @@ const ConversationItem = ({
     : null;
 
   const displayName   = type === "project" ? (name || "Project Chat") : (otherParticipant?.name || name || "Unknown");
-  const displayAvatar = otherParticipant?.avatar || "";
+  const displayAvatar = resolveFileUrl(otherParticipant?.avatar) || "";
   const otherUserId   = otherParticipant?.user?._id || otherParticipant?.user || "";
   const isOnline      = type === "direct" && onlineUsers.has(String(otherUserId));
   const isCreator     = String(createdBy) === String(currentUserId);
@@ -104,7 +105,7 @@ const ConversationItem = ({
             <Box sx={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: "#04C373", border: "2px solid #fff" }} />
           ) : null}
         >
-          <Avatar src={displayAvatar} sx={{ width: 42, height: 42, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "15px", fontWeight: 600, flexShrink: 0 }}>
+          <Avatar src={displayAvatar} sx={{ width: 42, height: 42, fontSize: "15px", fontWeight: 600, flexShrink: 0 }}>
             {displayName?.charAt(0)}
           </Avatar>
         </Badge>

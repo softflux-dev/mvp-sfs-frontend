@@ -7,6 +7,8 @@ import DialogActionButtons        from "../../../components/dialog/dialogAction"
 import TextInput                  from "../../../components/textInput";
 import { useConversationUsers }   from "../../../hooks/messages";
 import useUserStore               from "../../../zustand/useUserStore";
+import { resolveFileUrl } from "../../../utils/resolveFileUrl";
+
 
 // ── Gradient checkbox ─────────────────────────────────────────────────────────
 const UncheckedIcon = () => (
@@ -216,8 +218,8 @@ const NewConversationModal = ({ open, onClose, onStart }) => {
                       />
                     )}
                     <Avatar
-                      src={person.avatar}
-                      sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600 }}
+                       src={resolveFileUrl(person.avatar)}
+                      sx={{ width: 34, height: 34, fontSize: "13px", fontWeight: 600 }}
                     >
                       {person.name?.charAt(0)}
                     </Avatar>

@@ -15,6 +15,7 @@ import ConfirmationDialog from "../../../components/popups/confirmation";
 import { useMessages, useConversationActions } from "../../../hooks/messages";
 import { clearGroupMessagesApi } from "../../../api/modules/messages";
 import { getSocket } from "../../../utils/socketManager";
+import { resolveFileUrl } from "../../../utils/resolveFileUrl";
 
 const DateDivider = ({ label }) => (
   <Box display="flex" alignItems="center" gap={2} my={2}>
@@ -83,7 +84,6 @@ const ChatArea = ({
   }, [conversation?._id]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
-
   useEffect(() => {
     if (!conversation?._id) return;
     const socket = getSocket();
@@ -208,7 +208,7 @@ const ChatArea = ({
     ? conversation.participants?.find((p) => String(p.user?._id || p.user) !== String(currentUser?._id))
     : null;
   const displayName   = isGroup ? (conversation.name || "Project Chat") : (otherParticipant?.name || "Unknown");
-  const displayAvatar = otherParticipant?.avatar || "";
+  const displayAvatar = resolveFileUrl(otherParticipant?.avatar) || "";
   const otherUserId   = otherParticipant?.user?._id || otherParticipant?.user || "";
   const isOnline      = !isGroup && onlineUsers.has(String(otherUserId));
 
@@ -228,7 +228,7 @@ const ChatArea = ({
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 2.5, py: 2, borderBottom: "1px solid #F5F5F5", flexShrink: 0 }}>
           <Box display="flex" alignItems="center" gap={1.5}>
             <Box sx={{ position: "relative" }}>
-              <Avatar src={displayAvatar} sx={{ width: 40, height: 40, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "15px", fontWeight: 600 }}>
+              <Avatar src={displayAvatar} sx={{ width: 40, height: 40, fontSize: "15px", fontWeight: 600 }}>
                 {displayName?.charAt(0)}
               </Avatar>
               {!isGroup && (

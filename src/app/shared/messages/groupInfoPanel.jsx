@@ -4,6 +4,8 @@ import { Box, Typography, Avatar, IconButton, TextField, Drawer, Divider, Circul
 import { X, Edit2, Trash2, UserMinus, Check, MessageSquareOff, UserPlus, Search } from "lucide-react";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import { getConversationUsersApi, addMembersApi } from "../../../api/modules/messages";
+import { resolveFileUrl } from "../../../utils/resolveFileUrl";
+
 
 const GroupInfoPanel = ({
   open,
@@ -189,7 +191,7 @@ const GroupInfoPanel = ({
                           "&:hover": { backgroundColor: isSelected ? "#AA249315" : "#F0F0F0" },
                         }}
                       >
-                        <Avatar src={user.avatar} sx={{ width: 34, height: 34, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600 }}>
+                        <Avatar  src={resolveFileUrl(member.avatar)} sx={{ width: 34, height: 34, fontSize: "13px", fontWeight: 600 }}>
                           {user.name?.charAt(0)}
                         </Avatar>
                         <Box flex={1}>
@@ -274,7 +276,7 @@ const GroupInfoPanel = ({
                 const displayName     = member.name || member.fullName || "Unknown";
                 return (
                   <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1.5, px: 1.5, py: 1, borderRadius: "10px", backgroundColor: "#F9F9F9" }}>
-                    <Avatar src={member.avatar} sx={{ width: 36, height: 36, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600 }}>
+                    <Avatar src={resolveFileUrl(member.avatar)} sx={{ width: 36, height: 36, fontSize: "13px", fontWeight: 600 }}>
                       {displayName?.charAt(0)}
                     </Avatar>
                     <Box flex={1}>
