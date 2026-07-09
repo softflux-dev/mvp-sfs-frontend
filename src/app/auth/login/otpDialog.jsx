@@ -1,4 +1,4 @@
-// app/auth/login/otpDialog.jsx — FULL REPLACEMENT
+// app/auth/login/otpDialog.jsx — 
 import { useState } from "react";
 import {
   Box, Typography, Dialog, DialogContent,

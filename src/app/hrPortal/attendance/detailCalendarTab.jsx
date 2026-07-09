@@ -1,4 +1,4 @@
-// hrPortal/attendance/attendanceDetail/detailCalendarTab.jsx — NEW FILE
+// hrPortal/attendance/attendanceDetail/detailCalendarTab.jsx — 
 import { useState, useEffect } from "react";
 import { Box, Typography, IconButton } from "@mui/material";
 import { ChevronLeft, ChevronRight } from "lucide-react";

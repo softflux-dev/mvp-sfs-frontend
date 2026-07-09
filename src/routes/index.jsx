@@ -642,8 +642,27 @@ const EMP_ROUTES = [
     ),
     isHideMenu: false,
   },
-   {
+   
+  {
     id: 7,
+    nameKey: "All Bugs",
+    component: <AllBugsPage />,
+    exact: "exact",
+    path: "/employee/bugs",
+    isHideMenu: true,
+  },
+  {
+  id: 8,
+  nameKey: "My Documents",
+  component: <MyDocuments />,
+  exact: "exact",
+  path: "/my-documents",
+  activeIcon:   <img src={DocumentsActiveIcon}   alt="Documents" style={{ width: 20, height: 20 }} />,
+  inActiveIcon: <img src={DocumentsInactiveIcon} alt="Documents" style={{ width: 20, height: 20 }} />,
+  isHideMenu: false,
+},
+{
+    id: 9,
     nameKey: "Profile",
     component: <Profile />,
     exact: "exact",
@@ -656,24 +675,6 @@ const EMP_ROUTES = [
     ),
     isHideMenu: false,
   },
-  {
-    id: 8,
-    nameKey: "All Bugs",
-    component: <AllBugsPage />,
-    exact: "exact",
-    path: "/employee/bugs",
-    isHideMenu: true,
-  },
-  {
-  id: 9,
-  nameKey: "My Documents",
-  component: <MyDocuments />,
-  exact: "exact",
-  path: "/my-documents",
-  activeIcon:   <img src={DocumentsActiveIcon}   alt="Documents" style={{ width: 20, height: 20 }} />,
-  inActiveIcon: <img src={DocumentsInactiveIcon} alt="Documents" style={{ width: 20, height: 20 }} />,
-  isHideMenu: false,
-}
 ];
 
 

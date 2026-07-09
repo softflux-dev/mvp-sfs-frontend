@@ -1,4 +1,4 @@
-// src/app/empPortal/myAttendance/applyLeaveDialog.jsx — FULL REPLACEMENT
+// src/app/empPortal/myAttendance/applyLeaveDialog.jsx — 
 import { useState, useEffect }           from "react";
 import { Box, Typography, MenuItem }     from "@mui/material";
 import { DatePicker }                    from "@mui/x-date-pickers/DatePicker";

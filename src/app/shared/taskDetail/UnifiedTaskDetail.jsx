@@ -1,4 +1,4 @@
-// src/shared/taskDetail/UnifiedTaskDetail.jsx — FULL REPLACEMENT
+// src/shared/taskDetail/UnifiedTaskDetail.jsx — 
 import { useState, useEffect } from "react";
 import { Box, IconButton, Typography, Avatar, Grid, CircularProgress } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -49,7 +49,7 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
   // ── fetch task detail (stages come from backend now) ─────────────────────
   const {
     task: taskDetail, comments, activityLogs, submissions,
-    stages: taskStages,                    // ← stages from getTaskDetail response
+    stages: taskStages,                    
     loading, commentLoading, error,
     sendComment, updateStatus, submitWork, fetchDetail,
   } = useTaskDetail(taskId);

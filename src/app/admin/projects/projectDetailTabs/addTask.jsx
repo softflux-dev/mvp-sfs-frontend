@@ -1,4 +1,4 @@
-// src/app/admin/projects/projectDetailTabs/addTask.jsx — FULL REPLACEMENT
+// src/app/admin/projects/projectDetailTabs/addTask.jsx — 
 // When `showProjectSelector` is true (PM task management page),
 // a project dropdown appears first and drives module/team/stage loading.
 

@@ -1,4 +1,4 @@
-// tabs/workingHoursTab.jsx — FULL REPLACEMENT
+// tabs/workingHoursTab.jsx — 
 import { useState, useEffect } from "react";
 import { Box, Typography, Button, Grid, CircularProgress } from "@mui/material";
 import { LocalizationProvider, TimePicker } from "@mui/x-date-pickers";

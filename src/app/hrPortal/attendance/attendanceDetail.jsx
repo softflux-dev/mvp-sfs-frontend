@@ -1,4 +1,4 @@
-// hrPortal/attendance/attendanceDetail/index.jsx — FULL REPLACEMENT
+// hrPortal/attendance/attendanceDetail/index.jsx — 
 import { useState }                            from "react";
 import { Box, IconButton, Typography, Avatar } from "@mui/material";
 import { useNavigate, useLocation }            from "react-router-dom";

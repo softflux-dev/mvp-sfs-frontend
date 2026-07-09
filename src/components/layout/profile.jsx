@@ -68,12 +68,11 @@ export default function Profile() {
   //                          here anymore; this is the single source of truth.
   const displaySrc = isAdmin
     ? (companyLogo || resolveFileUrl(user?.avatar) || user?.profilePicture)
-    : (resolveFileUrl(user?.avatar) || user?.profilePicture
-       || "https://i.pinimg.com/736x/36/83/32/3683323f88954ae8c498f8a8bec7272b.jpg");
+    : (resolveFileUrl(user?.avatar) || user?.profilePicture);
 
   return (
     <>
-      {/* AVATAR BUTTON */}
+     {/* AVATAR BUTTON */}
       <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0 }}>
         <Avatar
           sx={{
@@ -83,7 +82,9 @@ export default function Profile() {
             border: "2px solid #AA2493",
           }}
           src={displaySrc}
-        />
+        >
+          {(user?.fullName || user?.name)?.charAt(0)?.toUpperCase() || "U"}
+        </Avatar>
       </IconButton>
 
       {/* PROFILE MENU */}
@@ -103,7 +104,7 @@ export default function Profile() {
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
         <Box display="flex" flexDirection="column" alignItems="center">
-          <Avatar
+         <Avatar
             sx={{
               width: 100,
               height: 100,
@@ -111,7 +112,9 @@ export default function Profile() {
               border: "3px solid #AA2493",
             }}
             src={displaySrc}
-          />
+          >
+            {(user?.fullName || user?.name)?.charAt(0)?.toUpperCase() || "U"}
+          </Avatar>
 
           <Typography fontSize="20px" fontWeight="600" mb={0.5}>
             {user?.fullName || user?.name || "User Name"}

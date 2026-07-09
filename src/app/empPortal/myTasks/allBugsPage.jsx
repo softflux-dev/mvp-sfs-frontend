@@ -1,4 +1,4 @@
-// src/app/empPortal/myTasks/allBugsPage.jsx — FULL REPLACEMENT
+// src/app/empPortal/myTasks/allBugsPage.jsx — 
 import { useState } from "react";
 import { Box, Typography, IconButton, Grid, MenuItem, Chip } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";

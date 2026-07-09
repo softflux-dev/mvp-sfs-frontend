@@ -48,7 +48,7 @@ const AuthLayout = ({ children }) => (
           lineHeight={1.2}
           sx={{ fontSize: { xs: "28px", md: "42px" } }}
         >
-          We Will Deliver Your Desire
+          We Will Develop Your Desire
         </Typography>
       </Box>
     </Box>

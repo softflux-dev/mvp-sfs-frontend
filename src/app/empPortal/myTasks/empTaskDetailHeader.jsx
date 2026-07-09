@@ -1,4 +1,4 @@
-// src/app/empPortal/myTasks/empTaskDetailHeader.jsx — FULL REPLACEMENT
+// src/app/empPortal/myTasks/empTaskDetailHeader.jsx — 
 import { Box, Typography, Chip, Grid } from "@mui/material";
 
 const PRIORITY_CONFIG = {

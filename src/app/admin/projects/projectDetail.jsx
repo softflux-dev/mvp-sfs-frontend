@@ -95,7 +95,8 @@ const ProjectDetail = () => {
 
     const result = await updateProject(project.id, payload);
 
-    if (result.success) {
+   if (result.success) {
+      const selectedManager = managers.find((m) => m._id === payload.projectManager);
       setProject((prev) => ({
         ...prev,
         projectName:      payload.projectName,
@@ -111,6 +112,7 @@ const ProjectDetail = () => {
           ? payload.status.charAt(0).toUpperCase() + payload.status.slice(1)
           : prev.status,
         budget:           payload.budget ?? prev.budget,
+        projectManager:   selectedManager?.fullName || prev.projectManager,
         projectManagerId: payload.projectManager || prev.projectManagerId,
         projectTypeId:    payload.projectType    || prev.projectTypeId,
       }));

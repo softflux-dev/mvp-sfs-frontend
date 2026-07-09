@@ -1,4 +1,4 @@
-// src/app/hrPortal/payroll/viewPayslipDialog.jsx — FINAL
+// src/app/hrPortal/payroll/viewPayslipDialog.jsx — 
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Box, Divider, Typography, CircularProgress } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";

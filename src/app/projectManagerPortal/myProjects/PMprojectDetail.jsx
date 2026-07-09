@@ -79,7 +79,7 @@ const PMprojectDetail = () => {
         <TeamTab
           project={project}
           onTeamChange={setTeamMembers}
-          role="pm"             // ← PM: no Add Member button shown
+          role="pm"            
         />
       )}
       {activeTab === 3 && <ModulesTab     project={project} role="pm" />}

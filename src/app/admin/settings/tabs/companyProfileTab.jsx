@@ -1,4 +1,4 @@
-// src/app/admin/settings/tabs/companyProfileTab.jsx — FULL REPLACEMENT
+// src/app/admin/settings/tabs/companyProfileTab.jsx — 
 import { useState, useRef, useEffect } from "react";
 import { Box, Typography, Avatar, MenuItem, Grid, CircularProgress } from "@mui/material";
 

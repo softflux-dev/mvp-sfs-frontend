@@ -1,4 +1,4 @@
-// app/projectManager/teamPerformance/index.jsx — FULL REPLACEMENT
+// app/projectManager/teamPerformance/index.jsx — 
 import { useState, useEffect } from "react";
 import { Box, Grid, Skeleton, Menu, MenuItem, Typography } from "@mui/material";
 import { ChevronDown } from "lucide-react";
@@ -37,7 +37,7 @@ const displayRows = [
 
 const TeamPerformance = () => {
   const [projects,        setProjects]        = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null); // null = All
+  const [selectedProject, setSelectedProject] = useState(null); 
   const [anchorEl,        setAnchorEl]        = useState(null);
   const [data,            setData]            = useState(null);
   const [loading,         setLoading]         = useState(true);

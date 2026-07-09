@@ -33,7 +33,7 @@ const perfTableHeader = [
 ];
 
 const perfDisplayRows = [
-  "perf_member",
+  "employee_details",
   "department",
   "perf_assigned",
   "perf_completed",

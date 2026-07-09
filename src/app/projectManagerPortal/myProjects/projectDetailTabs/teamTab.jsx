@@ -3,8 +3,8 @@ import { Box, Avatar, Stack, Typography, IconButton } from "@mui/material";
 import DeleteIcon from "../../../../assets/icons/delete-icon-inactive.svg";
 import Filter             from "../../../../components/filterBar/filter";
 import PaginatedTable     from "../../../../components/dynamicTable";
-import ConfirmationDialog from "../../../../components/popups/confirmation";       // forwardRef — Cancel/Yes
-import SuccessPopup       from "../../../../components/popups/confirmationDialog"; // auto-close success
+import ConfirmationDialog from "../../../../components/popups/confirmation";       
+import SuccessPopup       from "../../../../components/popups/confirmationDialog"; 
 
 const mockMembers = [
   { id: 1, name: "Product Catalog", role: "Developer",       assigned: 12, completed: 9,  avatar: "" },
@@ -25,10 +25,10 @@ const tableHeader = [
 ];
 
 const displayRows = [
-  "team_member",    // custom → avatar + name
-  "role",           // default → plain text
-  "assigned",       // default → plain text
-  "completed",      // default → plain text
+  "team_member",    
+  "role",           
+  "assigned",       
+  "completed",      
   "actions",    
 ];
 

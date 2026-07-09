@@ -1,4 +1,4 @@
-// hrPortal/attendance/index.jsx — FULL REPLACEMENT
+// hrPortal/attendance/index.jsx — 
 import { useState, useEffect, useCallback } from "react";
 import { Box, Grid, Typography }            from "@mui/material";
 import { Upload, AlertTriangle }            from "lucide-react";

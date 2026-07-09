@@ -1,4 +1,4 @@
-// src/api/modules/companySettings.js — NEW FILE
+// src/api/modules/companySettings.js — 
 import ENDPOINTS from "../endpoints";
 import api       from "../index";
 

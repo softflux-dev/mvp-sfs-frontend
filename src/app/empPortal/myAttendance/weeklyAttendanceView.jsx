@@ -1,4 +1,4 @@
-// src/app/empPortal/myAttendance/weeklyAttendanceView.jsx — FULL REPLACEMENT
+// src/app/empPortal/myAttendance/weeklyAttendanceView.jsx — 
 import { Box, CircularProgress } from "@mui/material";
 import WeeklyMiniStats from "./weeklyMiniStats";
 import WeeklyBreakdown from "./weeklyBreakdown";

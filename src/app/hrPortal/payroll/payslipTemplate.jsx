@@ -1,4 +1,4 @@
-// src/app/hrPortal/payroll/payslipTemplate.jsx — NEW FILE (lives in payroll/ folder)
+// src/app/hrPortal/payroll/payslipTemplate.jsx —
 import { Box, Typography } from "@mui/material";
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];

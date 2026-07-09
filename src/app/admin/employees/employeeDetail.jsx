@@ -14,6 +14,8 @@ import DocumentsTab         from "./employeeDetailTabs/documentsTab";
 import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
 import { useEmployee } from "../../../hooks/employee";
 import { getEmployeeByIdApi } from "../../../api/modules/employee";
+import { useDepartment } from "../../../hooks/department";
+import { useRole }       from "../../../hooks/role";
 
 
 const tabs = [
@@ -53,6 +55,7 @@ const EmployeeDetail = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { id }    = useParams();
+  
 
   const [employee,    setEmployee]    = useState(location.state?.employee || null);
   const [loading,     setLoading]     = useState(!location.state?.employee);
@@ -62,6 +65,9 @@ const EmployeeDetail = () => {
   const [activeTab, setActiveTab] = useState(1);
   const [editOpen,  setEditOpen]  = useState(false);
   const { updateEmployee, actionLoading } = useEmployee();
+  const { departments, fetchDepartments } = useDepartment();
+  const { roles,       fetchRoles }       = useRole();
+
 
   useEffect(() => {
     if (location.state?.employee) return;
@@ -80,38 +86,43 @@ const EmployeeDetail = () => {
     }).finally(() => setLoading(false));
   }, [id]);
 
-
+useEffect(() => {
+    fetchDepartments({ limit: 100 });
+    fetchRoles({ limit: 100 });
+  }, []);
   const [apiError, setApiError] = useState("");
 
-  const handleSave = async (formData) => {
-  const result = await updateEmployee(employee.id, formData);
-  if (result.success) {
-    // Merge updated fields back into local employee state so the header,
-    // tabs, and all child components reflect the change immediately.
-   setEmployee((prev) => ({
-      ...prev,
-      name:           formData.fullName        || prev.name,
-      phone:          formData.phone           || prev.phone,
-      // DON'T overwrite role/department with raw IDs from the form —
-      // those are ObjectIds used by the edit dialog, not display labels.
-      // The header shows prev.role (roleName string) and prev.department
-      // (department name string) which are already correct.
-      departmentId:   formData.department      || prev.departmentId,
-      roleId:         formData.role            || prev.roleId,
-      employmentType: formData.employmentType  || prev.employmentType,
-      workingHours:   formData.workingHours    ?? prev.workingHours,
-      monthlySalary:  formData.monthlySalary   ?? prev.monthlySalary,
-      machineId:      formData.machineId       || prev.machineId,
-      avatar: formData.avatarFile
-        ? result.data?.employee?.avatar || prev.avatar
-        : prev.avatar,
-    }));
-    setEditOpen(false);
-    setApiError("");
-  } else {
-    setApiError(result.message);
-  }
-};
+ const handleSave = async (formData) => {
+    const result = await updateEmployee(employee.id, formData);
+    if (result.success) {
+      const selectedDept = departments.find((d) => d._id === formData.department);
+      const selectedRole = roles.find((r) => r._id === formData.role);
+
+      setEmployee((prev) => ({
+        ...prev,
+        name:           formData.fullName        || prev.name,
+        phone:          formData.phone           || prev.phone,
+        department:     selectedDept?.name        || prev.department,
+        departmentId:   formData.department      || prev.departmentId,
+        role:           selectedRole?.roleName    || prev.role,
+        roleId:         formData.role            || prev.roleId,
+        type:           formData.employmentType  || prev.type,
+        workingHours:   formData.workingHours    ?? prev.workingHours,
+        monthlySalary:  formData.monthlySalary   ?? prev.monthlySalary,
+        machineId:      formData.machineId       || prev.machineId,
+        joiningDate:    formData.joiningDate
+          ? new Date(formData.joiningDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : prev.joiningDate,
+        avatar: formData.avatarFile
+          ? result.data?.employee?.avatar || prev.avatar
+          : prev.avatar,
+      }));
+      setEditOpen(false);
+      setApiError("");
+    } else {
+      setApiError(result.message);
+    }
+  };
 
 if (loading) {
     return (

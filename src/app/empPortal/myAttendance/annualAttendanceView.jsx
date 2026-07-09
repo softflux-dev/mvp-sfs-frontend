@@ -1,4 +1,4 @@
-// src/app/empPortal/myAttendance/annualAttendanceView.jsx — FULL REPLACEMENT
+// src/app/empPortal/myAttendance/annualAttendanceView.jsx — 
 import { Box, Grid, Typography, IconButton, CircularProgress } from "@mui/material";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import AnnualSummaryCard from "./annualSummaryCard";

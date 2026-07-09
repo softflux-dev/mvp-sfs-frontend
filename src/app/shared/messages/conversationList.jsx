@@ -1,4 +1,4 @@
-// src/app/shared/messages/conversationList.jsx — FULL REPLACEMENT
+// src/app/shared/messages/conversationList.jsx — 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Box, Typography, IconButton, Skeleton, Collapse, Menu, MenuItem } from "@mui/material";
 import { Plus, Search, ChevronDown, ChevronRight, RotateCcw, Trash2, MoreVertical } from "lucide-react";

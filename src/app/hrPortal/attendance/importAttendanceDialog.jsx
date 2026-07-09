@@ -1,4 +1,4 @@
-// hrPortal/attendance/importAttendanceDialog.jsx — FULL REPLACEMENT
+// hrPortal/attendance/importAttendanceDialog.jsx — 
 import { useState, useRef } from "react";
 import { Box, Typography, MenuItem } from "@mui/material";
 import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";

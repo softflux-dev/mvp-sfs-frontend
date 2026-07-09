@@ -1,4 +1,4 @@
-// app/projectManager/dashboard/myProjectsList.jsx — FULL REPLACEMENT
+// app/projectManager/dashboard/myProjectsList.jsx — 
 import { Box, Typography, Chip, Stack, CircularProgress, styled } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ProgressBar from "../../../components/progressBar";

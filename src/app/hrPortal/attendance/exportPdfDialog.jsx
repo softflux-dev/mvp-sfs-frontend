@@ -1,4 +1,4 @@
-// hrPortal/attendance/exportPdfDialog.jsx — FULL REPLACEMENT
+// hrPortal/attendance/exportPdfDialog.jsx —
 import { useState, useEffect, useMemo } from "react";
 import { Box, Typography, RadioGroup, FormControlLabel, Radio, CircularProgress } from "@mui/material";
 import { Calendar } from "lucide-react";

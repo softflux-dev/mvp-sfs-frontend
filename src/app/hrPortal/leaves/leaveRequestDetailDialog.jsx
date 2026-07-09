@@ -1,4 +1,4 @@
-// src/app/hrPortal/leaves/leaveRequestDetailDialog.jsx — FULL REPLACEMENT
+// src/app/hrPortal/leaves/leaveRequestDetailDialog.jsx — 
 import { useState, useEffect }                       from "react";
 import { Box, Typography, Avatar, Grid, Chip,
          CircularProgress, Divider }                 from "@mui/material";

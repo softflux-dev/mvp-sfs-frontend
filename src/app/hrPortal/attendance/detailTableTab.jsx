@@ -1,4 +1,4 @@
-// hrPortal/attendance/attendanceDetail/detailTableTab.jsx — FULL REPLACEMENT
+// hrPortal/attendance/attendanceDetail/detailTableTab.jsx —
 import { useState, useMemo } from "react";
 import { Box }               from "@mui/material";
 import { Plus }               from "lucide-react";

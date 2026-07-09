@@ -1,4 +1,4 @@
-// app/empPortal/dashboard/empAttendance.jsx — FULL REPLACEMENT
+// app/empPortal/dashboard/empAttendance.jsx — 
 import { Box, Typography, CircularProgress } from "@mui/material";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,

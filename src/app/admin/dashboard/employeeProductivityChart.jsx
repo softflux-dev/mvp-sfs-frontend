@@ -1,4 +1,4 @@
-// EmployeeProductivityChart.jsx — FULL REPLACEMENT
+// EmployeeProductivityChart.jsx — 
 // Metric: Tasks Assigned vs Completed On Time per employee
 // Dropdown filters to show all or a single employee
 import React, { useState, useEffect } from "react";

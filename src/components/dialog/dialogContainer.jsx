@@ -24,10 +24,18 @@ const DialogContainer = ({
   TransitionProps = { timeout: 300 },
   ...props
 }) => {
+  // Only allow closing via explicit close/cancel buttons (which call
+  // onClose() directly, with no reason). Ignore backdropClick so the
+  // dialog doesn't dismiss when clicking outside it.
+  const handleClose = (event, reason) => {
+    if (reason === "backdropClick") return;
+    onClose?.(event, reason);
+  };
+
   return (
     <BootstrapDialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       TransitionComponent={TransitionComponent}
       TransitionProps={TransitionProps}
       {...props}

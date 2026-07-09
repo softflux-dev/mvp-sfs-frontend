@@ -1,4 +1,4 @@
-// src/app/shared/messages/groupInfoPanel.jsx — FULL REPLACEMENT
+// src/app/shared/messages/groupInfoPanel.jsx — 
 import { useState, useRef, useEffect } from "react";
 import { Box, Typography, Avatar, IconButton, TextField, Drawer, Divider, CircularProgress } from "@mui/material";
 import { X, Edit2, Trash2, UserMinus, Check, MessageSquareOff, UserPlus, Search } from "lucide-react";
@@ -191,7 +191,7 @@ const GroupInfoPanel = ({
                           "&:hover": { backgroundColor: isSelected ? "#AA249315" : "#F0F0F0" },
                         }}
                       >
-                        <Avatar  src={resolveFileUrl(member.avatar)} sx={{ width: 34, height: 34, fontSize: "13px", fontWeight: 600 }}>
+                        <Avatar src={resolveFileUrl(user.avatar)} sx={{ width: 34, height: 34, fontSize: "13px", fontWeight: 600 }}>
                           {user.name?.charAt(0)}
                         </Avatar>
                         <Box flex={1}>

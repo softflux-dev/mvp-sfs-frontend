@@ -1,4 +1,4 @@
-// src/app/hrPortal/bonusIncrement/index.jsx — NEW FILE
+// src/app/hrPortal/bonusIncrement/index.jsx — 
 import { useState } from "react";
 import { Box, Grid } from "@mui/material";
 

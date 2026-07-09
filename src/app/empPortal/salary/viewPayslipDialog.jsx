@@ -1,4 +1,4 @@
-// src/app/employeePortal/salary/viewPayslipDialog.jsx — NEW FILE
+// src/app/employeePortal/salary/viewPayslipDialog.jsx — 
 import { Box, Divider, Typography } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
 import CustomButton from "../../../components/customButton";

@@ -1,4 +1,4 @@
-// src/app/hrPortal/bonusIncrement/addIncrementDialog.jsx — FULL REPLACEMENT
+// src/app/hrPortal/bonusIncrement/addIncrementDialog.jsx —
 import { useState, useEffect } from "react";
 import {
   Box, MenuItem, Typography, Avatar, Divider, CircularProgress,

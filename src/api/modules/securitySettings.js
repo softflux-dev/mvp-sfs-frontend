@@ -1,4 +1,4 @@
-// src/api/modules/securitySettings.js — NEW FILE
+// src/api/modules/securitySettings.js — 
 import ENDPOINTS from "../endpoints";
 import api       from "../index";
 

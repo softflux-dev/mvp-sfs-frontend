@@ -1,4 +1,4 @@
-// tabs/leavePolicyTab.jsx — FULL REPLACEMENT
+// tabs/leavePolicyTab.jsx — 
 import { useState, useEffect } from "react";
 import { Box, Typography, Grid, CircularProgress } from "@mui/material";
 

@@ -1,4 +1,4 @@
-// app/empPortal/dashboard/index.jsx — FULL REPLACEMENT
+// app/empPortal/dashboard/index.jsx — 
 import { useState, useEffect } from "react";
 import { Grid, Box, Skeleton } from "@mui/material";
 import { useNavigate }         from "react-router-dom";

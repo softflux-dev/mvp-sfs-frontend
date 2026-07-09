@@ -1,4 +1,4 @@
-// employees/employeeDetailTabs/salaryTab.jsx — FULL REPLACEMENT
+// employees/employeeDetailTabs/salaryTab.jsx — 
 import { useState, useEffect } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import PaginatedTable from "../../../../components/dynamicTable";

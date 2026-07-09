@@ -1,4 +1,4 @@
-// src/app/employeePortal/salary/index.jsx — FULL REPLACEMENT
+// src/app/employeePortal/salary/index.jsx — 
 import { useState } from "react";
 import { Box, Grid, Typography, CircularProgress } from "@mui/material";
 import jsPDF     from "jspdf";
@@ -27,14 +27,14 @@ const tableHeader = [
 ];
 
 const displayRows = [
-  "payroll_checkbox",   // ← checkbox column (reuses existing case)
+  "payroll_checkbox",   
   "ps_month",
   "ps_base_salary",
   "ps_bonus",
   "ps_deductions",
   "ps_net_pay",
-  "ps_payroll_status",  // ← new status chip case
-  "ps_actions",         // ← new actions case (view + download)
+  "ps_payroll_status",  
+  "ps_actions",         
 ];
 
 const StatCard = ({ label, value, sub, accent = "text.primary", bg = "#fff" }) => (

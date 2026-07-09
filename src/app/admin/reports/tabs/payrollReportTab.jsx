@@ -1,4 +1,4 @@
-// src/app/admin/reports/tabs/payrollReportTab.jsx — FULL REPLACEMENT
+// src/app/admin/reports/tabs/payrollReportTab.jsx —
 import { forwardRef, useImperativeHandle, useState, useEffect, useMemo } from "react";
 import { Box, IconButton, Typography, CircularProgress } from "@mui/material";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";

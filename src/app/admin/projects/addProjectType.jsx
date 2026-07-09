@@ -39,7 +39,7 @@ const AddProjectType = ({ open, onClose, onSave }) => {
     }
   }, [open]);
 
-  // ── Add new type ───────────────────────────────────────────────────────────
+ // ── Add new type ───────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!typeName.trim()) {
       setInputError("Project type name is required");
@@ -52,6 +52,7 @@ const AddProjectType = ({ open, onClose, onSave }) => {
       setInputError("");
       setSuccessMsg("Project type added successfully.");
       setSuccessOpen(true);
+      handleClose();
     } else {
       setInputError(result.message);
     }
@@ -65,6 +66,7 @@ const AddProjectType = ({ open, onClose, onSave }) => {
       setInlineEditId(null);
       setSuccessMsg("Project type updated.");
       setSuccessOpen(true);
+      handleClose();
     } else {
       setInputError(result.message);
     }
@@ -86,6 +88,7 @@ const AddProjectType = ({ open, onClose, onSave }) => {
         if (result.success) {
           setSuccessMsg("Project type deleted.");
           setSuccessOpen(true);
+          handleClose();
         } else {
           setInputError(result.message);
         }

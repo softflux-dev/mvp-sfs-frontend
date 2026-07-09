@@ -1,4 +1,4 @@
-// app/empPortal/dashboard/monthlyPerformance.jsx — FULL REPLACEMENT
+// app/empPortal/dashboard/monthlyPerformance.jsx — 
 import { Box, Typography, CircularProgress } from "@mui/material";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";

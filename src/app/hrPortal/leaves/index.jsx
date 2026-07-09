@@ -27,7 +27,7 @@ const tableHeader = [
 ];
 
 const displayRows = [
-  "lm_employee",
+  "employee_details",
   "lm_type",
   "lm_dates",
   "lm_days",

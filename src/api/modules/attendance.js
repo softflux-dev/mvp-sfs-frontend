@@ -1,4 +1,4 @@
-// src/api/modules/attendance.js — FULL REPLACEMENT
+// src/api/modules/attendance.js — 
 import ENDPOINTS from "../endpoints";
 import api       from "../index";
 

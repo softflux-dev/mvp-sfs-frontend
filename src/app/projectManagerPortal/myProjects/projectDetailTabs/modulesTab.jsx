@@ -3,8 +3,8 @@ import { Box, Grid } from "@mui/material";
 import CustomButton       from "../../../../components/customButton";
 import ModuleCard         from "../../../../components/cards/moduleCard";
 import AddModule          from "./addModule";
-import ConfirmationDialog from "../../../../components/popups/confirmation";        // ✅ forwardRef — Cancel/Yes
-import SuccessPopup       from "../../../../components/popups/confirmationDialog";  // ✅ auto-close success
+import ConfirmationDialog from "../../../../components/popups/confirmation";        
+import SuccessPopup       from "../../../../components/popups/confirmationDialog";  
 
 const mockModules = [
   { id: 1, title: "Product Catalog", description: "Product listing and detail pages", status: "Development", tasksLabel: "8/12 tasks", progress: 87, members: [], showActions: false },

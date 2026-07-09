@@ -1,4 +1,4 @@
-// tabs/securityTab.jsx — FULL REPLACEMENT
+// tabs/securityTab.jsx — 
 import { useState, useEffect } from "react";
 import { Box, Typography, Grid, MenuItem, CircularProgress } from "@mui/material";
 

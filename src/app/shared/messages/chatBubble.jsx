@@ -1,4 +1,4 @@
-// src/app/shared/messages/chatBubble.jsx — FULL REPLACEMENT
+// src/app/shared/messages/chatBubble.jsx — 
 import { useState } from "react";
 import { Box, Typography, Avatar, Menu, MenuItem, TextField, IconButton } from "@mui/material";
 import { MoreVertical, Edit2, Trash2, Check, X, Paperclip } from "lucide-react";

@@ -1,4 +1,4 @@
-// hrPortal/attendance/attendanceHistoryTab.jsx — FULL REPLACEMENT
+// hrPortal/attendance/attendanceHistoryTab.jsx — 
 import { useRef, useState } from "react";
 import { Box } from "@mui/material";
 

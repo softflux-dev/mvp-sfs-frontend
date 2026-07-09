@@ -1,4 +1,4 @@
-// src/app/shared/messages/index.jsx — FULL REPLACEMENT
+// src/app/shared/messages/index.jsx — 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Box } from "@mui/material";
 

@@ -64,7 +64,7 @@ const allowedPathSet = React.useMemo(() => {
 
 const { label: roleLabel } = ROLE_ROUTE_MAP[user?.role] || { label: "" };
 
-// ← REPLACE the old visibleRoutes useMemo with this:
+
 const visibleRoutes = React.useMemo(() => {
   if (!allowedPathSet) return [];
 
@@ -81,8 +81,18 @@ const visibleRoutes = React.useMemo(() => {
       result.push(route);
     }
   }
-  return result;
+
+  // Always render "Settings" and "Profile" last, regardless of the
+  // order rolePages happens to come back in from the backend.
+  const isPinnedLast = (route) =>
+    route.nameKey === "Settings" || route.nameKey === "Profile";
+
+  const normal = result.filter((r) => !isPinnedLast(r));
+  const pinned = result.filter((r) => isPinnedLast(r));
+
+  return [...normal, ...pinned];
 }, [user?.rolePages, allowedPathSet]);
+  
 
     
 

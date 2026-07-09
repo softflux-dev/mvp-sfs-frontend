@@ -1,4 +1,4 @@
-// src/app/empPortal/myAttendance/monthlyAttendanceView.jsx — FULL REPLACEMENT
+// src/app/empPortal/myAttendance/monthlyAttendanceView.jsx — 
 import { Box, Typography, Chip, CircularProgress } from "@mui/material";
 import { useMonthlyCalendar } from "../../../hooks/employeeAttendance";
 

@@ -1,4 +1,4 @@
-// src/app/empPortal/myAttendance/index.jsx — FULL REPLACEMENT
+// src/app/empPortal/myAttendance/index.jsx — 
 import { useState, useEffect } from "react";
 import { Box, Grid, IconButton, Typography, CircularProgress } from "@mui/material";
 import { ChevronLeft, ChevronRight } from "lucide-react";

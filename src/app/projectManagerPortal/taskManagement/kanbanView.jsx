@@ -72,7 +72,7 @@ const KanbanView = ({ tasks = [], stages = [], onTaskStatusUpdated }) => {
    const drag = {
   taskId:    String(draggableId || movedTask._id || movedTask.id),
   taskTitle: movedTask.title || movedTask.task || "",
-  projectId: movedTask.projectId || movedTask.project?._id || movedTask.project || "",  // ← add
+  projectId: movedTask.projectId || movedTask.project?._id || movedTask.project || "",  
   srcId:     source.droppableId,
   destId:    destination.droppableId,
 };

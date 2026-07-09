@@ -1,4 +1,4 @@
-// employees/projectDetailTabs/uploadProjectDocumentDialog.jsx — NEW FILE
+// employees/projectDetailTabs/uploadProjectDocumentDialog.jsx — 
 import { useState, useEffect} from "react";
 import { Box, MenuItem, Typography, Avatar, Checkbox, CircularProgress } from "@mui/material";
 import {

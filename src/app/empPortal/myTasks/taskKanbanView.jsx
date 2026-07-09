@@ -1,4 +1,4 @@
-// src/app/empPortal/myTasks/taskKanbanView.jsx — FULL REPLACEMENT
+// src/app/empPortal/myTasks/taskKanbanView.jsx — 
 // Same pattern as PM kanbanView — uses stages prop as column definitions
 
 import { useState, useEffect, useRef }           from "react";

@@ -1,4 +1,4 @@
-// src/app/hrPortal/payroll/index.jsx — FINAL
+// src/app/hrPortal/payroll/index.jsx — 
 // Email PDF: renders PayslipTemplate in hidden div, html2canvas captures it.
 // Same template, same UI. One render per employee, then instant capture.
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -35,7 +35,7 @@ const tableHeader = [
   { id: "actions",    label: ""            },
 ];
 const displayRows = [
-  "payroll_checkbox","payroll_emp_id","payroll_employee","payroll_department",
+  "payroll_checkbox","payroll_emp_id", "employee_details","payroll_department",
   "payroll_working","payroll_present","payroll_leave","payroll_salary",
   "payroll_bonus_col","payroll_deductions_col","payroll_net","actions_menu",
 ];

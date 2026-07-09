@@ -1,4 +1,4 @@
-// src/app/admin/employees/salarySetupDialog.jsx — NEW FILE
+// src/app/admin/employees/salarySetupDialog.jsx —
 import { useState, useEffect } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import {

@@ -44,7 +44,8 @@ const OverviewTab = ({ project = {}, role = "admin" }) => {
     { label: "Start Date",     value: project.startDate || "Jan 15, 2026"  },
     { label: "End Date",       value: project.endDate   || "Jun 30, 2026"  },
     { label: "Days Remaining", value: daysRemaining                        },
-    !isPM && { label: "Budget", value: project.budget ? `$${Number(project.budget).toLocaleString()}` : "$150,000" },
+    !isPM && { label: "Budget", value: project.budget != null ? `$${Number(project.budget).toLocaleString()}` : "$0" },
+
   ].filter(Boolean);
 
     const statsData = [
