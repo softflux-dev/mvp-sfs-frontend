@@ -254,6 +254,9 @@ const Employees = () => {
         editingEmployee={editingEmp}
         loading={actionLoading}
         apiError={apiError}
+        existingMachineIds={employees
+    .map((e) => e.machineId)
+    .filter((id) => id && id !== editingEmp?.machineId)}
       />
 
       {/* Confirm delete */}

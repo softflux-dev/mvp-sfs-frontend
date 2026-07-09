@@ -1,5 +1,5 @@
 // src/app/hrPortal/bonusIncrement/addBonusDialog.jsx — 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, MenuItem, Typography, Avatar, Checkbox, CircularProgress } from "@mui/material";
 import { DatePicker }           from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -33,6 +33,12 @@ const AddBonusDialog = ({
 }) => {
   const [form,   setForm]   = useState({ ...INITIAL_FORM });
   const [errors, setErrors] = useState({});
+
+  const fieldRefs = {
+    monthYear:   useRef(null),
+    amount:      useRef(null),
+    employeeIds: useRef(null),
+  };
 
   // Real employees from hook — fetch flat list when dialog opens
   const { employees, fetchEmployees } = useEmployee();
@@ -73,9 +79,22 @@ const AddBonusDialog = ({
     return e;
   };
 
+  const FIELD_ORDER = ["monthYear", "amount", "employeeIds"];
+
   const handleSave = () => {
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+
+      const firstErrorField = FIELD_ORDER.find((f) => errs[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
+      return;
+    }
 
     const d = new Date(form.monthYear);
     onSave?.({
@@ -141,7 +160,7 @@ const AddBonusDialog = ({
             )}
 
             {/* Month/Year DatePicker */}
-            <Box>
+            <Box ref={fieldRefs.monthYear}>
               <CustomInputLabel label="Bonus Month *" />
               <DatePicker
                 value={form.monthYear}
@@ -162,7 +181,7 @@ const AddBonusDialog = ({
             </Box>
 
             {/* Amount */}
-            <Box>
+            <Box ref={fieldRefs.amount}>
               <CustomInputLabel label="Bonus Amount (Rs) *" />
               <TextInput
                 placeholder="Enter amount"
@@ -178,7 +197,7 @@ const AddBonusDialog = ({
             </Box>
 
             {/* Multi-select employees — real data from useEmployee */}
-            <Box>
+            <Box ref={fieldRefs.employeeIds}>
               <CustomInputLabel label="Select Employees *" />
               <CustomSelect
                 multiple

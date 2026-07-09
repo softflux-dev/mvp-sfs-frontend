@@ -1,5 +1,5 @@
 // hrPortal/holidays/addHolidayDialog.jsx 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, MenuItem, Typography } from "@mui/material";
 import { DatePicker }            from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider }  from "@mui/x-date-pickers/LocalizationProvider";
@@ -34,6 +34,12 @@ const INITIAL_FORM = {
 const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loading = false, apiError = "" }) => {
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [errors,   setErrors]   = useState({});
+
+  const fieldRefs = {
+    name:     useRef(null),
+    fromDate: useRef(null),
+    toDate:   useRef(null),
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -78,10 +84,20 @@ const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loadin
     return e;
   };
 
+  const FIELD_ORDER = ["name", "fromDate", "toDate"];
+
   const handleSave = () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+
+      const firstErrorField = FIELD_ORDER.find((f) => validationErrors[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
       return;
     }
     onSave?.({
@@ -114,7 +130,7 @@ const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loadin
             )}
 
             {/* Holiday Name */}
-            <Box>
+            <Box ref={fieldRefs.name}>
               <CustomInputLabel label="Holiday Name *" />
               <TextInput
                 placeholder="e.g. Eid-ul-Fitr, Independence Day"
@@ -139,7 +155,7 @@ const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loadin
 
             {/* From / To Date */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box>
+              <Box ref={fieldRefs.fromDate}>
                 <CustomInputLabel label="Start Date *" />
                 <DatePicker
                   value={formData.fromDate}
@@ -152,7 +168,7 @@ const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loadin
                 />
                 {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.fromDate}</Typography>}
               </Box>
-              <Box>
+              <Box ref={fieldRefs.toDate}>
                 <CustomInputLabel label="End Date *" />
                 <DatePicker
                   value={formData.toDate}

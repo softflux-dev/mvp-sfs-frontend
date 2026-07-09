@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useRef } from "react";
 import { Box, MenuItem, Typography, CircularProgress } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -43,6 +43,16 @@ const AddProject = ({
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [errors,   setErrors]   = useState({});
 
+  const fieldRefs = {
+    projectName:    useRef(null),
+    clientName:     useRef(null),
+    projectManager: useRef(null),
+    projectType:    useRef(null),
+    startDate:      useRef(null),
+    endDate:        useRef(null),
+    status:         useRef(null),
+  };
+
   useEffect(() => {
     if (!open) return;
     if (editingProject) {
@@ -79,6 +89,7 @@ const AddProject = ({
     if (!formData.projectName.trim()) e.projectName    = "Project name is required";
     if (!formData.clientName.trim())  e.clientName     = "Client name is required";
     if (!formData.projectManager)     e.projectManager = "Project manager is required";
+    if (!formData.projectType)        e.projectType    = "Project type is required";
     if (!formData.status)             e.status         = "Status is required";
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -94,11 +105,20 @@ const AddProject = ({
     }
     return e;
   };
+  const FIELD_ORDER = ["projectName", "clientName", "projectManager", "projectType", "startDate", "endDate", "status"];
 
-  const handleSave = () => {
+const handleSave = () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+
+      const firstErrorField = FIELD_ORDER.find((f) => validationErrors[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
       return;
     }
     onSave?.(formData);
@@ -133,7 +153,7 @@ const AddProject = ({
             )}
 
             {/* Project Name */}
-            <Box>
+            <Box ref={fieldRefs.projectName}>
               <CustomInputLabel label="Project Name *" />
               <TextInput placeholder="Enter Project Name" value={formData.projectName}
                 onChange={handleChange("projectName")} inputBgColor="#fff" fullWidth
@@ -141,7 +161,7 @@ const AddProject = ({
             </Box>
 
             {/* Client Name */}
-            <Box>
+            <Box ref={fieldRefs.clientName}>
               <CustomInputLabel label="Client Name *" />
               <TextInput placeholder="Enter Client Name" value={formData.clientName}
                 onChange={handleChange("clientName")} inputBgColor="#fff" fullWidth
@@ -157,7 +177,7 @@ const AddProject = ({
             </Box>
 
             {/* Project Manager */}
-            <Box>
+            <Box  ref={fieldRefs.projectManager}>
               <CustomInputLabel label="Project Manager *" />
               <CustomSelect value={formData.projectManager}
                 onChange={handleChange("projectManager")}
@@ -177,9 +197,10 @@ const AddProject = ({
               )}
             </Box>
 
+          
             {/* Project Type */}
-            <Box>
-              <CustomInputLabel label="Project Type" />
+            <Box ref={fieldRefs.projectType}>
+              <CustomInputLabel label="Project Type *" />
               <CustomSelect value={formData.projectType}
                 onChange={handleChange("projectType")}
                 fullWidth height="45px" inputBgColor="#fff" displayEmpty
@@ -193,11 +214,14 @@ const AddProject = ({
                   <MenuItem key={t._id} value={t._id}>{t.label}</MenuItem>
                 ))}
               </CustomSelect>
+              {errors.projectType && (
+                <Typography fontSize="12px" color="error" mt={0.5}>{errors.projectType}</Typography>
+              )}
             </Box>
 
             {/* Start + End Date */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box>
+              <Box ref={fieldRefs.startDate}>
                 <CustomInputLabel label="Start Date *" />
                 <DatePicker value={formData.startDate} onChange={handleDateChange("startDate") } 
                   slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.startDate } }}
@@ -205,7 +229,7 @@ const AddProject = ({
                 />
                 {errors.startDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.startDate}</Typography>}
               </Box>
-              <Box>
+              <Box ref={fieldRefs.endDate}>
                 <CustomInputLabel label="End Date *" />
                 <DatePicker value={formData.endDate} onChange={handleDateChange("endDate")} 
                 minDate={formData.startDate ? new Date(formData.startDate) : undefined}
@@ -218,7 +242,7 @@ const AddProject = ({
 
             {/* Status + Budget */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box>
+              <Box ref={fieldRefs.status}>
                 <CustomInputLabel label="Project Status *" />
                 <CustomSelect value={formData.status} onChange={handleChange("status")}
                   fullWidth height="45px" inputBgColor="#fff" displayEmpty

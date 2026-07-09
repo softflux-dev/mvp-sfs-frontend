@@ -1,5 +1,5 @@
 // src/app/hrPortal/bonusIncrement/addIncrementDialog.jsx —
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Box, MenuItem, Typography, Avatar, Divider, CircularProgress,
 } from "@mui/material";
@@ -42,6 +42,12 @@ const AddIncrementDialog = ({
 }) => {
   const [form,   setForm]   = useState({ ...INITIAL_FORM });
   const [errors, setErrors] = useState({});
+
+  const fieldRefs = {
+    employeeId:    useRef(null),
+    effectiveDate: useRef(null),
+    percentage:    useRef(null),
+  };
 
   // Real employees from hook
 const [employees, setEmployees] = useState([]);
@@ -96,9 +102,22 @@ const [employees, setEmployees] = useState([]);
     return e;
   };
 
+  const FIELD_ORDER = ["employeeId", "effectiveDate", "percentage"];
+
   const handleSave = () => {
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+
+      const firstErrorField = FIELD_ORDER.find((f) => errs[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
+      return;
+    }
 
     onSave?.({
       employeeId:       form.employeeId,
@@ -139,7 +158,7 @@ const [employees, setEmployees] = useState([]);
             )}
 
             {/* Employee select */}
-            <Box>
+            <Box ref={fieldRefs.employeeId}>
               <CustomInputLabel label="Select Employee *" />
               <CustomSelect
                 value={form.employeeId}
@@ -198,7 +217,7 @@ const [employees, setEmployees] = useState([]);
             )}
 
             {/* Effective Date */}
-            <Box>
+            <Box ref={fieldRefs.effectiveDate}>
               <CustomInputLabel label="Effective Date *" />
               <DatePicker
                 value={form.effectiveDate}
@@ -217,7 +236,7 @@ const [employees, setEmployees] = useState([]);
             </Box>
 
             {/* Increment % */}
-            <Box>
+            <Box ref={fieldRefs.percentage}>
               <CustomInputLabel label="Increment Percentage *" />
               <TextInput
                 placeholder="e.g. 10"

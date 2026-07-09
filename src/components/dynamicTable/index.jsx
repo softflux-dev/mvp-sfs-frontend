@@ -125,6 +125,51 @@ function TaskAssigneesCell({ row }) {
     </TableCell>
   );
 }
+
+function DocSharedWithCell({ row }) {
+  const [showAll, setShowAll] = useState(false);
+
+  const names   = Array.isArray(row.sharedNames) ? row.sharedNames : [];
+  const visible  = names.slice(0, 2);
+  const overflow = names.slice(2);
+
+  if (!row.sharedCount) {
+    return (
+      <TableCell>
+        <Typography fontSize="12px" color="text.secondary">Not shared</Typography>
+      </TableCell>
+    );
+  }
+
+  return (
+    <TableCell>
+      <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
+        {visible.map((name, i) => (
+          <Box key={i} sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#F0F0F0", fontSize: "12px", fontWeight: 500, color: "#374151", whiteSpace: "nowrap" }}>
+            {name}
+          </Box>
+        ))}
+        {!showAll && overflow.length > 0 && (
+          <Box onClick={(e) => { e.stopPropagation(); setShowAll(true); }}
+            sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#AA24931A", fontSize: "12px", fontWeight: 600, color: "#AA2493", cursor: "pointer", whiteSpace: "nowrap", "&:hover": { backgroundColor: "#AA249330" } }}>
+            +{overflow.length} more
+          </Box>
+        )}
+        {showAll && overflow.map((name, i) => (
+          <Box key={i} sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#F0F0F0", fontSize: "12px", fontWeight: 500, color: "#374151", whiteSpace: "nowrap" }}>
+            {name}
+          </Box>
+        ))}
+        {showAll && overflow.length > 0 && (
+          <Box onClick={(e) => { e.stopPropagation(); setShowAll(false); }}
+            sx={{ px: "8px", py: "3px", borderRadius: "6px", backgroundColor: "#F5F5F5", fontSize: "12px", fontWeight: 600, color: "#9CA3AF", cursor: "pointer", "&:hover": { backgroundColor: "#E5E5E5" } }}>
+            less
+          </Box>
+        )}
+      </Box>
+    </TableCell>
+  );
+}
  
 
 export default function PaginatedTable({
@@ -2858,18 +2903,7 @@ case "att_summary_actions":
     </TableCell>
   );
  case "doc_shared_with":
-  return (
-    <TableCell key={val}>
-      {row.sharedCount === 0 ? (
-        <Typography fontSize="12px" color="text.secondary">Not shared</Typography>
-      ) : (
-        <Typography fontSize="13px" color="text.primary">
-          {row.sharedNames.slice(0, 2).join(", ")}
-          {row.sharedCount > 2 ? ` +${row.sharedCount - 2} more` : ""}
-        </Typography>
-      )}
-    </TableCell>
-  );
+  return <DocSharedWithCell key={val} row={row} />;
 // ── Detail page table — edit-only action ────────────────────────────────────
 case "att_detail_actions":
   return (

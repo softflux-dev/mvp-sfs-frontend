@@ -1,28 +1,11 @@
 // performanceTabs/projectProgressChart.jsx
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Box, Typography, Menu, MenuItem } from "@mui/material";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell,
+  Tooltip, ResponsiveContainer,
 } from "recharts";
 import { ChevronDown } from "lucide-react";
-
-const allData = {
-  "All Employees": [
-    { name: "Priya",  progress: 15 },
-    { name: "David",  progress: 70 },
-    { name: "Sarah",  progress: 48 },
-    { name: "Lisa",   progress: 92 },
-    { name: "Emily",  progress: 28 },
-  ],
-  "Priya":  [{ name: "Priya",  progress: 15 }],
-  "David":  [{ name: "David",  progress: 70 }],
-  "Sarah":  [{ name: "Sarah",  progress: 48 }],
-  "Lisa":   [{ name: "Lisa",   progress: 92 }],
-  "Emily":  [{ name: "Emily",  progress: 28 }],
-};
-
-const employees = ["All Employees", "Priya", "David", "Sarah", "Lisa", "Emily"];
 
 const GradientBar = (props) => {
   const { x, y, width, height } = props;
@@ -60,9 +43,16 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-const PerformanceProjectProgressChart = () => {
+const PerformanceProjectProgressChart = ({ data = [], loading = false }) => {
   const [selected, setSelected] = useState("All Employees");
   const [anchorEl, setAnchorEl] = useState(null);
+
+  // ── Build dropdown options from the real team members in `data` ─────────
+  const employees = useMemo(() => ["All Employees", ...data.map((d) => d.name)], [data]);
+
+  const chartData = selected === "All Employees"
+    ? data
+    : data.filter((d) => d.name === selected);
 
   return (
     <Box sx={{
@@ -124,23 +114,33 @@ const PerformanceProjectProgressChart = () => {
         </Menu>
       </Box>
 
-      <ResponsiveContainer width="100%" height={280}>
-        <BarChart data={allData[selected]} barSize={48}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11, fill: "#6B7280" }}
-            axisLine={{ stroke: "#E5E7EB" }} tickLine={false}
-          />
-          <YAxis
-            domain={[0, 100]} ticks={[0, 25, 50, 75, 100]}
-            tick={{ fontSize: 11, fill: "#6B7280" }}
-            axisLine={{ stroke: "#E5E7EB" }} tickLine={false}
-          />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
-          <Bar dataKey="progress" shape={<GradientBar />} radius={[8, 8, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" height={280}>
+          <Typography fontSize={13} color="text.secondary">Loading...</Typography>
+        </Box>
+      ) : !data.length ? (
+        <Box display="flex" justifyContent="center" alignItems="center" height={280}>
+          <Typography fontSize={13} color="text.secondary">No team members yet.</Typography>
+        </Box>
+      ) : (
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData} barSize={48}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 11, fill: "#6B7280" }}
+              axisLine={{ stroke: "#E5E7EB" }} tickLine={false}
+            />
+            <YAxis
+              domain={[0, 100]} ticks={[0, 25, 50, 75, 100]}
+              tick={{ fontSize: 11, fill: "#6B7280" }}
+              axisLine={{ stroke: "#E5E7EB" }} tickLine={false}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
+            <Bar dataKey="progress" shape={<GradientBar />} radius={[8, 8, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
     </Box>
   );
 };

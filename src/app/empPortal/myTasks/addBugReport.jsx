@@ -1,11 +1,7 @@
 // addBugReport.jsx
-// No API changes needed in this component — it receives onSave as a prop
-// and the parent (AllBugsBox / AllBugsPage) calls the real API.
-// This file is included for completeness; it is identical to your existing version
-// but with the generateTcId removed — the TC ID should come from the server
-// on create, or from editingBug.tcId on edit.
 
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { Box, Typography, MenuItem } from "@mui/material";
 import { ImagePlus, X }              from "lucide-react";
 
@@ -51,6 +47,12 @@ const AddBugReport = ({ open, onClose, onSave, editingBug = null, loading = fals
   const [formData,    setFormData]    = useState(INITIAL_FORM);
   const [errors,      setErrors]      = useState({});
   const [successOpen, setSuccessOpen] = useState(false);
+
+  const fieldRefs = {
+    title:    useRef(null),
+    severity: useRef(null),
+    status:   useRef(null),
+  };
 
   const isEdit = Boolean(editingBug);
 
@@ -114,9 +116,22 @@ const AddBugReport = ({ open, onClose, onSave, editingBug = null, loading = fals
     return e;
   };
 
+  const FIELD_ORDER = ["title", "severity", "status"];
+
   const handleSave = () => {
     const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (Object.keys(errs).length) {
+      setErrors(errs);
+
+      const firstErrorField = FIELD_ORDER.find((f) => errs[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
+      return;
+    }
     onSave?.(formData);
     handleClose();
     setSuccessOpen(true);
@@ -152,7 +167,7 @@ const AddBugReport = ({ open, onClose, onSave, editingBug = null, loading = fals
             </Box>
 
             {/* Bug Title */}
-            <Box>
+            <Box ref={fieldRefs.title}>
               <CustomInputLabel label="Bug Title *" />
               <TextInput
                 placeholder="Enter bug title"
@@ -167,14 +182,14 @@ const AddBugReport = ({ open, onClose, onSave, editingBug = null, loading = fals
 
             {/* Severity + Status */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box>
+              <Box ref={fieldRefs.severity}>
                 <CustomInputLabel label="Severity" />
                 <CustomSelect value={formData.severity} onChange={handleChange("severity")} fullWidth height="45px" inputBgColor="#fff">
                   {SEVERITY_OPTIONS.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                 </CustomSelect>
                 {errors.severity && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.severity}</Typography>}
               </Box>
-              <Box>
+              <Box ref={fieldRefs.status}>
                 <CustomInputLabel label="Status" />
                 <CustomSelect value={formData.status} onChange={handleChange("status")} fullWidth height="45px" inputBgColor="#fff">
                   {STATUS_OPTIONS.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}

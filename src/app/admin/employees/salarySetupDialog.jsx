@@ -1,5 +1,5 @@
 // src/app/admin/employees/salarySetupDialog.jsx —
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import {
   DialogContainer,
@@ -42,13 +42,29 @@ const SalarySetupDialog = ({
   onSave,
   loading     = false,
   editingEmployee = null,
+  initialSalary   = null,
+  onDraftChange   = null,
 }) => {
   const [salary, setSalary] = useState({ ...EMPTY_SALARY });
   const [errors, setErrors] = useState({});
 
+ const fieldRefs = {
+    basicSalary: useRef(null),
+  };
+
+  // ── Track the closed→open transition only — this must NOT re-run every
+  //    time `initialSalary` changes while the dialog is already open,
+  //    otherwise it fights with the continuous draft-sync effect below
+  //    (every keystroke updates initialSalary via the parent, which would
+  //    re-trigger this effect and reset the field mid-type).
+  const wasOpenRef = useRef(false);
+
   // Pre-populate when editing an existing employee who already has salary data
-  useEffect(() => {
-    if (!open) return;
+useEffect(() => {
+    const justOpened = open && !wasOpenRef.current;
+    wasOpenRef.current = open;
+    if (!justOpened) return;
+
     if (editingEmployee?.salaryBreakdown) {
       setSalary({
         basicSalary:         String(editingEmployee.salaryBreakdown.basicSalary        || ""),
@@ -58,11 +74,30 @@ const SalarySetupDialog = ({
         lunchAllowance:      String(editingEmployee.salaryBreakdown.lunchAllowance     || ""),
         housingAllowance:    String(editingEmployee.salaryBreakdown.housingAllowance   || ""),
       });
+    } else if (initialSalary?.salaryBreakdown) {
+      // Restore whatever the user last entered, in case this reopen is
+      // due to a failed save (e.g. duplicate Attendance ID caught on step 1)
+      setSalary({
+        basicSalary:         String(initialSalary.salaryBreakdown.basicSalary        || ""),
+        securityAllowance:   String(initialSalary.salaryBreakdown.securityAllowance  || ""),
+        medicalAllowance:    String(initialSalary.salaryBreakdown.medicalAllowance   || ""),
+        transportAllowance:  String(initialSalary.salaryBreakdown.transportAllowance || ""),
+        lunchAllowance:      String(initialSalary.salaryBreakdown.lunchAllowance     || ""),
+        housingAllowance:    String(initialSalary.salaryBreakdown.housingAllowance   || ""),
+      });
     } else {
       setSalary({ ...EMPTY_SALARY });
     }
     setErrors({});
-  }, [open, editingEmployee]);
+  }, [open, editingEmployee, initialSalary]);
+
+// ── Continuously report the current draft back to the parent, so any
+  //    partial input survives even if the user clicks "Back" instead of
+  //    "Save" (e.g. to go fix a validation error on step 1).
+  useEffect(() => {
+    if (!open) return;
+    onDraftChange?.({ salaryBreakdown: { ...salary } });
+  }, [salary, open]);
 
   const handleChange = (field) => (e) => {
     setSalary((prev) => ({ ...prev, [field]: e.target.value }));
@@ -90,10 +125,20 @@ const SalarySetupDialog = ({
     return e;
   };
 
+  const FIELD_ORDER = ["basicSalary"];
+
   const handleSave = () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+
+      const firstErrorField = FIELD_ORDER.find((f) => validationErrors[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
       return;
     }
     onSave?.({
@@ -110,11 +155,10 @@ const SalarySetupDialog = ({
     });
   };
 
-  const handleClose = () => {
-    setSalary({ ...EMPTY_SALARY });
+ const handleClose = () => {
     setErrors({});
     onClose?.();
-  };
+  };;
 
   const rsIcon = <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>;
 
@@ -133,7 +177,7 @@ const SalarySetupDialog = ({
         }}>
 
           {/* Basic Salary */}
-          <Box>
+          <Box ref={fieldRefs.basicSalary}>
             <CustomInputLabel label="Basic Salary *" />
             <TextInput
               placeholder="0"

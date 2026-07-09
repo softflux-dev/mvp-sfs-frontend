@@ -61,6 +61,7 @@ const AddEmployee = ({
   editingEmployee = null,
   loading  = false,
   apiError = "",
+  existingMachineIds = [],
 }) => {
   const { departments, fetchDepartments } = useDepartment();
   const { roles,       fetchRoles }       = useRole();
@@ -68,8 +69,21 @@ const AddEmployee = ({
   const [formData,       setFormData]       = useState(INITIAL_FORM);
   const [errors,         setErrors]         = useState({});
   const [salaryOpen,     setSalaryOpen]     = useState(false);  // step 2
-  const [pendingFormData, setPendingFormData] = useState(null); // holds step 1 data while step 2 is open
+ const [pendingFormData, setPendingFormData] = useState(null); 
+  const [salaryDraft,    setSalaryDraft]    = useState(null);
   const fileInputRef = useRef();
+
+  const fieldRefs = {
+    fullName:       useRef(null),
+    email:          useRef(null),
+    phone:          useRef(null),
+    department:     useRef(null),
+    role:           useRef(null),
+    employmentType: useRef(null),
+    workingHours:   useRef(null),
+    joiningDate:    useRef(null),
+    machineId:      useRef(null),
+  };
 
   useEffect(() => {
     if (open) {
@@ -141,10 +155,16 @@ const AddEmployee = ({
     if (formData.machineId.trim()) {
       if (!/^\d+$/.test(formData.machineId.trim())) {
         e.machineId = "Machine ID must contain numbers only.";
+      } else if (existingMachineIds.includes(formData.machineId.trim())) {
+        e.machineId = "This Attendance Machine ID is already assigned to another employee.";
       }
     }
     if (!formData.fullName.trim())  e.fullName       = "Full name is required";
-    if (!formData.email.trim())     e.email          = "Email is required";
+   if (!formData.email.trim()) {
+      e.email = "Email is required";
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/.test(formData.email.trim())) {
+      e.email = "Please enter a valid email address";
+    }
     if (formData.phone.trim()) {
       if (!/^\d+$/.test(formData.phone.trim())) {
         e.phone = "Phone number must contain digits only.";
@@ -166,19 +186,35 @@ const AddEmployee = ({
     return e;
   };
 
+  const FIELD_ORDER = [
+    "machineId", "fullName", "email", "phone",
+    "department", "role", "employmentType",
+    "workingHours", "joiningDate",
+  ];
+
   // Step 1 — validate and open salary dialog
   const handleNext = () => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+
+      const firstErrorField = FIELD_ORDER.find((f) => validationErrors[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
       return;
     }
     setPendingFormData(formData);
     setSalaryOpen(true);
   };
 
+
   // Step 2 — salary dialog calls this with the salary breakdown
   const handleSalaryDone = (salaryData) => {
+    setSalaryDraft(salaryData);   // keep a copy in case the save below fails
     setSalaryOpen(false);
     // Merge step 1 + step 2 and call the parent's onSave
     onSave?.({
@@ -194,6 +230,7 @@ const AddEmployee = ({
     setErrors({});
     setSalaryOpen(false);
     setPendingFormData(null);
+    setSalaryDraft(null); 
     onClose?.();
   };
 
@@ -261,7 +298,7 @@ const AddEmployee = ({
             </Box>
 
             {/* Attendance Machine ID */}
-            <Box>
+            <Box ref={fieldRefs.machineId}>
               <CustomInputLabel label="Attendance Machine ID (Optional)" />
               <TextInput
                 placeholder="e.g. 1024 (ID from biometric device)"
@@ -282,7 +319,7 @@ const AddEmployee = ({
             </Box>
 
             {/* Full Name */}
-            <Box>
+            <Box ref={fieldRefs.fullName}>
               <CustomInputLabel label="Full Name *" />
               <TextInput placeholder="Enter Full Name" value={formData.fullName}
                 onChange={handleChange("fullName")} inputBgColor="#fff" fullWidth
@@ -290,7 +327,7 @@ const AddEmployee = ({
             </Box>
 
             {/* Email */}
-            <Box>
+            <Box ref={fieldRefs.email}>
               <CustomInputLabel label="Email *" />
               <TextInput placeholder="Enter Email" value={formData.email}
                 onChange={handleChange("email")} inputBgColor="#fff" fullWidth
@@ -299,7 +336,7 @@ const AddEmployee = ({
             </Box>
 
             {/* Phone */}
-            <Box>
+            <Box ref={fieldRefs.phone}>
               <CustomInputLabel label="Phone" />
               <TextInput
                 placeholder="Enter Phone"
@@ -317,7 +354,7 @@ const AddEmployee = ({
 
             {/* Department + Role */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box>
+              <Box ref={fieldRefs.department}>
                 <CustomInputLabel label="Department *" />
                 <CustomSelect value={formData.department}
                   onChange={handleChange("department")}
@@ -337,7 +374,7 @@ const AddEmployee = ({
                 )}
               </Box>
 
-              <Box>
+              <Box ref={fieldRefs.role}>
                 <CustomInputLabel label="Role *" />
                 <CustomSelect value={formData.role}
                   onChange={handleChange("role")}
@@ -359,7 +396,7 @@ const AddEmployee = ({
             </Box>
 
             {/* Employment Type */}
-            <Box>
+            <Box ref={fieldRefs.employmentType}>
               <CustomInputLabel label="Employment Type *" />
               <CustomSelect value={formData.employmentType}
                 onChange={handleChange("employmentType")}
@@ -381,7 +418,7 @@ const AddEmployee = ({
 
             {/* Working Hours + Joining Date */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box>
+              <Box ref={fieldRefs.workingHours}>
                 <CustomInputLabel label="Working Hours/Day *" />
                 <TextInput placeholder="0" value={formData.workingHours}
                   onChange={handleChange("workingHours")}
@@ -390,7 +427,7 @@ const AddEmployee = ({
                   inputProps={{ min: 1, max: 24, step: 1 }}
                   error={!!errors.workingHours} helperText={errors.workingHours} />
               </Box>
-              <Box>
+              <Box ref={fieldRefs.joiningDate}>
                 <CustomInputLabel label="Joining Date *" />
                 <DatePicker value={formData.joiningDate} onChange={handleDateChange}
                   slotProps={{
@@ -429,6 +466,8 @@ const AddEmployee = ({
         onSave={handleSalaryDone}
         loading={loading}
         editingEmployee={editingEmployee}
+        initialSalary={salaryDraft}
+        onDraftChange={setSalaryDraft}
       />
     </LocalizationProvider>
   );

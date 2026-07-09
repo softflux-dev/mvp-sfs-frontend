@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box,Typography } from "@mui/material";
 
 import {
@@ -23,6 +23,10 @@ const SubmitWorkDialog = ({ open, onClose, onSave, taskTitle = "", loading = fal
   const [errors,      setErrors]      = useState({});
   const [successOpen, setSuccessOpen] = useState(false);
 
+  const fieldRefs = {
+    title: useRef(null),
+  };
+
   useEffect(() => {
     if (!open) return;
     setFormData({ ...INITIAL_FORM, title: taskTitle });
@@ -41,9 +45,22 @@ const SubmitWorkDialog = ({ open, onClose, onSave, taskTitle = "", loading = fal
     return e;
   };
 
+  const FIELD_ORDER = ["title"];
+
   const handleSave = () => {
     const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) { setErrors(validationErrors); return; }
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+
+      const firstErrorField = FIELD_ORDER.find((f) => validationErrors[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
+      return;
+    }
     onSave?.(formData);
     handleClose();
     setSuccessOpen(true);
@@ -71,7 +88,7 @@ const SubmitWorkDialog = ({ open, onClose, onSave, taskTitle = "", loading = fal
           }}>
 
             {/* Title */}
-            <Box>
+            <Box ref={fieldRefs.title}>
               <CustomInputLabel label="Title *" />
               <TextInput
                 placeholder="Enter title"

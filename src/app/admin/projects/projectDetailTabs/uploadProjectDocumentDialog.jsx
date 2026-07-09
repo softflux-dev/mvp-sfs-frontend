@@ -1,5 +1,5 @@
 // employees/projectDetailTabs/uploadProjectDocumentDialog.jsx — 
-import { useState, useEffect} from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, MenuItem, Typography, Avatar, Checkbox, CircularProgress } from "@mui/material";
 import {
   DialogContainer,
@@ -59,6 +59,12 @@ const UploadProjectDocumentDialog = ({
   const [errors,     setErrors]     = useState({});
   const [dragActive, setDragActive] = useState(false);
 
+  const fieldRefs = {
+    title: useRef(null),
+    type:  useRef(null),
+    files: useRef(null),
+  };
+
   const set = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -93,9 +99,22 @@ const UploadProjectDocumentDialog = ({
     return e;
   };
 
+  const FIELD_ORDER = ["title", "type", "files"];
+
   const handleSave = () => {
     const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+
+      const firstErrorField = FIELD_ORDER.find((f) => errs[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
+      return;
+    }
     onSave?.(formData);
     
   };
@@ -174,7 +193,7 @@ const UploadProjectDocumentDialog = ({
         }}
       >
         {/* Document Title */}
-        <Box>
+        <Box ref={fieldRefs.title}>
           <CustomInputLabel label="Document Title" />
           <TextInput
             placeholder="Enter document title"
@@ -188,7 +207,7 @@ const UploadProjectDocumentDialog = ({
         </Box>
 
         {/* Document Type */}
-        <Box>
+        <Box ref={fieldRefs.type}>
           <CustomInputLabel label="Document Type" />
           <CustomSelect
             value={formData.type}
@@ -263,7 +282,7 @@ const UploadProjectDocumentDialog = ({
         </Box>
 
         {/* File Upload */}
-        <Box>
+        <Box ref={fieldRefs.files}>
           <CustomInputLabel label="File" />
           <UploadBox
             uploadIcon={UploadIcon}

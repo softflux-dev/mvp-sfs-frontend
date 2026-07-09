@@ -141,6 +141,13 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
         : null),
   };
 
+  // ── Compute overdue live — don't rely solely on the cron-set isOverdue
+  //    flag, since that only updates once daily and can lag behind reality.
+  const isTaskOverdue = displayTask.taskStatus !== "completed"
+    && displayTask.endDateRaw
+    && new Date(displayTask.endDateRaw) < new Date()
+    && !displayTask.deadlineExtended;
+
   const handleEditSave = async (formData) => {
     setEditLoading(true);
     setApiError("");
@@ -217,6 +224,23 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
           </Box>
         )}
       </Box>
+
+ {isTaskOverdue && canEdit && (
+        <Box sx={{
+          backgroundColor: "#FFF3E0", border: "1px solid #FFB74D", borderRadius: "12px",
+          p: 2, mb: 2, mt: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2,
+        }}>
+          <Typography fontSize="13px" color="#B45309" fontWeight={500}>
+            This task is overdue. You can extend the deadline anytime by editing the task.
+          </Typography>
+          <CustomButton
+            btnLabel="Extend Deadline"
+            variant="gradientText"
+            handlePressBtn={() => setEditOpen(true)}
+          />
+        </Box>
+      )}
+
 
       {/* Main layout */}
       <Grid container spacing={3}>

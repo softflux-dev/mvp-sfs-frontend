@@ -2,7 +2,7 @@
 // When `showProjectSelector` is true (PM task management page),
 // a project dropdown appears first and drives module/team/stage loading.
 
-import { useState, useEffect }       from "react";
+import { useState, useEffect, useRef }       from "react";
 import {
   Box, MenuItem, Typography, Avatar, Checkbox,
   CircularProgress, IconButton, Chip,
@@ -73,6 +73,17 @@ const AddTask = ({
   const [formData,       setFormData]       = useState(INITIAL_FORM);
   const [errors,         setErrors]         = useState({});
   const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  const fieldRefs = {
+    project:     useRef(null),
+    module:      useRef(null),
+    assigneeIds: useRef(null),
+    title:       useRef(null),
+    priority:    useRef(null),
+    status:      useRef(null),
+    startDate:   useRef(null),
+    endDate:     useRef(null),
+  };
 
   // ── Project-driven dynamic data (only used when showProjectSelector=true) ──
   const [selectedProject,   setSelectedProject]   = useState("");
@@ -242,22 +253,41 @@ const AddTask = ({
     if (!formData.priority)                          e.priority    = "Priority is required";
     if (!formData.status)                            e.status      = "Task status is required";
     if (showProjectSelector && !selectedProject)     e.project     = "Project is required";
-      if (formData.endDate) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const end = new Date(formData.endDate);
-        end.setHours(0, 0, 0, 0);
-        if (end < today) e.endDate = "End date cannot be in the past.";
-        if (formData.startDate && end <= new Date(formData.startDate)) {
-          e.endDate = "End date must be after the start date.";
-        }
+
+    if (!formData.startDate) {
+      e.startDate = "Start date is required.";
+    }
+
+    if (!formData.endDate) {
+      e.endDate = "End date is required.";
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const end = new Date(formData.endDate);
+      end.setHours(0, 0, 0, 0);
+      if (end < today) e.endDate = "End date cannot be in the past.";
+      if (formData.startDate && end <= new Date(formData.startDate)) {
+        e.endDate = "End date must be after the start date.";
       }
+    }
     return e;
   };
+const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "status", "startDate", "endDate"];
 
-  const handleSave = async () => {
+   const handleSave = async () => {
     const errs = validate();
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+
+      const firstErrorField = FIELD_ORDER.find((f) => errs[f]);
+      if (firstErrorField && fieldRefs[firstErrorField]?.current) {
+        fieldRefs[firstErrorField].current.scrollIntoView({
+          behavior: "smooth",
+          block:    "center",
+        });
+      }
+      return;
+    }
 
     // Upload new files to Cloudinary
     const existingAtts  = formData.attachments.filter((a) => a.isExisting);
@@ -313,7 +343,7 @@ const AddTask = ({
 
             {/* 0. Project selector — only shown in PM task management page */}
             {showProjectSelector && (
-              <Box>
+              <Box ref={fieldRefs.project}>
                 <CustomInputLabel label="Project *" />
                 <CustomSelect
                   value={selectedProject}
@@ -348,7 +378,7 @@ const AddTask = ({
             )}
 
             {/* 1. Module */}
-            <Box>
+            <Box ref={fieldRefs.module}>
               <CustomInputLabel label="Module *" />
               <CustomSelect
                 value={formData.module} onChange={handleChange("module")}
@@ -394,7 +424,7 @@ const AddTask = ({
             )}
 
             {/* 3. Department selector */}
-            <Box>
+            <Box ref={fieldRefs.assigneeIds}>
               <CustomInputLabel label="Select Department *" />
               <CustomSelect
                 value={selectedDept}
@@ -452,7 +482,7 @@ const AddTask = ({
             {errors.assigneeIds && <Typography fontSize="12px" color="error" mt={-1.5}>{errors.assigneeIds}</Typography>}
 
             {/* 5. Title */}
-            <Box>
+            <Box ref={fieldRefs.title}>
               <CustomInputLabel label="Title *" />
               <TextInput placeholder="Enter Title" value={formData.title} onChange={handleChange("title")} inputBgColor="#fff" fullWidth error={!!errors.title} helperText={errors.title} />
             </Box>
@@ -464,7 +494,7 @@ const AddTask = ({
             </Box>
 
             {/* 7. Priority */}
-            <Box>
+            <Box ref={fieldRefs.priority}>
               <CustomInputLabel label="Priority *" />
               <CustomSelect value={formData.priority} onChange={handleChange("priority")} fullWidth height="45px" inputBgColor="#fff" displayEmpty
                 renderValue={(v) => PRIORITY_OPTIONS.find((p) => p.value === v)?.label || <Typography fontSize={13} color="text.secondary">Select Priority</Typography>}
@@ -475,7 +505,7 @@ const AddTask = ({
             </Box>
 
             {/* 8. Task Status */}
-            <Box>
+            <Box ref={fieldRefs.status}>
               <CustomInputLabel label="Task Status *" />
               <CustomSelect value={formData.status} onChange={handleChange("status")} fullWidth height="45px" inputBgColor="#fff" displayEmpty
                 disabled={showProjectSelector && !selectedProject}
@@ -494,12 +524,18 @@ const AddTask = ({
 
             {/* 9. Start + End Date */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box>
-                <CustomInputLabel label="Start Date" />
-                <DatePicker value={formData.startDate} onChange={(v) => setFormData((prev) => ({ ...prev, startDate: v }))} slotProps={{ textField: { size: "small", fullWidth: true } }} sx={GlobalStyle.datePickerStyle} />
+             <Box ref={fieldRefs.startDate}>
+                <CustomInputLabel label="Start Date *" />
+                <DatePicker
+                  value={formData.startDate}
+                  onChange={(v) => setFormData((prev) => ({ ...prev, startDate: v }))}
+                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.startDate } }}
+                  sx={GlobalStyle.datePickerStyle}
+                />
+                {errors.startDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.startDate}</Typography>}
               </Box>
-              <Box>
-                <CustomInputLabel label="End Date" />
+              <Box ref={fieldRefs.endDate}>
+                <CustomInputLabel label="End Date *" />
                 <DatePicker
                   value={formData.endDate}
                   onChange={(v) => setFormData((prev) => ({ ...prev, endDate: v }))}
