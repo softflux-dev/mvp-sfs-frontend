@@ -45,9 +45,13 @@ const AddModule = ({ open, onClose, onSave, editingModule = null, loading = fals
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  const validate = () => {
+ const validate = () => {
     const e = {};
-    if (!formData.moduleName.trim()) e.moduleName = "Module name is required";
+    if (!formData.moduleName.trim()) {
+      e.moduleName = "Module name is required";
+    } else if (!/^[a-zA-Z0-9\s_-]+$/.test(formData.moduleName.trim())) {
+      e.moduleName = "Module name can only contain letters, numbers, spaces, hyphens, or underscores.";
+    }
     if (!formData.status)            e.status     = "Status is required";
     return e;
   };

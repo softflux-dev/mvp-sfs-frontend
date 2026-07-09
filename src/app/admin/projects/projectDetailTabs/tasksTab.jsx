@@ -320,6 +320,8 @@ const handleSave = async (formData) => {
         departmentOptions={teamDepts}
         teamEmployees={teamEmployees}
         stages={stages}
+        projectStartDate={project.startDate}
+        projectEndDate={project.endDate}
       />
 
       <ConfirmationDialog ref={confirmDialogRef} />

@@ -66,6 +66,8 @@ const AddTask = ({
   departmentOptions = [],
   teamEmployees     = [],
   stages            = DEFAULT_STAGES,
+  projectStartDate  = null,   
+  projectEndDate    = null,
   // ── Dynamic props (used when opened from PM task management page) ─────────
   showProjectSelector = false,   // true → show project dropdown + fetch data dynamically
   projects            = [],      // list of PM's projects
@@ -91,6 +93,8 @@ const AddTask = ({
   const [dynTeamEmployees,  setDynTeamEmployees]  = useState([]);
   const [dynDeptOptions,    setDynDeptOptions]    = useState([]);
   const [dynStages,         setDynStages]         = useState(DEFAULT_STAGES);
+  const [dynProjectDates,   setDynProjectDates]   = useState({ startDate: null, endDate: null }); // ← NEW
+
   const [projectLoading,    setProjectLoading]    = useState(false);
 
   const { departments, fetchDepartments } = useDepartment();
@@ -100,6 +104,8 @@ const AddTask = ({
   const activeTeam      = showProjectSelector ? dynTeamEmployees : teamEmployees;
   const activeDepts     = showProjectSelector ? dynDeptOptions   : departmentOptions;
   const activeStages    = showProjectSelector ? dynStages        : stages;
+  const activeProjectStart = showProjectSelector ? dynProjectDates.startDate : projectStartDate;   
+  const activeProjectEnd   = showProjectSelector ? dynProjectDates.endDate   : projectEndDate; 
 
   // ── Fetch project data when project changes ───────────────────────────────
   useEffect(() => {
@@ -108,6 +114,7 @@ const AddTask = ({
       setDynTeamEmployees([]);
       setDynDeptOptions([]);
       setDynStages(DEFAULT_STAGES);
+      setDynProjectDates({ startDate: null, endDate: null });
       return;
     }
     setProjectLoading(true);
@@ -256,6 +263,12 @@ const AddTask = ({
 
     if (!formData.startDate) {
       e.startDate = "Start date is required.";
+    } else if (activeProjectStart) {
+      const start = new Date(formData.startDate); start.setHours(0, 0, 0, 0);
+      const projStart = new Date(activeProjectStart); projStart.setHours(0, 0, 0, 0);
+      if (start < projStart) {
+        e.startDate = `Task start date cannot be before the project start date (${projStart.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}).`;
+      }
     }
 
     if (!formData.endDate) {
@@ -268,6 +281,12 @@ const AddTask = ({
       if (end < today) e.endDate = "End date cannot be in the past.";
       if (formData.startDate && end <= new Date(formData.startDate)) {
         e.endDate = "End date must be after the start date.";
+      }
+      if (!e.endDate && activeProjectEnd) {
+        const projEnd = new Date(activeProjectEnd); projEnd.setHours(0, 0, 0, 0);
+        if (end > projEnd) {
+          e.endDate = `Task end date cannot be after the project deadline (${projEnd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}).`;
+        }
       }
     }
     return e;
@@ -529,6 +548,8 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
                 <DatePicker
                   value={formData.startDate}
                   onChange={(v) => setFormData((prev) => ({ ...prev, startDate: v }))}
+                  minDate={activeProjectStart ? new Date(activeProjectStart) : undefined}
+                  maxDate={activeProjectEnd ? new Date(activeProjectEnd) : undefined}
                   slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.startDate } }}
                   sx={GlobalStyle.datePickerStyle}
                 />
@@ -540,6 +561,7 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
                   value={formData.endDate}
                   onChange={(v) => setFormData((prev) => ({ ...prev, endDate: v }))}
                   minDate={formData.startDate ? new Date(formData.startDate) : new Date()}
+                  maxDate={activeProjectEnd ? new Date(activeProjectEnd) : undefined}
                   slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.endDate } }}
                   sx={GlobalStyle.datePickerStyle}
                 />
