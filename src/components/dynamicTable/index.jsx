@@ -368,6 +368,20 @@ case "project_status": {
           </TableCell>
         );
       }
+
+      // ── Task category (plain text, secondary colour for em dash) ──────────────
+ case "task_category":
+   return (
+     <TableCell key={val}>
+       <Typography
+         fontSize="13px"
+         fontWeight={400}
+         color={row.category === "—" ? "text.secondary" : "text.black"}
+       >
+         {row.category || "-"}
+       </Typography>
+     </TableCell>
+   );
 // ── leave_status — used in employee MyLeaveRequests ───────────────────────────
 case "leave_status": {
   const STATUS_CFG = {

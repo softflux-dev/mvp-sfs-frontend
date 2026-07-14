@@ -20,6 +20,7 @@ const ModuleCard = ({
   tasksLabel   = "8/12 tasks",
   progress     = 87,
   members      = [],
+  categoryLabel = "",
   onEdit,
   onDelete,
   showActions,   // kept for backward-compat but no longer needed
@@ -64,6 +65,23 @@ const ModuleCard = ({
           }}
         />
       </Box>
+
+      {/* ── Category chip ───────────────────────────────────────────────── */}
+      {categoryLabel && (
+        <Chip
+          label={categoryLabel}
+          sx={{
+            height: "20px",
+            fontSize: "10px",
+            fontWeight: 500,
+            px: 0.5,
+            borderRadius: "8px",
+            alignSelf: "flex-start",
+            backgroundColor: "#F3E8FB",
+            color: "#AA2493",
+          }}
+        />
+      )}
 
       {/* ── Description ─────────────────────────────────────────────────── */}
       <Typography fontSize="12px" color="text.secondary" lineHeight={1.5}>

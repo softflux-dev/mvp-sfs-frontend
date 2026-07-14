@@ -11,6 +11,7 @@ import SalaryTab            from "./employeeDetailTabs/salaryTab";
 import AttendanceTab        from "./employeeDetailTabs/attendanceTab";
 import TasksTab             from "./employeeDetailTabs/tasksTab";
 import DocumentsTab         from "./employeeDetailTabs/documentsTab";
+import AssignedProjectsTab from "./employeeDetailTabs/assignedProjectsTab";
 import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
 import { useEmployee } from "../../../hooks/employee";
 import { getEmployeeByIdApi } from "../../../api/modules/employee";
@@ -18,13 +19,7 @@ import { useDepartment } from "../../../hooks/department";
 import { useRole }       from "../../../hooks/role";
 
 
-const tabs = [
-  { id: 1, label: "Personal Info" },
-  { id: 2, label: "Salary"        },
-  //{ id: 3, label: "Attendance"    },
-  { id: 3, label: "Tasks"         },
-  { id: 4, label: "Documents"     },
-];
+
 const mapEmployee = (emp) => ({
   id:             emp._id,
   empId:          emp.empId,
@@ -58,6 +53,7 @@ const EmployeeDetail = () => {
   
 
   const [employee,    setEmployee]    = useState(location.state?.employee || null);
+ const isPM = /project\s*_?\s*manager/i.test(employee?.role || "");
   const [loading,     setLoading]     = useState(!location.state?.employee);
   const [fetchError,  setFetchError]  = useState("");
 
@@ -67,6 +63,18 @@ const EmployeeDetail = () => {
   const { updateEmployee, actionLoading } = useEmployee();
   const { departments, fetchDepartments } = useDepartment();
   const { roles,       fetchRoles }       = useRole();
+
+  const baseTabs = [
+    { id: 1, label: "Personal Info" },
+    { id: 2, label: "Salary" },
+  ];
+
+  if (isPM) {
+    baseTabs.push({ id: 3, label: "Assigned Projects" });
+  }
+
+  baseTabs.push({ id: 4, label: "Tasks" });
+  baseTabs.push({ id: 5, label: "Documents" });
 
 
   useEffect(() => {
@@ -91,6 +99,12 @@ useEffect(() => {
     fetchRoles({ limit: 100 });
   }, []);
   const [apiError, setApiError] = useState("");
+
+  useEffect(() => {
+  if (!isPM && activeTab === 3) {
+    setActiveTab(1);
+  }
+}, [isPM, activeTab]);
 
  const handleSave = async (formData) => {
     const result = await updateEmployee(employee.id, formData);
@@ -171,13 +185,14 @@ if (loading) {
       />
 
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
-      <CustomTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+     <CustomTabs tabs={baseTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* ── Tab content ──────────────────────────────────────────────────── */}
       {activeTab === 1 && <PersonalInfoTab employee={employee} />}
       {activeTab === 2 && <SalaryTab employee={employee} />}
-      {activeTab === 3 && <TasksTab employee={employee} />}
-      {activeTab === 4 && <DocumentsTab employee={employee} />}
+      {isPM && activeTab === 3 && <AssignedProjectsTab employee={employee} />}
+      {activeTab === 4 && <TasksTab employee={employee} />}
+      {activeTab === 5 && <DocumentsTab employee={employee} />}
 
       {/* ── Edit Employee dialog ──────────────────────────────────────────── */}
       <AddEmployee

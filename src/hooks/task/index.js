@@ -25,7 +25,7 @@ export const useTask = (projectId) => {
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
-  const [filters,       setFilters]       = useState({ search: "", status: "", priority: "", module: "" });
+  const [filters,       setFilters]       = useState({ search: "", status: "", priority: "", module: "", category: "" });
   const [deptEmployees,  setDeptEmployees]  = useState([]);
   const [deptEmpLoading, setDeptEmpLoading] = useState(false);
 
@@ -39,6 +39,7 @@ export const useTask = (projectId) => {
         status:   customParams.status   ?? filters.status, 
         priority: customParams.priority ?? filters.priority,
         module:   customParams.module   ?? filters.module,
+        category: customParams.category ?? filters.category,
       };
       Object.keys(params).forEach((k) => { if (!params[k]) delete params[k]; });
       const res = await getProjectTasksApi(projectId, params);

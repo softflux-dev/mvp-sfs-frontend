@@ -6,6 +6,7 @@ import DialogActionButtons from "../../../components/dialog/dialogAction";
 import TextInput           from "../../../components/textInput";
 import { ALL_PAGE_GROUPS } from "./pagesData";
 
+
 const SelectPagesDialog = ({
   open,
   onClose,
@@ -33,7 +34,8 @@ const SelectPagesDialog = ({
     setSearch("");
   }, [open, editingRole]);
 
-  const toggle = (page) => {
+const toggle = (page) => {
+    if (page.id === "emp-profile") return;   
     setSelected((prev) =>
       prev.some((p) => p.id === page.id)
         ? prev.filter((p) => p.id !== page.id)
@@ -41,11 +43,13 @@ const SelectPagesDialog = ({
     );
   };
 
-  const isSelected = (page) => selected.some((p) => p.id === page.id);
+ const isSelected = (page) =>
+    page.id === "emp-profile" || selected.some((p) => p.id === page.id);
 
-  const handleSave = () => {
-    // Convert to the shape the backend Role model expects
-    const pages = selected.map((p, i) => ({
+ const handleSave = () => {
+    const PROFILE_PAGE = { id: "emp-profile", title: "Profile", path: "/profile" };
+    const withoutProfile = selected.filter((p) => p.id !== "emp-profile");
+    const pages = [PROFILE_PAGE, ...withoutProfile].map((p) => ({
       id:    p.id,
       title: p.title,
       path:  p.path,
@@ -108,45 +112,57 @@ const SelectPagesDialog = ({
                 </Typography>
 
                 <Box display="flex" flexDirection="column" gap={0.5}>
-                  {filtered.map((page) => (
-                    <Box
-                      key={page.id}
-                      onClick={() => toggle(page)}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        backgroundColor: isSelected(page) ? "#F0E8FA" : "#fff",
-                        borderRadius: "10px",
-                        px: 2,
-                        py: 1,
-                        cursor: "pointer",
-                        border: isSelected(page)
-                          ? "1px solid #AA2493"
-                          : "1px solid transparent",
-                        transition: "all 0.15s ease",
-                        "&:hover": { backgroundColor: "#F0E8FA" },
-                      }}
-                    >
-                      <Checkbox
-                        size="small"
-                        checked={isSelected(page)}
-                        onChange={() => toggle(page)}
-                        disableRipple
+                {filtered.map((page) => {
+                    const locked = page.id === "emp-profile";
+                    return (
+                      <Box
+                        key={page.id}
+                        onClick={() => toggle(page)}
                         sx={{
-                          p: 0,
-                          color: "#D1D5DB",
-                          "&.Mui-checked": { color: "#AA2493" },
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          backgroundColor: isSelected(page) ? "#F0E8FA" : "#fff",
+                          borderRadius: "10px",
+                          px: 2,
+                          py: 1,
+                          cursor: locked ? "default" : "pointer",
+                          border: isSelected(page)
+                            ? "1px solid #AA2493"
+                            : "1px solid transparent",
+                          transition: "all 0.15s ease",
+                          "&:hover": { backgroundColor: locked ? "#F0E8FA" : "#F0E8FA" },
                         }}
-                      />
-                      <Typography fontSize="13px" fontWeight={500} color="text.primary">
-                        {page.title}
-                      </Typography>
-                      <Typography fontSize="11px" color="text.secondary" ml="auto">
-                        {page.path}
-                      </Typography>
-                    </Box>
-                  ))}
+                      >
+                        <Checkbox
+                          size="small"
+                          checked={isSelected(page)}
+                          disabled={locked}
+                          onChange={() => toggle(page)}
+                          disableRipple
+                          sx={{
+                            p: 0,
+                            color: "#D1D5DB",
+                            "&.Mui-checked": { color: "#AA2493" },
+                            "&.Mui-disabled.Mui-checked": { color: "#AA2493" },
+                          }}
+                        />
+                        <Typography fontSize="13px" fontWeight={500} color="text.primary">
+                          {page.title}
+                        </Typography>
+                        {locked && (
+                          <Typography fontSize="10px" fontWeight={600} color="#AA2493"
+                            sx={{ backgroundColor: "#F0E8FA", px: 1, py: 0.2, borderRadius: "6px" }}
+                          >
+                            Always included
+                          </Typography>
+                        )}
+                        <Typography fontSize="11px" color="text.secondary" ml="auto">
+                          {page.path}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
                 </Box>
               </Box>
             );

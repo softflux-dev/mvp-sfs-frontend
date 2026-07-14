@@ -39,6 +39,9 @@ const DEFAULT_STAGES = [
   { id: "stage_5", label: "Stage 5" },
 ];
 
+const TITLE_PATTERN = /^[a-zA-Z0-9 _-]+$/;
+const TITLE_MAX_LENGTH = 100;
+
 const getInitials = (name = "") =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
@@ -254,7 +257,13 @@ const AddTask = ({
 
   const validate = () => {
     const e = {};
-    if (!formData.title.trim())                      e.title       = "Title is required";
+    if (!formData.title.trim()) {
+      e.title = "Title is required";
+    } else if (!TITLE_PATTERN.test(formData.title.trim())) {
+      e.title = "Title can only contain letters, numbers, spaces, hyphens, and underscores";
+    } else if (formData.title.trim().length > TITLE_MAX_LENGTH) {
+      e.title = `Title cannot exceed ${TITLE_MAX_LENGTH} characters`;
+    }
     if (!formData.module)                            e.module      = "Module is required";
     if (!selectedIds.length)                         e.assigneeIds = "At least one assignee is required";
     if (!formData.priority)                          e.priority    = "Priority is required";
@@ -499,13 +508,13 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
             )}
 
             {errors.assigneeIds && <Typography fontSize="12px" color="error" mt={-1.5}>{errors.assigneeIds}</Typography>}
-
-            {/* 5. Title */}
-            <Box ref={fieldRefs.title}>
-              <CustomInputLabel label="Title *" />
-              <TextInput placeholder="Enter Title" value={formData.title} onChange={handleChange("title")} inputBgColor="#fff" fullWidth error={!!errors.title} helperText={errors.title} />
-            </Box>
-
+              {/* 5. Title */}
+              <Box ref={fieldRefs.title}>
+                <CustomInputLabel label="Title *" />
+                <TextInput placeholder="Enter Title" value={formData.title} onChange={handleChange("title")}
+                  inputBgColor="#fff" fullWidth error={!!errors.title} helperText={errors.title}
+                  inputProps={{ maxLength: TITLE_MAX_LENGTH }} />
+              </Box>
             {/* 6. Description */}
             <Box>
               <CustomInputLabel label="Description" />

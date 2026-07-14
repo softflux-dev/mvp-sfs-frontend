@@ -4,9 +4,11 @@ import { Box, Grid, Typography, CircularProgress } from "@mui/material";
 import CustomButton       from "../../../../components/customButton";
 import ModuleCard         from "../../../../components/cards/moduleCard";
 import AddModule          from "./addModule";
+import AddModuleCategory  from "./addModuleCategory";                 
 import ConfirmationDialog from "../../../../components/popups/confirmation";
 import SuccessPopup       from "../../../../components/popups/confirmationDialog";
-import { useModule }      from "../../../../hooks/module";       
+import { useModule }      from "../../../../hooks/module";
+import { useModuleCategory } from "../../../../hooks/moduleCategory";    
 
 const ModulesTab = ({ project = {} }) => {
   const {
@@ -17,10 +19,13 @@ const ModulesTab = ({ project = {} }) => {
     createModule,
     updateModule,
     deleteModule,
-  } = useModule(project.id);                                   
+  } = useModule(project.id);
+
+  const { moduleCategories, fetchModuleCategories } = useModuleCategory(); 
 
   const [modalOpen,     setModalOpen]     = useState(false);
   const [editingModule, setEditingModule] = useState(null);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);         
   const [successMsg,    setSuccessMsg]    = useState("");
   const [showSuccess,   setShowSuccess]   = useState(false);
   const [apiError,      setApiError]      = useState("");
@@ -60,6 +65,7 @@ const ModulesTab = ({ project = {} }) => {
       title:       formData.moduleName,
       description: formData.description || "",
       status:      formData.status      || "planning",
+      category:    formData.category    || null,        
     };
 
     let result;
@@ -88,18 +94,23 @@ const ModulesTab = ({ project = {} }) => {
     status:      mod.status
       ? mod.status.charAt(0).toUpperCase() + mod.status.slice(1)
       : "Planning",
-    // tasks label — 0/0 on new modules
     tasksLabel:  `${mod.completedTasks ?? 0}/${mod.totalTasks ?? 0} tasks`,
     progress:    mod.progress        ?? 0,
-    // members array of avatar URLs
     members:     (mod.members || []).map((m) => m.avatar || ""),
+    categoryId:  mod.category?._id   || "",             
+    categoryLabel: mod.category?.label || "",             
   }));
 
   return (
     <Box sx={{ mt: 2 }}>
 
       {/* Header */}
-      <Box display="flex" justifyContent="flex-end" mb={3}>
+      <Box display="flex" justifyContent="flex-end" gap={1.5} mb={3}>
+        <CustomButton
+          btnLabel="+ Add Category"
+          variant="outlined"
+          handlePressBtn={() => setCategoryModalOpen(true)}
+        />
         <CustomButton
           btnLabel="+ Add Module"
           variant="gradient"
@@ -132,33 +143,40 @@ const ModulesTab = ({ project = {} }) => {
           {moduleCards.map((mod) => (
             <Grid item size={{ xs: 12, sm: 6, md: 4 }} key={mod.id}>
               <ModuleCard
-                title={mod.title}
-                description={mod.description}
-                status={mod.status}
-                tasksLabel={mod.tasksLabel}
-                progress={mod.progress}
-                members={mod.members}
-                onEdit={() => handleEdit(mod)}
-                onDelete={() => handleDelete(mod)}
-              />
+                  title={mod.title}
+                  description={mod.description}
+                  status={mod.status}
+                  tasksLabel={mod.tasksLabel}
+                  progress={mod.progress}
+                  members={mod.members}
+                  categoryLabel={mod.categoryLabel}
+                  onEdit={() => handleEdit(mod)}
+                  onDelete={() => handleDelete(mod)}
+                />
             </Grid>
           ))}
         </Grid>
       )}
 
-      {/* Add / Edit dialog */}
+      {/* Add / Edit Module dialog */}
       <AddModule
         open={modalOpen}
         onClose={() => { setModalOpen(false); setEditingModule(null); setApiError(""); }}
         onSave={handleSave}
         editingModule={editingModule}
         loading={actionLoading}
+        categoryOptions={moduleCategories}         
       />
 
-      {/* Confirm delete */}
+      {/* Add / Edit / Delete Categories dialog */}
+      <AddModuleCategory                             
+        open={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+        onSave={() => fetchModuleCategories()}
+      />
+
       <ConfirmationDialog ref={confirmDialogRef} />
 
-      {/* Success popup */}
       <SuccessPopup
         open={showSuccess}
         onClose={() => setShowSuccess(false)}

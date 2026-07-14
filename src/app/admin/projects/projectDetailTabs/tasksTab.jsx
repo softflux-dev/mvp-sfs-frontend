@@ -13,10 +13,12 @@ import { useModule }      from "../../../../hooks/module";
 import { useDepartment }  from "../../../../hooks/department";
 import { getProjectTeamApi } from "../../../../api/modules/project";
 import { uploadTaskAttachmentUrlApi } from "../../../../api/modules/task";
+import { useModuleCategory } from "../../../../hooks/moduleCategory";   
 
 const tableHeader = [
   { id: "task",       label: "Task"        },
   { id: "module",     label: "Module"      },
+   { id: "category",   label: "Category"    },
   { id: "assignees",  label: "Assignees"   },
   { id: "priority",   label: "Priority"    },
   { id: "startDate",  label: "Start Date"  },
@@ -28,6 +30,7 @@ const tableHeader = [
 const displayRows = [
   "task",
   "module",
+  "task_category", 
   "task_assignees",
   "task_priority",
   "task_start_date",
@@ -71,6 +74,8 @@ const TasksTab = ({
 
   const { modules, loading: modulesLoading } = useModule(project.id);
   const { departments, fetchDepartments }    = useDepartment();
+  const { moduleCategories }                 = useModuleCategory();     
+
 
   const [modalOpen,   setModalOpen]   = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -134,6 +139,8 @@ const TasksTab = ({
     task:         t.title,
     module:       t.module?.title || "—",
     moduleId:     t.module?._id   || "",
+    category:     t.module?.category?.label || "—",     
+    categoryId:   t.module?.category?._id   || "", 
     assignees:    (t.assignees || []).map((a) => a.fullName || "").join(", ") || "—",
     assigneeIds:  (t.assignees || []).map((a) => a._id),
     assigneeNames:(t.assignees || []).map((a) => a.fullName || ""),
@@ -237,28 +244,39 @@ const handleSave = async (formData) => {
     <Box sx={{ mt: 2 }}>
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
-      <Box display="flex" alignItems="center" gap={2} mb={2}>
+      <Box
+        display="flex"
+        flexDirection={{ xs: "column", sm: "row" }}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        justifyContent={{ xs: "flex-end", sm: "flex-start" }}
+        gap={2}
+        mb={2}
+      >
         <Box flex={1}>
           <Filter
             mode="tasks"
             employees={teamEmployees}
             stages={stages}
+            categories={moduleCategories}        
             onFilterChange={(f) => {
               handleFilterChange({
                 search:   f.search   || "",
                 status:   f.status   || "",
                 priority: f.priority || "",
                 assignee: f.assignee || "",
+                category: f.category || "",          
               });
             }}
           />
         </Box>
-        <CustomButton
-          btnLabel="+ Add Task"
-          variant="gradient"
-          handlePressBtn={() => { setEditingTask(null); setModalOpen(true); }}
-          disabled={!hasTeam || !hasModules}
-        />
+        <Box display="flex" justifyContent={{ xs: "flex-end", sm: "flex-start" }}>
+          <CustomButton
+            btnLabel="+ Add Task"
+            variant="gradient"
+            handlePressBtn={() => { setEditingTask(null); setModalOpen(true); }}
+            disabled={!hasTeam || !hasModules}
+          />
+        </Box>
       </Box>
 
       {/* ── Error banner ─────────────────────────────────────────────────── */}

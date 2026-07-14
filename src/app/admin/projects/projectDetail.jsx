@@ -1,6 +1,6 @@
 import { useState, useEffect }         from "react";
 import { Box, IconButton, Typography } from "@mui/material";
-import { useNavigate, useLocation }    from "react-router-dom";
+import { useNavigate, useLocation, useParams, useSearchParams }    from "react-router-dom";
 
 import CustomTabs          from "../../../components/tabs";
 import AddProject          from "./addProject";
@@ -41,9 +41,13 @@ const tabs = [
 const ProjectDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: routeProjectId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+
+  const initialTab = parseInt(searchParams.get("tab"), 10) || 1;
   const [project,     setProject]     = useState(location.state?.project || {});
-  const [activeTab,   setActiveTab]   = useState(1);
+  const [activeTab,   setActiveTab]   = useState(initialTab);
   const [editOpen,    setEditOpen]    = useState(false);
   const [successMsg,  setSuccessMsg]  = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -57,8 +61,13 @@ const ProjectDetail = () => {
   const { updateProject, actionLoading } = useProject();
   const { projectTypes, fetchProjectTypes } = useProjectType();
 
+   const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    setSearchParams({ tab: String(newTab) }, { replace: true });
+  };
+
   // ── Fetch full project on mount to get saved stages ───────────────────────
-  useEffect(() => {
+ useEffect(() => {
     fetchProjectTypes();
     getProjectManagersApi().then((res) => {
       if (res?.status === 200 || res?.status === 201) {
@@ -66,8 +75,11 @@ const ProjectDetail = () => {
       }
     });
 
-    // fetch full project to get saved stages
-    const projectId = location.state?.project?.id;
+   
+
+    // fetch full project to get saved stages (and, when navigated without
+    // state — e.g. from a notification — the rest of the project fields too)
+    const projectId = location.state?.project?.id || routeProjectId;
     if (!projectId) return;
 
     getProjectByIdApi(projectId).then((res) => {
@@ -75,6 +87,33 @@ const ProjectDetail = () => {
         const fullProject = res.data.data.project;
         if (fullProject.stages?.length) {
           setStages(fullProject.stages);
+        }
+
+        // ── Only backfill `project` state when we didn't already get it
+        //    from navigation state — avoids clobbering anything the
+        //    existing flow already populated correctly. ──────────────────
+        if (!location.state?.project) {
+          setProject({
+            id:               fullProject._id,
+            projectName:      fullProject.projectName,
+            client:           fullProject.clientName || "—",
+            description:      fullProject.description || "",
+            status: fullProject.status
+              ? fullProject.status.charAt(0).toUpperCase() + fullProject.status.slice(1)
+              : "—",
+            progress:         fullProject.progress ?? 0,
+            startDate: fullProject.startDate
+              ? new Date(fullProject.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "—",
+            endDate: fullProject.endDate
+              ? new Date(fullProject.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "—",
+            budget:           fullProject.budget ?? 0,
+            projectManager:   fullProject.projectManager?.fullName || "—",
+            projectManagerId: fullProject.projectManager?._id      || "",
+            projectType:      fullProject.projectType?.value || fullProject.projectType?._id || "",
+            projectTypeId:    fullProject.projectType?._id        || "",
+          });
         }
       }
     });
@@ -141,7 +180,7 @@ const ProjectDetail = () => {
 
       <ProjectDetailHeader project={project} onEditClick={() => setEditOpen(true)} />
 
-      <CustomTabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+      <CustomTabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {activeTab === 1 && <OverviewTab    project={project} />}
       {activeTab === 2 && (

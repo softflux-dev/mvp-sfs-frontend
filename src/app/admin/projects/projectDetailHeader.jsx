@@ -68,7 +68,7 @@ const metaRow2 = [
         {/* Row 1 */}
         <Grid container spacing={2} mb={2}>
           {metaRow1.map((f) => (
-            <Grid item size={{ xs: isPM ? 6 : 4 }} key={f.label}>
+            <Grid item size={{ xs: 6, md: isPM ? 6 : 4 }} key={f.label}>
               <Typography fontSize="11px" color="text.secondary" fontWeight={500} mb={0.3}>
                 {f.label}
               </Typography>
@@ -82,7 +82,7 @@ const metaRow2 = [
         {/* Row 2 */}
         <Grid container spacing={2}>
           {metaRow2.map((f) => (
-            <Grid item size={{ xs: isPM ? 6 : 4 }} key={f.label}>
+            <Grid item size={{ xs: 6, md: isPM ? 6 : 4 }} key={f.label}>
               <Typography fontSize="11px" color="text.secondary" fontWeight={500} mb={0.3}>
                 {f.label}
               </Typography>

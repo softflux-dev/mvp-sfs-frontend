@@ -66,6 +66,7 @@ const AddProject = ({
         endDate:        editingProject.endDate   ? new Date(editingProject.endDate)   : null,
         status:         editingProject.status?.toLowerCase() || "",
         budget:         editingProject.budget != null ? String(editingProject.budget) : "",
+        
       });
     } else {
       setFormData(INITIAL_FORM);
@@ -84,10 +85,36 @@ const AddProject = ({
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
+const NAME_PATTERN = /^[a-zA-Z0-9 ]+$/;
+const NAME_MAX_LENGTH = 100;
+const DESCRIPTION_MAX_LENGTH = 1000;
+
+const blockInvalidNumericKeys = (e) => {
+  if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
+};
+
+const blockNegativePaste = (e) => {
+  const pasted = e.clipboardData.getData("text");
+  if (/-/.test(pasted)) e.preventDefault();
+};
+
   const validate = () => {
     const e = {};
-    if (!formData.projectName.trim()) e.projectName    = "Project name is required";
-    if (!formData.clientName.trim())  e.clientName     = "Client name is required";
+ if (!formData.projectName.trim()) {
+      e.projectName = "Project name is required";
+    } else if (!NAME_PATTERN.test(formData.projectName.trim())) {
+      e.projectName = "Project name can only contain letters, numbers, and spaces";
+    } else if (formData.projectName.trim().length > NAME_MAX_LENGTH) {
+      e.projectName = `Project name cannot exceed ${NAME_MAX_LENGTH} characters`;
+    }
+
+    if (!formData.clientName.trim()) {
+      e.clientName = "Client name is required";
+    } else if (!NAME_PATTERN.test(formData.clientName.trim())) {
+      e.clientName = "Client name can only contain letters, numbers, and spaces";
+    } else if (formData.clientName.trim().length > NAME_MAX_LENGTH) {
+      e.clientName = `Client name cannot exceed ${NAME_MAX_LENGTH} characters`;
+    }
     if (!formData.projectManager)     e.projectManager = "Project manager is required";
     if (!formData.projectType)        e.projectType    = "Project type is required";
     if (!formData.status)             e.status         = "Status is required";
@@ -129,7 +156,15 @@ const handleSave = () => {
     setErrors({});
     onClose?.();
   };
+  const handleBudgetChange = (e) => {
+    let val = e.target.value;
 
+    // Strip minus sign entirely — budget can never be negative
+    val = val.replace(/-/g, "");
+
+    setFormData((prev) => ({ ...prev, budget: val }));
+    if (errors.budget) setErrors((prev) => ({ ...prev, budget: "" }));
+  };
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <DialogContainer open={open} onClose={handleClose} maxWidth="580px" fullWidth>
@@ -157,7 +192,8 @@ const handleSave = () => {
               <CustomInputLabel label="Project Name *" />
               <TextInput placeholder="Enter Project Name" value={formData.projectName}
                 onChange={handleChange("projectName")} inputBgColor="#fff" fullWidth
-                error={!!errors.projectName} helperText={errors.projectName} />
+                error={!!errors.projectName} helperText={errors.projectName}
+                inputProps={{ maxLength: NAME_MAX_LENGTH }} />
             </Box>
 
             {/* Client Name */}
@@ -165,7 +201,8 @@ const handleSave = () => {
               <CustomInputLabel label="Client Name *" />
               <TextInput placeholder="Enter Client Name" value={formData.clientName}
                 onChange={handleChange("clientName")} inputBgColor="#fff" fullWidth
-                error={!!errors.clientName} helperText={errors.clientName} />
+                error={!!errors.clientName} helperText={errors.clientName}
+                inputProps={{ maxLength: NAME_MAX_LENGTH }} />
             </Box>
 
             {/* Description */}
@@ -173,7 +210,8 @@ const handleSave = () => {
               <CustomInputLabel label="Project Description" />
               <TextInput placeholder="Enter Description" value={formData.description}
                 onChange={handleChange("description")} inputBgColor="#fff"
-                fullWidth multiline rows={3} />
+                fullWidth multiline rows={3}
+                inputProps={{ maxLength: DESCRIPTION_MAX_LENGTH }} />
             </Box>
 
             {/* Project Manager */}
@@ -261,8 +299,11 @@ const handleSave = () => {
               <Box>
                 <CustomInputLabel label="Budget" />
                 <TextInput placeholder="0" value={formData.budget}
-                  onChange={handleChange("budget")} inputBgColor="#fff"
+                  onChange={handleBudgetChange} inputBgColor="#fff"
                   fullWidth type="number"
+                  onKeyDown={blockInvalidNumericKeys}
+                  onPaste={blockNegativePaste}
+                  inputProps={{ min: 0 }}
                   InputStartIcon={<span style={{ fontSize: "14px", color: "#808080", fontWeight: 500 }}>$</span>}
                 />
               </Box>

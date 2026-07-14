@@ -687,6 +687,26 @@ const getTheme = (direction = "ltr") =>
           },
         },
       },
+      MuiPickersDay: {
+        styleOverrides: {
+          root: {
+            fontFamily: '"Poppins", sans-serif',
+            "&.Mui-selected": {
+              backgroundColor: "#AA2493",
+              color: "#ffffff",
+              "&:hover": {
+                backgroundColor: "#8a1d78",
+              },
+              "&:focus": {
+                backgroundColor: "#AA2493",
+              },
+            },
+            "&.MuiPickersDay-today:not(.Mui-selected)": {
+              borderColor: "#AA2493",
+            },
+          },
+        },
+      },
     },
   });
 

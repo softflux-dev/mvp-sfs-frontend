@@ -1,8 +1,10 @@
-// components/appBar/notifications.jsx  — FULL REPLACEMENT
+// components/appBar/notifications.jsx  — 
 // UI is identical to the original. Only the data source is replaced:
 // mock array → useNotifications hook with 30s polling.
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import useUserStore from "../../zustand/useUserStore";
 import {
   IconButton,
   Box,
@@ -49,7 +51,77 @@ function relativeTime(dateStr) {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// ── Resolve where a notification click should navigate, based on type + role ──
+
+const TASK_ASSIGN_STATUS_TYPES = ["newTaskAssignment", "taskStatusUpdate"];
+const OTHER_TASK_TYPES         = ["taskDeadlineExtended", "taskOverdue"];
+const BUG_TYPES                = ["bugStatusUpdated"];
+const MESSAGE_TYPES            = ["newMessageReceived"];
+const PROJECT_TYPES            = ["projectDeadlineChanged", "projectDeadlineReminder", "projectTeamUpdated", "projectModuleUpdated"];
+const LEAVE_SUBMIT_TYPES       = ["leaveRequestSubmitted"];
+const LEAVE_DECIDED_TYPES      = ["leaveApprovedRejected"];
+
+function resolveNotificationRoute(n, role) {
+  const { type, data = {} } = n;
+
+  // ── Messages ──────────────────────────────────────────────────────────
+  if (MESSAGE_TYPES.includes(type)) {
+    if (role === "ADMIN")           return "/messages";
+    if (role === "HR")              return "/hr-messages";
+    if (role === "PROJECT_MANAGER") return "/pm-messages";
+    return "/messages"; // Employee
+  }
+
+  // ── Bug status updates ───────────────────────────────────────────────
+  if (BUG_TYPES.includes(type)) {
+    if (role === "EMPLOYEE")                        return "/employee/bugs";
+    if (role === "PROJECT_MANAGER" && data.taskId)  return `/pm-tasks/${data.taskId}`;
+    if (role === "ADMIN" && data.taskId)            return `/projects/tasks/${data.taskId}`;
+    return null;
+  }
+
+  // ── Leave submitted (HR/Admin need to review) ────────────────────────
+  if (LEAVE_SUBMIT_TYPES.includes(type)) {
+    if (role === "HR" || role === "ADMIN") return "/leave-management";
+    return null;
+  }
+
+  // ── Leave approved/rejected (goes back to the requester) ─────────────
+  if (LEAVE_DECIDED_TYPES.includes(type)) {
+    if (role === "EMPLOYEE" || role === "HR" || role === "PROJECT_MANAGER") return "/emp-attendance";
+    return null;
+  }
+
+  // ── Task assigned / task status updated ─────────────────────────────────
+  if (TASK_ASSIGN_STATUS_TYPES.includes(type)) {
+    if (role === "EMPLOYEE")                     return "/my-tasks";
+    if (role === "PROJECT_MANAGER")              return "/task-management";
+    if (role === "ADMIN" && data.taskId)         return `/projects/tasks/${data.taskId}`;
+    return null;
+  }
+
+  // ── Other task-related (deadline extended, overdue) ──────────────────
+  if (OTHER_TASK_TYPES.includes(type)) {
+    if (role === "EMPLOYEE")                        return "/my-tasks";
+    if (role === "PROJECT_MANAGER" && data.taskId)  return `/pm-tasks/${data.taskId}`;
+    if (role === "ADMIN" && data.taskId)            return `/projects/tasks/${data.taskId}`;
+    return null;
+  }
+
+  // ── Project-related (deadline change, team update, module update) ───────
+  if (PROJECT_TYPES.includes(type)) {
+    if (role === "ADMIN" && data.projectId)            return `/projects/${data.projectId}`;
+    if (role === "PROJECT_MANAGER" && data.projectId)  return `/pm-projects/${data.projectId}`;
+    return null;
+  }
+
+  return null;
+}
+
 const Notifications = () => {
+  const navigate = useNavigate();
+  const { user } = useUserStore();
+  const role = user?.role;
   const [anchorEl, setAnchorEl] = useState(null);
   const [tab,      setTab]      = useState(0);
 
@@ -73,6 +145,11 @@ const Notifications = () => {
 
   const handleClickNotif = async (n) => {
     if (!n.isRead) await markRead(n._id);
+    const path = resolveNotificationRoute(n, role);
+    if (path) {
+      handleClose();
+      navigate(path);
+    }
   };
 
   return (

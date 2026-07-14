@@ -17,6 +17,7 @@ const Filter = ({
   projectTypes = [],
   employees   = [],
   projects    = [],
+  categories  = [],
   isPM        = false,
    isEmployee  = false,
   stages = [],
@@ -160,13 +161,13 @@ const Filter = ({
     type: "search",
     key: "search",
     placeholder: "Search tasks...",
-    grid: { xs: 12, md: 3 },
+    grid: { xs: 12, md: 2.4 },
   },
   {
     type: "select",
     key: "status",
     placeholder: "All Task Status",
-    grid: { xs: 12, md: 3 },
+    grid: { xs: 12, md: 2.4 },
     options: [
       { v: "", l: "All Task Status" },
       ...stages.map((s) => ({ v: s.id, l: s.label })),
@@ -176,7 +177,7 @@ const Filter = ({
     type: "select",
     key: "assignee",
     placeholder: "All Assignees",
-    grid: { xs: 12, md: 3 },
+    grid: { xs: 12, md: 2.4 },
     options: [
       { v: "", l: "All Assignees" },
       ...employees.map((e) => ({ v: e._id, l: e.fullName || e.name })),
@@ -186,12 +187,22 @@ const Filter = ({
     type: "select",
     key: "priority",
     placeholder: "All Priority",
-    grid: { xs: 12, md: 3 },
+    grid: { xs: 12, md: 2.4 },
     options: [
       { v: "", l: "All Priority" },
       { v: "high",   l: "High"   },
       { v: "medium", l: "Medium" },
       { v: "low",    l: "Low"    },
+    ],
+  },
+   {
+    type: "select",
+    key: "category",
+    placeholder: "All Categories",
+    grid: { xs: 12, md: 2.4 },
+    options: [
+      { v: "", l: "All Categories" },
+      ...categories.map((c) => ({ v: c._id, l: c.label })),
     ],
   },
 ],
@@ -860,7 +871,7 @@ holidays: [
 
   const fields =
     typeof configs[mode] === "function"
-      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM,isEmployee, stages })
+      ? configs[mode]({ managers, departments, roles, projectTypes, employees, projects, isPM,isEmployee, stages, categories })
       : configs[mode] || configs.full;
 
   // ── Only render fields whose showIf (if present) passes for current values ──

@@ -135,6 +135,7 @@ const SubmitWorkDialog = ({ open, onClose, onSave, taskTitle = "", loading = fal
                 borderRadius: "14px",
                 px: 2, py: 1.5,
                 display: "flex",
+                flexWrap: "wrap",
                 alignItems: "center",
                 gap: 1.5,
               }}>
@@ -164,7 +165,7 @@ const SubmitWorkDialog = ({ open, onClose, onSave, taskTitle = "", loading = fal
                     }
                   />
                 </Box>
-                <Typography fontSize="13px" color="text.secondary">
+                <Typography fontSize="13px" color="text.secondary" sx={{ wordBreak: "break-word" }}>
                   {formData.attachments ? formData.attachments.name : "No file Screenshots"}
                 </Typography>
               </Box>

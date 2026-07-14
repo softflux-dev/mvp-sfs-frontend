@@ -1,7 +1,7 @@
 // src/shared/taskDetail/UnifiedTaskDetail.jsx — 
 import { useState, useEffect } from "react";
 import { Box, IconButton, Typography, Avatar, Grid, CircularProgress } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Send } from "lucide-react";
 
 import CustomButton        from "../../../components/customButton";
@@ -32,6 +32,7 @@ const DEFAULT_STAGES = [
 const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
   const navigate = useNavigate();
   const location = useLocation();
+   const { id: routeTaskId } = useParams();
 
   const task    = location.state?.task    || {};
   const canEdit = location.state?.canEdit ?? false;
@@ -39,7 +40,7 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
   const isAdmin = role === "admin";
   const isPM    = role === "pm";
 
-  const taskId    = task?._id || task?.id;
+  const taskId    = task?._id || task?.id || routeTaskId;
   const projectId =
     task?.projectId      ||
     task?.project?._id   ||
@@ -64,11 +65,13 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
 
   // Fallback stages for the edit dialog (admin/PM need these from project API)
   const [editStages, setEditStages] = useState(DEFAULT_STAGES);
+  const [editProjectDates, setEditProjectDates] = useState({ startDate: null, endDate: null }); 
+
 
   // ── Active stages — from task detail response (works for all roles) ───────
   const activeStages = taskStages?.length ? taskStages : editStages;
 
-  useEffect(() => {
+ useEffect(() => {
     if (!projectId || role === "employee") return;
     // Admin/PM: fetch team + project stages for the edit dialog
     Promise.all([
@@ -80,8 +83,10 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
         setTeamMembers(teamRes.data.data.team || []);
       }
       if (projectRes?.status === 200 || projectRes?.status === 201) {
-        const saved = projectRes.data.data.project?.stages;
+        const proj = projectRes.data.data.project;
+        const saved = proj?.stages;
         if (saved?.length) setEditStages(saved);
+        setEditProjectDates({ startDate: proj?.startDate || null, endDate: proj?.endDate || null }); 
       }
     }).catch(() => {});
   }, [projectId, role]);
@@ -213,7 +218,18 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
       <Box sx={{ position: "relative" }}>
         <EmpTaskDetailHeader task={displayTask} stages={activeStages} />
         {canEdit && (
-          <Box sx={{ position: "absolute", top: 20, right: 24 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              position: { xs: "static", sm: "absolute" },
+              top: { sm: 20 },
+              right: { sm: 24 },
+              mt: { xs: -2, sm: 0 },
+              mb: { xs: 2, sm: 0 },
+              px: { xs: "24px", sm: 0 },
+            }}
+          >
             <CustomButton
               btnLabel="Edit Task"
               variant="gradientText"
@@ -225,7 +241,7 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
         )}
       </Box>
 
- {isTaskOverdue && canEdit && (
+     {isTaskOverdue && canEdit && (
         <Box sx={{
           backgroundColor: "#FFF3E0", border: "1px solid #FFB74D", borderRadius: "12px",
           p: 2, mb: 2, mt: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2,
@@ -349,16 +365,29 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
             <Box display="flex" flexDirection="column" gap={1}>
               {activityLogs.map((item, idx) => (
                 <Box key={item._id || item.id || idx}
-                  sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2 }}
+                  sx={{
+                    backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5,
+                    display: "flex",
+                    flexDirection: { xs: "column", sm: "row" },
+                    alignItems: { xs: "flex-start", sm: "flex-start" },
+                    justifyContent: "space-between",
+                    gap: { xs: 0.5, sm: 2 },
+                  }}
                 >
-                  <Box display="flex" alignItems="flex-start" gap={1.5}>
+                  <Box display="flex" alignItems="flex-start" gap={1.5} minWidth={0} flex={1}>
                     <Box sx={{ width: 10, height: 10, borderRadius: "50%", background: "linear-gradient(135deg, #AA2493, #022179)", flexShrink: 0, mt: 0.5 }} />
-                    <Box>
-                      <Typography fontSize="13px" fontWeight={500}>{item.text || item.action}</Typography>
+                    <Box minWidth={0}>
+                      <Typography fontSize="13px" fontWeight={500} sx={{ wordBreak: "break-word" }}>{item.text || item.action}</Typography>
                       <Typography fontSize="11px" color="text.secondary">{item.by || item.performedByName || "System"}</Typography>
                     </Box>
                   </Box>
-                  <Typography fontSize="11px" color="text.secondary" whiteSpace="nowrap">
+                  <Typography
+                    fontSize="11px" color="text.secondary"
+                    sx={{
+                      whiteSpace: { xs: "normal", sm: "nowrap" },
+                      pl: { xs: "22px", sm: 0 },
+                    }}
+                  >
                     {item.createdAt ? new Date(item.createdAt).toLocaleString() : item.date}
                   </Typography>
                 </Box>
@@ -393,6 +422,8 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
           departmentOptions={teamDepts}
           teamEmployees={teamEmployees}
           stages={activeStages}
+          projectStartDate={editProjectDates.startDate}
+          projectEndDate={editProjectDates.endDate}
           projects={isPM ? pmProjects : undefined}
         />
       )}

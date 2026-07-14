@@ -29,39 +29,40 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) 
 
   // ── Build columns from stages + tasks ────────────────────────────────────
  useEffect(() => {
-  const knownStageIds = new Set(stages.map((s) => s.id));
+    const knownStageIds = new Set(stages.map((s) => s.id));
 
-  setColumns(
-    stages.map((stage, index) => ({
-      ...stage,
-      tasks: tasks
-        .filter((t) => {
-          if (t.status === stage.id) return true;
-          if (index === 0 && !knownStageIds.has(t.status)) return true;
-          return false;
-        })
-        .map((t) => ({
-          id:             t._id,
-          title:          t.title,
-          priority:       t.priority
-            ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
-            : "Medium",
-          deadline:       t.endDate
-            ? new Date(t.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-            : "",
-          assignees:      t.assignees      || [],
-          assigneeName:   t.assignees?.[0]?.fullName || "",
-          assigneeAvatar: t.assignees?.[0]?.avatar   || "",
-          module:         t.module?.title  || "",
-          description:    t.description   || "",
-          project:        project.projectName || "",
-          status:         t.status,
-          comments:       t.commentCount        || 0,
-          attachments:    t.attachments?.length || 0,
-        })),
-    }))
-  );
-}, [tasks, stages, project.projectName]);
+    setColumns(
+      stages.map((stage, index) => ({
+        ...stage,
+        tasks: tasks
+          .filter((t) => {
+            if (t.status === stage.id) return true;
+            if (index === 0 && !knownStageIds.has(t.status)) return true;
+            return false;
+          })
+          .map((t) => ({
+            id:             t._id,
+            title:          t.title,
+            priority:       t.priority
+              ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
+              : "Medium",
+            deadline:       t.endDate
+              ? new Date(t.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+              : "",
+            assignees:      t.assignees      || [],
+            assigneeName:   t.assignees?.[0]?.fullName || "",
+            assigneeAvatar: t.assignees?.[0]?.avatar   || "",
+            module:         t.module?.title  || "",
+            description:    t.description   || "",
+            projectName:    project.projectName || "",
+            projectId:      project.id           || "",
+            status:         t.status,
+            comments:       t.commentCount        || 0,
+            attachments:    t.attachments?.length || 0,
+          })),
+      }))
+    );
+  }, [tasks, stages, project.projectName, project.id]);
 
   // ── Start editing a stage label ───────────────────────────────────────────
   const startEdit = (stage) => {
@@ -227,22 +228,22 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) 
                           transition: "transform 0.1s ease",
                         }}
                       >
-                        <PipelineCard
-                          title={task.title}
-                          priority={task.priority}
-                          deadline={task.deadline}
-                          assigneeName={task.assigneeName}
-                          assignee={task.assigneeAvatar}
-                          project={task.project}
-                          comments={task.comments}
-                          attachments={task.attachments}
-                          assignees={task.assignees}
-                          onClick={() =>
-                            navigate(`/projects/tasks/${task.id}`, {
-                              state: { task, canEdit: true },
-                            })
-                          }
-                        />
+                       <PipelineCard
+                        title={task.title}
+                        priority={task.priority}
+                        deadline={task.deadline}
+                        assigneeName={task.assigneeName}
+                        assignee={task.assigneeAvatar}
+                        project={task.projectName}
+                        comments={task.comments}
+                        attachments={task.attachments}
+                        assignees={task.assignees}
+                        onClick={() =>
+                          navigate(`/projects/tasks/${task.id}`, {
+                            state: { task, canEdit: true },
+                          })
+                        }
+                      />
                       </Box>
                     )}
                   </Draggable>

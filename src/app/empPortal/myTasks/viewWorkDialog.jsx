@@ -37,7 +37,6 @@ const ViewWorkDialog = ({ open, onClose, submissions = [], loading = false, task
   return (
     <DialogContainer open={open} onClose={onClose} maxWidth="560px" fullWidth>
       <DialogHeader title="All Submitted Work" onClose={onClose} />
-
       <DialogBody>
         <Box sx={{
           backgroundColor: "#F5F5F5",
@@ -46,6 +45,7 @@ const ViewWorkDialog = ({ open, onClose, submissions = [], loading = false, task
           display: "flex",
           flexDirection: "column",
           gap: 0,
+          overflowX: "hidden",
         }}>
 
           {loading && (
@@ -72,18 +72,19 @@ const ViewWorkDialog = ({ open, onClose, submissions = [], loading = false, task
               : "";
 
             return (
-              <Box key={sub._id || idx}>
+            
+              <Box key={sub._id || idx} sx={{ minWidth: 0 }}>
                 {idx > 0 && <Divider sx={{ borderColor: "#E0E0E0", my: 2.5 }} />}
 
-                <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
-                  <Typography fontSize="13px" fontWeight={600} color="text.primary">
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5} gap={1} flexWrap="wrap">
+                  <Typography fontSize="13px" fontWeight={600} color="text.primary" sx={{ wordBreak: "break-word" }}>
                     {submitterName}
                   </Typography>
-                  <Typography fontSize="11px" color="text.secondary">{submittedDate}</Typography>
+                  <Typography fontSize="11px" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>{submittedDate}</Typography>
                 </Box>
 
-                {sub.title && (
-                  <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={0.8}>
+               {sub.title && (
+                  <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={0.8} sx={{ wordBreak: "break-word" }}>
                     {sub.title}
                   </Typography>
                 )}
@@ -119,15 +120,20 @@ const ViewWorkDialog = ({ open, onClose, submissions = [], loading = false, task
                   </Box>
                 )}
 
-                {sub.fileName && (
-                  <AttachmentCard
-                    fileName={sub.fileName}
-                    fileSize={sub.fileSize}
-                    bgColor="#fff"
-                    onDownload={() => handleDownload(sub)}
-                  />
+              {sub.fileName && (
+                  <Box sx={{
+                    minWidth: 0,
+                    "& > *": { minWidth: 0 },              
+                    "& img, & svg": { flexShrink: 0 },       
+                  }}>
+                    <AttachmentCard
+                      fileName={sub.fileName}
+                      fileSize={sub.fileSize}
+                      bgColor="#fff"
+                      onDownload={() => handleDownload(sub)}
+                    />
+                  </Box>
                 )}
-
                 {sub.note && (
                   <Typography fontSize="12px" color="text.secondary" mt={1} fontStyle="italic">
                     Note: {sub.note}

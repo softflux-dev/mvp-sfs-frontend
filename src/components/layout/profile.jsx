@@ -56,7 +56,7 @@ export default function Profile() {
 
   const handleProfileClick = () => {
     setAnchorEl(null);
-    navigate("/profile");
+    navigate(isAdmin ? "/settings" : "/profile");
   };
 
   // What to actually show:

@@ -66,12 +66,18 @@ const AddEmployee = ({
   const { departments, fetchDepartments } = useDepartment();
   const { roles,       fetchRoles }       = useRole();
 
+
+
   const [formData,       setFormData]       = useState(INITIAL_FORM);
   const [errors,         setErrors]         = useState({});
   const [salaryOpen,     setSalaryOpen]     = useState(false);  // step 2
- const [pendingFormData, setPendingFormData] = useState(null); 
+  const [pendingFormData, setPendingFormData] = useState(null); 
   const [salaryDraft,    setSalaryDraft]    = useState(null);
   const fileInputRef = useRef();
+
+   const filteredRoles = formData.department
+    ? roles.filter((r) => (r.department?._id || r.department) === formData.department)
+    : roles;
 
   const fieldRefs = {
     fullName:       useRef(null),
@@ -138,7 +144,12 @@ const AddEmployee = ({
       avatarPreview: URL.createObjectURL(file),
     }));
   };
-
+const handleDepartmentChange = (e) => {
+    const val = e.target.value;
+    setFormData((prev) => ({ ...prev, department: val, role: "" }));
+    if (errors.department) setErrors((prev) => ({ ...prev, department: "" }));
+    if (errors.role)       setErrors((prev) => ({ ...prev, role: "" }));
+  };
   const blockInvalidNumericKeys = (e) => {
     if (["-", "+", "e", "E"].includes(e.key)) e.preventDefault();
   };
@@ -150,6 +161,13 @@ const AddEmployee = ({
     }
   };
 
+  const blockNegativePaste = (e) => {
+  const pasted = e.clipboardData.getData("text");
+  if (/-/.test(pasted)) e.preventDefault();
+};
+  const NAME_PATTERN = /^[a-zA-Z ]+$/;
+  const FULLNAME_MAX_LENGTH = 50;
+
   const validate = () => {
     const e = {};
     if (formData.machineId.trim()) {
@@ -159,7 +177,17 @@ const AddEmployee = ({
         e.machineId = "This Attendance Machine ID is already assigned to another employee.";
       }
     }
-    if (!formData.fullName.trim())  e.fullName       = "Full name is required";
+   if (!formData.fullName.trim()) {
+      e.fullName = "Full name is required";
+    } else if (!NAME_PATTERN.test(formData.fullName.trim())) {
+      e.fullName = "Full name can only contain letters and spaces";
+    } else if (formData.fullName.trim().length < 2) {
+      e.fullName = "Full name must be at least 2 characters";
+    } else if (formData.fullName.trim().length > FULLNAME_MAX_LENGTH) {
+      e.fullName = `Full name cannot exceed ${FULLNAME_MAX_LENGTH} characters`;
+    } else if (/\s{2,}/.test(formData.fullName.trim())) {
+      e.fullName = "Full name cannot contain multiple consecutive spaces";
+    }
    if (!formData.email.trim()) {
       e.email = "Email is required";
     } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/.test(formData.email.trim())) {
@@ -233,6 +261,12 @@ const AddEmployee = ({
     setSalaryDraft(null); 
     onClose?.();
   };
+
+  const handleWorkingHoursChange = (e) => {
+  let val = e.target.value.replace(/-/g, "");
+  setFormData((prev) => ({ ...prev, workingHours: val }));
+  if (errors.workingHours) setErrors((prev) => ({ ...prev, workingHours: "" }));
+};
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -318,12 +352,13 @@ const AddEmployee = ({
               />
             </Box>
 
-            {/* Full Name */}
+           {/* Full Name */}
             <Box ref={fieldRefs.fullName}>
               <CustomInputLabel label="Full Name *" />
               <TextInput placeholder="Enter Full Name" value={formData.fullName}
                 onChange={handleChange("fullName")} inputBgColor="#fff" fullWidth
-                error={!!errors.fullName} helperText={errors.fullName} />
+                error={!!errors.fullName} helperText={errors.fullName}
+                inputProps={{ maxLength: FULLNAME_MAX_LENGTH }} />
             </Box>
 
             {/* Email */}
@@ -356,8 +391,8 @@ const AddEmployee = ({
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box ref={fieldRefs.department}>
                 <CustomInputLabel label="Department *" />
-                <CustomSelect value={formData.department}
-                  onChange={handleChange("department")}
+               <CustomSelect value={formData.department}
+                  onChange={handleDepartmentChange}
                   fullWidth height="45px" inputBgColor="#fff" displayEmpty
                   renderValue={(v) =>
                     departments.find((d) => d._id === v)?.name || (
@@ -373,21 +408,26 @@ const AddEmployee = ({
                   <Typography fontSize="12px" color="error" mt={0.5}>{errors.department}</Typography>
                 )}
               </Box>
-
               <Box ref={fieldRefs.role}>
                 <CustomInputLabel label="Role *" />
                 <CustomSelect value={formData.role}
                   onChange={handleChange("role")}
                   fullWidth height="45px" inputBgColor="#fff" displayEmpty
+                  disabled={!formData.department}
                   renderValue={(v) =>
-                    roles.find((r) => r._id === v)?.roleName || (
-                      <Typography fontSize={13} color="text.secondary">Select Role</Typography>
+                    filteredRoles.find((r) => r._id === v)?.roleName || (
+                      <Typography fontSize={13} color="text.secondary">
+                        {formData.department ? "Select Role" : "Select department first"}
+                      </Typography>
                     )
                   }
                 >
-                  {roles.map((r) => (
-                    <MenuItem key={r._id} value={r._id}>{r.roleName}</MenuItem>
-                  ))}
+                  {filteredRoles.length === 0
+                    ? <MenuItem disabled><Typography fontSize={13} color="text.secondary">No roles in this department</Typography></MenuItem>
+                    : filteredRoles.map((r) => (
+                        <MenuItem key={r._id} value={r._id}>{r.roleName}</MenuItem>
+                      ))
+                  }
                 </CustomSelect>
                 {errors.role && (
                   <Typography fontSize="12px" color="error" mt={0.5}>{errors.role}</Typography>
@@ -420,9 +460,10 @@ const AddEmployee = ({
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box ref={fieldRefs.workingHours}>
                 <CustomInputLabel label="Working Hours/Day *" />
-                <TextInput placeholder="0" value={formData.workingHours}
-                  onChange={handleChange("workingHours")}
+              <TextInput placeholder="0" value={formData.workingHours}
+                  onChange={handleWorkingHoursChange}
                   onKeyDown={blockInvalidNumericKeys}
+                  onPaste={blockNegativePaste}
                   inputBgColor="#fff" fullWidth type="number"
                   inputProps={{ min: 1, max: 24, step: 1 }}
                   error={!!errors.workingHours} helperText={errors.workingHours} />

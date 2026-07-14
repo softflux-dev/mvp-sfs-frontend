@@ -113,9 +113,15 @@ const TeamTab = ({ project = {}, onTeamChange }) => {
     role:      m.role,
     assigned:  m.assigned,
     completed: m.completed,
+    isProjectManager: m.isProjectManager || false,
+
   }));
 
   const handleDelete = (row) => {
+    if (row.isProjectManager) {
+      setError("The Project Manager can't be removed from the team here. Reassign the project to a different manager instead.");
+      return;
+    }
     confirmDialogRef.current?.open({
       title:       "Remove Team Member?",
       description: `"${row.name}" will be removed from this project.`,

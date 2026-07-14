@@ -1,6 +1,6 @@
 import { useState, useEffect }         from "react";
 import { Box, IconButton, Typography } from "@mui/material";
-import { useNavigate, useLocation }    from "react-router-dom";
+import { useNavigate, useLocation,useParams }    from "react-router-dom";
 
 import CustomTabs          from "../../../components/tabs";
 import ProjectDetailHeader from "../../admin/projects/projectDetailHeader";
@@ -37,6 +37,7 @@ const tabs = [
 const PMprojectDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { id: routeProjectId } = useParams();
 
   const [project,     setProject]     = useState(location.state?.project || {});
   const [activeTab,   setActiveTab]   = useState(1);

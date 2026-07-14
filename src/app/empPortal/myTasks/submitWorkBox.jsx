@@ -142,7 +142,7 @@ const handleViewAll = async () => {
                 <FileGridTile key={file._id || file.id} file={file} xs={xs} />
               ))}
 
-              {/* View More tile */}
+             {/* View More tile */}
               {use2x2 && remaining > 0 && (
                 <Grid item size={{ xs: 6 }}>
                   <Box
@@ -167,12 +167,19 @@ const handleViewAll = async () => {
                       backgroundColor: "rgba(0,0,0,0.15)",
                       backdropFilter: "blur(4px)",
                       display: "flex", alignItems: "center", justifyContent: "center",
+                      px: 1,
                     }}>
-                      <Typography fontSize="13px" fontWeight={700} sx={{
-                        background: "linear-gradient(90deg, #AA2493, #022179)",
-                        WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                      }}>
+                      <Typography
+                        fontSize={{ xs: "11px", sm: "13px" }}
+                        fontWeight={700}
+                        textAlign="center"
+                        sx={{
+                          background: "linear-gradient(90deg, #AA2493, #022179)",
+                          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                          backgroundClip: "text",
+                          lineHeight: 1.3,
+                        }}
+                      >
                         View More ({remaining}+)
                       </Typography>
                     </Box>
