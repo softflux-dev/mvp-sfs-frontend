@@ -1,5 +1,6 @@
-// src/hooks/messages.js — FULL REPLACEMENT
+// src/hooks/messages.js — 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 import {
   getConversationsApi, getMessagesApi, markAsReadApi,
   sendMessageRestApi, getConversationUsersApi,
@@ -161,18 +162,25 @@ export const useMessages = (conversationId, currentUserId) => {
     }
   }, [conversationId]);
 
-  // ── Upload attachments, then send ─────────────────────────────────────────
+  // ── Upload attachments to Cloudinary, then send ───────────────────────────
   const sendWithAttachments = useCallback(async (files, text, tempId) => {
     try {
-      const formData = new FormData();
-      files.forEach((f) => formData.append("files", f));
-      const res = await uploadAttachmentsApi(conversationId, formData);
-      if (res?.status === 200 || res?.status === 201) {
-        const attachments = res.data.data.attachments || [];
-        return await sendMessage(text, tempId, attachments);
-      }
+      // Upload each file to Cloudinary in parallel
+      const uploaded = await Promise.all(
+        files.map((f) => uploadToCloudinary(f, "messages"))
+      );
+
+      const attachments = uploaded.map((u, i) => ({
+        fileName: u.fileName,
+        url:      u.url,
+        fileSize: u.fileSize,
+        mimeType: files[i].type || "",
+      }));
+
+      return await sendMessage(text, tempId, attachments);
+    } catch {
       return { success: false, message: "Upload failed." };
-    } catch { return { success: false, message: "Upload failed." }; }
+    }
   }, [conversationId, sendMessage]);
 
   const editMessage = useCallback(async (messageId, text) => {

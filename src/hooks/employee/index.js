@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 import {
   getEmployeesApi,
   createEmployeeApi,
@@ -76,18 +77,18 @@ export const useEmployee = () => {
     setActionLoading(true);
     setError("");
     try {
-      // build FormData for multipart (avatar support)
-      const payload = new FormData();
+      let avatarUrl = "";
+      if (formData.avatarFile) {
+        const uploaded = await uploadToCloudinary(formData.avatarFile, "employees");
+        avatarUrl = uploaded.url;
+      }
+
+      const payload = {};
       Object.entries(formData).forEach(([key, value]) => {
-  if (key === "avatarFile" && value) {
-    payload.append("avatar", value);
-  } else if (key === "salaryBreakdown" && value != null) {
-    // Objects must be JSON-stringified before appending to FormData
-    payload.append(key, JSON.stringify(value));
-  } else if (key !== "avatarPreview" && key !== "avatarFile" && value != null) {
-    payload.append(key, value);
-  }
-});
+        if (key === "avatarFile" || key === "avatarPreview") return;
+        if (value != null) payload[key] = value;
+      });
+      if (avatarUrl) payload.avatar = avatarUrl;
 
       const response = await createEmployeeApi(payload);
 
@@ -117,17 +118,18 @@ export const useEmployee = () => {
     setActionLoading(true);
     setError("");
     try {
-      const payload = new FormData();
-     Object.entries(formData).forEach(([key, value]) => {
-  if (key === "avatarFile" && value) {
-    payload.append("avatar", value);
-  } else if (key === "salaryBreakdown" && value != null) {
-    // Objects must be JSON-stringified before appending to FormData
-    payload.append(key, JSON.stringify(value));
-  } else if (key !== "avatarPreview" && key !== "avatarFile" && value != null) {
-    payload.append(key, value);
-  }
-});
+      let avatarUrl;
+      if (formData.avatarFile) {
+        const uploaded = await uploadToCloudinary(formData.avatarFile, "employees");
+        avatarUrl = uploaded.url;
+      }
+
+      const payload = {};
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === "avatarFile" || key === "avatarPreview") return;
+        if (value != null) payload[key] = value;
+      });
+      if (avatarUrl) payload.avatar = avatarUrl;
 
       const response = await updateEmployeeApi(id, payload);
 

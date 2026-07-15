@@ -5,6 +5,5 @@ import api       from "../index";
 export const getCompanyProfileApi = () =>
   api(ENDPOINTS.getCompanyProfile, null, "get");
 
-// payload is a FormData instance (since logo upload is multipart)
 export const updateCompanyProfileApi = (payload) =>
-  api(ENDPOINTS.updateCompanyProfile, payload, "put", true);
+  api(ENDPOINTS.updateCompanyProfile, payload, "put");

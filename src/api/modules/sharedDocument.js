@@ -4,8 +4,8 @@ import api       from "../index";
 export const getSharedDocumentsApi = (params) =>
   api(ENDPOINTS.getSharedDocuments, params, "get");
 
-export const uploadSharedDocumentApi = (formData) =>
-  api(ENDPOINTS.uploadSharedDocument, formData, "post", true);
+export const uploadSharedDocumentApi = (payload) =>
+  api(ENDPOINTS.uploadSharedDocument, payload, "post");
 
 export const deleteSharedDocumentApi = (id) =>
   api(`${ENDPOINTS.deleteSharedDocument}/${id}`, null, "delete");

@@ -1,5 +1,6 @@
-// src/hooks/companySettings.js — FULL REPLACEMENT
+// src/hooks/companySettings.js — 
 import { useState, useEffect, useCallback } from "react";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 import { getCompanyProfileApi, updateCompanyProfileApi } from "../../api/modules/companySettings";
 
 export const useCompanyProfile = () => {
@@ -34,21 +35,24 @@ export const useCompanyProfile = () => {
     setActionLoading(true);
     setError("");
     try {
-      const payload = new FormData();
-      payload.append("companyName", formData.companyName || "");
-      payload.append("industry",    formData.industry    || "");
-      payload.append("address",     formData.address     || "");
-      payload.append("website",     formData.website      || "");
+      let logoUrl;
       if (formData.logoFile) {
-        payload.append("logo", formData.logoFile);
+        const uploaded = await uploadToCloudinary(formData.logoFile, "company");
+        logoUrl = uploaded.url;
       }
+
+      const payload = {
+        companyName: formData.companyName || "",
+        industry:    formData.industry    || "",
+        address:     formData.address     || "",
+        website:     formData.website     || "",
+      };
+      if (logoUrl) payload.logoUrl = logoUrl;
 
       const res = await updateCompanyProfileApi(payload);
       if (res?.status === 200 || res?.status === 201) {
         const savedProfile = res.data.data.profile;
         setProfile(savedProfile);
-        // Include the saved profile in the result so callers (e.g. the
-        // topbar logo broadcast) can read the fresh logoUrl immediately.
         return { success: true, message: res.data.message, profile: savedProfile };
       }
       const msg = res?.data?.message || "Failed to save changes.";

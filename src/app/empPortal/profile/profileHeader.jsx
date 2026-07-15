@@ -3,19 +3,12 @@ import { Box, Typography, Chip, Avatar, IconButton } from "@mui/material";
 import UploadIcon from "../../../assets/icons/upload-img.svg";
 import { baseUrl } from "../../../api/index";
 
-// baseUrl already ends with "/api/" (e.g. "http://localhost:5000/api/")
-// — strip that off to get the bare backend origin for static file URLs.
-const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
 
-// The backend stores avatar as a RELATIVE path (e.g. "/uploads/xyz.png").
-// This must be prefixed with the backend's actual domain before being used
-// as an <Avatar src>, otherwise the browser tries to load it from the
-// frontend's own origin (localhost:5173) instead of the backend
-// (localhost:5000) and silently fails to render.
+
 const resolveAvatarUrl = (avatarUrl) => {
   if (!avatarUrl) return "";
   if (avatarUrl.startsWith("http") || avatarUrl.startsWith("blob:")) return avatarUrl;
-  return `${getBackendOrigin()}${avatarUrl}`;
+  return avatarUrl; // fallback — already handles absolute URLs
 };
 
 const ProfileHeader = ({ profile = {}, onAvatarChange }) => {

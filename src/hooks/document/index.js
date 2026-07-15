@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 import {
   getEmployeeDocumentsApi,
   uploadEmployeeDocumentApi,
@@ -39,10 +40,19 @@ export const useDocument = (employeeId) => {
     setActionLoading(true);
     setError("");
     try {
-      const payload = new FormData();
-      payload.append("title",        formData.title);
-      payload.append("documentType", formData.documentType || "other");
-      if (formData.file) payload.append("file", formData.file);
+      let fileUrl = "", fileName = "";
+      if (formData.file) {
+        const uploaded = await uploadToCloudinary(formData.file, "employee-documents");
+        fileUrl  = uploaded.url;
+        fileName = uploaded.fileName;
+      }
+
+      const payload = {
+        title:        formData.title,
+        documentType: formData.documentType || "other",
+        fileUrl,
+        fileName,
+      };
 
       const response = await uploadEmployeeDocumentApi(employeeId, payload);
       if (response?.status === 200 || response?.status === 201) {

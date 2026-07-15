@@ -34,20 +34,10 @@ const INITIAL_FORM = {
   logoPreview: "",
 };
 
-// baseUrl already ends with "/api/" (e.g. "http://localhost:5000/api/")
-// — strip that off to get the bare backend origin for static file URLs.
-const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
 
-// The backend stores logoUrl as a RELATIVE path (e.g. "/uploads/images/logo-123.png").
-// This must be prefixed with the backend's actual domain before being used as
-// an <Avatar src>, otherwise the browser tries to load it from the frontend's
-// own origin (localhost:5173) instead of the backend (localhost:5000) and
-// silently fails to render.
-const resolveLogoUrl = (logoUrl) => {
-  if (!logoUrl) return "";
-  if (logoUrl.startsWith("http")) return logoUrl;  // already absolute, leave as-is
-  return `${getBackendOrigin()}${logoUrl}`;
-};
+
+
+const resolveLogoUrl = (logoUrl) => logoUrl || "";
 
 const CompanyProfileTab = () => {
   const fileInputRef = useRef(null);

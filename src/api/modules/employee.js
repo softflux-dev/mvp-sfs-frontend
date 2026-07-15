@@ -8,10 +8,10 @@ export const getEmployeeByIdApi = (id) =>
   api(`${ENDPOINTS.getEmployeeById}/${id}`, null, "get");
 
 export const createEmployeeApi = (payload) =>
-  api(ENDPOINTS.createEmployee, payload, "post", true);  
+  api(ENDPOINTS.createEmployee, payload, "post");
 
 export const updateEmployeeApi = (id, payload) =>
-  api(`${ENDPOINTS.updateEmployee}/${id}`, payload, "put", true);
+  api(`${ENDPOINTS.updateEmployee}/${id}`, payload, "put");
 
 export const deleteEmployeeApi = (id) =>
   api(`${ENDPOINTS.deleteEmployee}/${id}`, null, "delete");

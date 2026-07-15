@@ -5,7 +5,7 @@ export const getProjectDocumentsApi = (projectId) =>
   api(`${ENDPOINTS.getProjectDocuments}/${projectId}/documents`, null, "get");
 
 export const uploadProjectDocumentApi = (projectId, payload) =>
-  api(`${ENDPOINTS.uploadProjectDocument}/${projectId}/documents`, payload, "post", true);
+  api(`${ENDPOINTS.uploadProjectDocument}/${projectId}/documents`, payload, "post");
 
 export const deleteProjectDocumentApi = (projectId, documentId) =>
   api(`${ENDPOINTS.deleteProjectDocument}/${projectId}/documents/${documentId}`, null, "delete");

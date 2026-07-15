@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 import { getProfileApi, updateProfileApi, changePasswordApi } from "../../api/modules/profile";
 
 export const useProfile = () => {
@@ -31,13 +32,21 @@ export const useProfile = () => {
     setActionLoading(true);
     setError("");
     try {
-      const res = await updateProfileApi(formData);
+      let avatarUrl;
+      if (formData.avatarFile) {
+        const uploaded = await uploadToCloudinary(formData.avatarFile, "employees");
+        avatarUrl = uploaded.url;
+      }
+
+      const payload = {};
+      if (formData.fullName !== undefined) payload.fullName = formData.fullName;
+      if (formData.phone    !== undefined) payload.phone    = formData.phone;
+      if (avatarUrl)                       payload.avatar   = avatarUrl;
+
+      const res = await updateProfileApi(payload);
       if (res?.status === 200 || res?.status === 201) {
         const updated = res.data.data.employee;
         setProfile(updated);
-        // Return the freshly-saved profile so callers (e.g. broadcasting
-        // the new avatar to the topbar) don't have to rely on stale
-        // closure state from before this update resolved.
         return { success: true, message: "Profile updated successfully.", profile: updated };
       }
       const msg = res?.data?.message || "Failed to update profile.";

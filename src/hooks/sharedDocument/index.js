@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 import {
   getSharedDocumentsApi,
   uploadSharedDocumentApi,
@@ -39,11 +40,26 @@ export const useSharedDocument = (options = {}) => {
     }
   }, [pmId]);
 
-  const uploadDocument = useCallback(async (formData) => {
+ const uploadDocument = useCallback(async (formData) => {
     setActionLoading(true);
     setError("");
     try {
-      const res = await uploadSharedDocumentApi(formData);
+      let fileUrl = "", fileName = "";
+      if (formData.file) {
+        const uploaded = await uploadToCloudinary(formData.file, "shared-documents");
+        fileUrl  = uploaded.url;
+        fileName = uploaded.fileName;
+      }
+
+      const payload = {
+        title:        formData.title,
+        documentType: formData.documentType || formData.type || "other",
+        assigneeIds:  formData.assigneeIds || [],
+        fileUrl,
+        fileName,
+      };
+
+      const res = await uploadSharedDocumentApi(payload);
       if (res?.status === 200 || res?.status === 201) {
         await fetchDocuments();
         return { success: true, message: "Document uploaded successfully." };

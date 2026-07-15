@@ -1,5 +1,6 @@
-// hooks/projectDocument.js — FULL REPLACEMENT
+// hooks/projectDocument.js — 
 import { useState, useCallback, useEffect } from "react";
+import { uploadToCloudinary } from "../../utils/cloudinaryUpload";
 import {
   getProjectDocumentsApi,
   uploadProjectDocumentApi,
@@ -41,18 +42,27 @@ export const useProjectDocument = (projectId) => {
     setActionLoading(true);
     setError("");
     try {
-      const payload = new FormData();
-      payload.append("title",        formData.title);
-      payload.append("documentType", formData.documentType || formData.type || "other");
-      payload.append("assigneeIds",  JSON.stringify(formData.assigneeIds || []));
-
+      let fileUrl = "", fileName = "", fileSize = "";
       const fileToSend = formData.file || formData.files?.[0];
-      if (fileToSend) payload.append("file", fileToSend);
+      if (fileToSend) {
+        const uploaded = await uploadToCloudinary(fileToSend, "project-documents");
+        fileUrl  = uploaded.url;
+        fileName = uploaded.fileName;
+        fileSize = uploaded.fileSize;
+      }
+
+      const payload = {
+        title:        formData.title,
+        documentType: formData.documentType || formData.type || "other",
+        assigneeIds:  formData.assigneeIds || [],
+        fileUrl,
+        fileName,
+        fileSize,
+      };
 
       const response = await uploadProjectDocumentApi(projectId, payload);
       if (response?.status === 200 || response?.status === 201) {
         const newDoc = response.data.data.document;
-        // ✅ Prepend directly — no re-fetch, dialog closes instantly
         setDocuments((prev) => [{ ...newDoc, _source: "project" }, ...prev]);
         return { success: true, message: "Document uploaded successfully." };
       }
@@ -63,7 +73,7 @@ export const useProjectDocument = (projectId) => {
       setError("Something went wrong.");
       return { success: false };
     } finally {
-      setActionLoading(false); // ✅ loading stops as soon as upload responds
+      setActionLoading(false);
     }
   }, [projectId]);
 
@@ -89,19 +99,19 @@ export const useProjectDocument = (projectId) => {
     }
   }, [projectId]);
 
-  const downloadDocument = useCallback(async (documentId) => {
-    const url   = `${baseUrl}admin/projects/${projectId}/documents/${documentId}/download`;
-    const token = localStorage.getItem("token");
+ const downloadDocument = useCallback(async (documentId) => {
     try {
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) { setError("Failed to download document."); return; }
-      const blob    = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const a       = document.createElement("a");
-      a.href = blobUrl;
-      a.download = "";
-      a.click();
-      URL.revokeObjectURL(blobUrl);
+      const res = await downloadProjectDocumentApi(projectId, documentId);
+      if (res?.status === 200 || res?.status === 201) {
+        const { fileUrl, fileName } = res.data.data;
+        const a = document.createElement("a");
+        a.href     = fileUrl;
+        a.download = fileName || "";
+        a.target   = "_blank";
+        a.click();
+      } else {
+        setError("Failed to download document.");
+      }
     } catch {
       setError("Failed to download document.");
     }
