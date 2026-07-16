@@ -1,3 +1,4 @@
+// src/hooks/department.js — 
 import { useState, useCallback, useEffect } from "react";
 import {
   getDepartmentsApi,
