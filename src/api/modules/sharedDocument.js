@@ -15,6 +15,5 @@ export const downloadSharedDocumentApi = (id) =>
     `${ENDPOINTS.downloadSharedDocument}/${id}/download`,
     null,
     "get",
-    false,
-    { responseType: "blob" }
+    false
   );

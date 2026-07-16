@@ -5,6 +5,7 @@ import {
   getProjectDocumentsApi,
   uploadProjectDocumentApi,
   deleteProjectDocumentApi,
+   downloadProjectDocumentApi,
 } from "../../api/modules/projectDocument";
 import { baseUrl } from "../../api/index";
 

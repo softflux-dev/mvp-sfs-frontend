@@ -96,23 +96,22 @@ export const useSharedDocument = (options = {}) => {
   }, [fetchDocuments]);
 
   const downloadDocument = useCallback(async (id) => {
-    try {
-      const res = await downloadSharedDocumentApi(id);
-      const disposition = res.headers?.["content-disposition"] || "";
-      const nameMatch   = disposition.match(/filename="?([^";\n]+)"?/);
-      const fileName    = nameMatch?.[1]?.trim() || "document";
-      const blob = new Blob([res.data], {
-        type: res.headers?.["content-type"] || "application/octet-stream",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a   = document.createElement("a");
-      a.href = url; a.download = fileName;
-      document.body.appendChild(a); a.click(); a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
+  try {
+    const res = await downloadSharedDocumentApi(id);
+    if (res?.status === 200 || res?.status === 201) {
+      const { fileUrl, fileName } = res.data.data;
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = fileName || "";
+      a.target = "_blank";
+      a.click();
+    } else {
       setError("Failed to download document.");
     }
-  }, []);
+  } catch {
+    setError("Failed to download document.");
+  }
+}, []);
 
   useEffect(() => {
     fetchDocuments();

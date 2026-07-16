@@ -4,6 +4,7 @@ import {
   getEmployeeDocumentsApi,
   uploadEmployeeDocumentApi,
   deleteEmployeeDocumentApi,
+  downloadEmployeeDocumentApi,
 } from "../../api/modules/document";
 import { downloadSharedDocumentApi } from "../../api/modules/sharedDocument";
 import { baseUrl } from "../../api/index";
@@ -91,18 +92,22 @@ export const useDocument = (employeeId) => {
   }, [employeeId, fetchDocuments]);
 
   const downloadDocument = useCallback(async (documentId) => {
-    const url = `${baseUrl}admin/employees/${employeeId}/documents/${documentId}/download`;
-    const token   = localStorage.getItem("token");
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => res.blob())
-      .then((blob) => {
-        const blobUrl = URL.createObjectURL(blob);
-        const a       = document.createElement("a");
-        a.href = blobUrl; a.download = "";
-        a.click(); URL.revokeObjectURL(blobUrl);
-      })
-      .catch(() => setError("Failed to download document."));
-  }, [employeeId]);
+  try {
+    const res = await downloadEmployeeDocumentApi(employeeId, documentId);
+    if (res?.status === 200 || res?.status === 201) {
+      const { fileUrl, fileName } = res.data.data;
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = fileName || "";
+      a.target = "_blank";
+      a.click();
+    } else {
+      setError("Failed to download document.");
+    }
+  } catch {
+    setError("Failed to download document.");
+  }
+}, [employeeId]);
 
   useEffect(() => { fetchDocuments(); }, [employeeId]);
 
