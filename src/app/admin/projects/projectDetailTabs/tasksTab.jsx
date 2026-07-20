@@ -23,7 +23,7 @@ const tableHeader = [
   { id: "priority",   label: "Priority"    },
   { id: "startDate",  label: "Start Date"  },
   { id: "endDate",    label: "End Date"    },
-  { id: "status",     label: "Task Status" },  // ← renamed from "Pipeline"
+  { id: "status",     label: "Task Pipeline Status" }, 
   { id: "actions",    label: "Actions"     },
 ];
 

@@ -166,10 +166,10 @@ const Filter = ({
   {
     type: "select",
     key: "status",
-    placeholder: "All Task Status",
+    placeholder: "All Task Pipeline Status",
     grid: { xs: 12, md: 2.4 },
     options: [
-      { v: "", l: "All Task Status" },
+      { v: "", l: "All Task Pipeline Status" },
       ...stages.map((s) => ({ v: s.id, l: s.label })),
     ],
   },
@@ -772,10 +772,10 @@ emp_my_tasks: ({ projects = [], stages = [] }) => [
  {
     type: "select",
     key: "status",
-    placeholder: "All Task Status",
+    placeholder: "All Task Pipeline Status",
     grid: { xs: 12, md: 3 },
     options: [
-      { v: "", l: "All Task Status" },
+      { v: "", l: "All Task Pipeline Status" },
       ...stages.map((s) => ({ v: s.id, l: s.label })),
     ],
   },
@@ -939,31 +939,43 @@ holidays: [
               />
             )}
             {f.type === "monthyear" && (
-              <DatePicker
-                views={["year", "month"]}
-                openTo="month"
-                value={values[f.key] || null}
-                onChange={(v) => setVal(f.key, v)}
-                sx={{
-                  ...GlobalStyle.datePickerStyle,
-                  "& input": {
-                    color: values[f.key] ? "inherit" : "transparent",
-                  },
-                  "& input::placeholder": {
-                    color: "#9CA3AF",
-                    opacity: 1,
-                    visibility: "visible",
-                  },
-                }}
-                slotProps={{
-                  textField: {
-                    label: "",
-                    fullWidth: true,
-                    inputProps: { placeholder: f.placeholder },
-                  },
-                }}
-              />
-            )}
+  <DatePicker
+    views={["year", "month"]}
+    openTo="month"
+    value={values[f.key] || null}
+    onChange={(v) => setVal(f.key, v)}
+    sx={{
+      ...GlobalStyle.datePickerStyle,
+      "& input": {
+        color: values[f.key] ? "inherit" : "transparent",
+      },
+      "& input::placeholder": {
+        color: "#9CA3AF",
+        opacity: 1,
+        visibility: "visible",
+      },
+    }}
+    slotProps={{
+      textField: {
+        label: "",
+        fullWidth: true,
+        inputProps: { placeholder: f.placeholder },
+      },
+      // ── Version-agnostic fix: MUI X renders month/year buttons with
+      // role="radio" + aria-checked, regardless of internal class names,
+      // which differ across MUI X versions and were the reason the
+      // earlier class-name-based overrides silently didn't match. ────────
+      popper: {
+        sx: {
+          "& [role='radio'][aria-checked='true']": {
+            background: "linear-gradient(90deg, #AA2493 0%, #022179 100%) !important",
+            color: "#ffffff !important",
+          },
+        },
+      },
+    }}
+  />
+)}
             {f.type === "year" && (
             <DatePicker
               views={["year"]}

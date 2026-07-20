@@ -259,8 +259,28 @@ const PayrollManagement = () => {
           sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 2.5 }}>
           <Box>
             <Typography fontSize="13px" fontWeight={500} color="text.secondary" mb={0.5}>Select Month</Typography>
-            <DatePicker value={selectedDate} onChange={handleDateChange} views={["year","month"]} openTo="month"
-              slotProps={{ textField: { size: "small", sx: { width: 200 } } }} sx={GlobalStyle.datePickerStyle} />
+            <DatePicker 
+            value={selectedDate} 
+            onChange={handleDateChange} 
+            views={["year","month"]} 
+            openTo="month"
+            slotProps={{ 
+              textField: { size: "small", sx: { width: 200 } },
+              // ── Same fix as the Filter component's monthyear picker: MUI X
+              // renders selected month/year buttons with role="radio" +
+              // aria-checked="true" regardless of version, so target that
+              // directly rather than guessing internal class names. ─────────────
+              popper: {
+                sx: {
+                  "& [role='radio'][aria-checked='true']": {
+                    background: "linear-gradient(90deg, #AA2493 0%, #022179 100%) !important",
+                    color: "#ffffff !important",
+                  },
+                },
+              },
+            }} 
+            sx={GlobalStyle.datePickerStyle} 
+          />
           </Box>
           <CustomButton
             btnLabel={actionLoading

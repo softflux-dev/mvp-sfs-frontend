@@ -17,7 +17,7 @@ const tableHeader = [
   { id: "project",       label: "Project"  },
   { id: "assigneeNames", label: "Assignee" },
   { id: "dueDate",       label: "Due Date" },
-  { id: "status",        label: "Status"   },
+  { id: "status",        label: "Task Pipeline Status"   },
 ];
 
 const displayRows = [

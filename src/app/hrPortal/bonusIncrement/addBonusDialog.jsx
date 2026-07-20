@@ -172,6 +172,18 @@ const AddBonusDialog = ({
                 openTo="month"
                 slotProps={{
                   textField: { size: "small", fullWidth: true, error: !!errors.monthYear },
+                  // ── Same fix as elsewhere: MUI X renders selected month/year
+                  // buttons with role="radio" + aria-checked="true" regardless of
+                  // version, so target that stable attribute instead of guessing
+                  // internal class names. ─────────────────────────────────────────
+                  popper: {
+                    sx: {
+                      "& [role='radio'][aria-checked='true']": {
+                        background: "linear-gradient(90deg, #AA2493 0%, #022179 100%) !important",
+                        color: "#ffffff !important",
+                      },
+                    },
+                  },
                 }}
                 sx={GlobalStyle.datePickerStyle}
               />
@@ -180,15 +192,26 @@ const AddBonusDialog = ({
               )}
             </Box>
 
-            {/* Amount */}
+           {/* Amount */}
             <Box ref={fieldRefs.amount}>
               <CustomInputLabel label="Bonus Amount (Rs) *" />
               <TextInput
                 placeholder="Enter amount"
                 value={form.amount}
-                onChange={set("amount")}
-                onKeyDown={(e) => { if (["-","e","E","+"].includes(e.key)) e.preventDefault(); }}
-                inputBgColor="#fff" fullWidth type="number" inputProps={{ min: 1 }}
+                onChange={(e) => {
+                  // ── Strip everything except digits — this catches EVERY path that
+                  // could produce a negative/invalid value: typing "-", pasting,
+                  // AND clicking the native spinner's down arrow with the mouse
+                  // (which fires no keydown event at all, so keyboard-only guards
+                  // can't catch it). ──────────────────────────────────────────────
+                  const digitsOnly = e.target.value.replace(/[^\d]/g, "");
+                  setForm((prev) => ({ ...prev, amount: digitsOnly }));
+                  if (errors.amount) setErrors((prev) => ({ ...prev, amount: "" }));
+                }}
+                onKeyDown={(e) => {
+                  if (["-","e","E","+","."].includes(e.key)) e.preventDefault();
+                }}
+                inputBgColor="#fff" fullWidth type="number" inputProps={{ min: 0 }}
                 error={!!errors.amount} helperText={errors.amount}
                 InputStartIcon={
                   <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>

@@ -13,6 +13,7 @@ import CustomInputLabel    from "../../../components/customInputLabel";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
 import { getEmployeesApi } from "../../../api/modules/employee";
+import { useDepartment }   from "../../../hooks/department";
 
 const getInitials = (name = "") =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -27,6 +28,7 @@ const ALLOWANCE_LABELS = {
 };
 
 const INITIAL_FORM = {
+  department:    "",
   employeeId:    "",
   effectiveDate: null,
   percentage:    "",
@@ -43,24 +45,27 @@ const AddIncrementDialog = ({
   const [form,   setForm]   = useState({ ...INITIAL_FORM });
   const [errors, setErrors] = useState({});
 
+  const { departments, fetchDepartments } = useDepartment();
+
   const fieldRefs = {
+    department:    useRef(null),
     employeeId:    useRef(null),
     effectiveDate: useRef(null),
     percentage:    useRef(null),
   };
 
   // Real employees from hook
-const [employees, setEmployees] = useState([]);
-
+  const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
-  if (!open) return;
-  getEmployeesApi({ limit: 100, page: 1 }).then((res) => {
-    if (res?.status === 200 || res?.status === 201) {
-      setEmployees(res.data.data.employees || []);
-    }
-  });
-}, [open]);
+    if (!open) return;
+    fetchDepartments({ limit: 100 });
+    getEmployeesApi({ limit: 100, page: 1 }).then((res) => {
+      if (res?.status === 200 || res?.status === 201) {
+        setEmployees(res.data.data.employees || []);
+      }
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,8 +73,20 @@ const [employees, setEmployees] = useState([]);
     setErrors({});
   }, [open]);
 
+  // ── Filter employees by selected department ──────────────────────────────
+  const departmentEmployees = form.department
+    ? employees.filter((e) => (e.department?._id || e.department) === form.department)
+    : [];
+
+  const handleDepartmentChange = (e) => {
+    const val = e.target.value;
+    setForm((prev) => ({ ...prev, department: val, employeeId: "" }));
+    if (errors.department) setErrors((prev) => ({ ...prev, department: "" }));
+    if (errors.employeeId) setErrors((prev) => ({ ...prev, employeeId: "" }));
+  };
+
   // Derived values
-  const selectedEmployee = employees.find((e) => e._id === form.employeeId) || null;
+  const selectedEmployee = departmentEmployees.find((e) => e._id === form.employeeId) || null;
   const pct = parseFloat(form.percentage) || 0;
 
   // Live breakdown calculation
@@ -96,13 +113,14 @@ const [employees, setEmployees] = useState([]);
 
   const validate = () => {
     const e = {};
+    if (!form.department)                            e.department    = "Please select a department.";
     if (!form.employeeId)                            e.employeeId    = "Please select an employee.";
     if (!form.effectiveDate)                         e.effectiveDate = "Effective date is required.";
     if (!form.percentage || pct <= 0 || pct > 100)  e.percentage    = "Enter a valid percentage (1–100).";
     return e;
   };
 
-  const FIELD_ORDER = ["employeeId", "effectiveDate", "percentage"];
+  const FIELD_ORDER = ["department", "employeeId", "effectiveDate", "percentage"];
 
   const handleSave = () => {
     const errs = validate();
@@ -157,17 +175,42 @@ const [employees, setEmployees] = useState([]);
               </Box>
             )}
 
-            {/* Employee select */}
+            {/* Department select */}
+            <Box ref={fieldRefs.department}>
+              <CustomInputLabel label="Select Department *" />
+              <CustomSelect
+                value={form.department}
+                onChange={handleDepartmentChange}
+                fullWidth height="45px" inputBgColor="#fff" displayEmpty
+                renderValue={(v) =>
+                  departments.find((d) => d._id === v)?.name || (
+                    <Typography fontSize={13} color="text.secondary">Select Department</Typography>
+                  )
+                }
+              >
+                {departments.map((d) => (
+                  <MenuItem key={d._id} value={d._id}>{d.name}</MenuItem>
+                ))}
+              </CustomSelect>
+              {errors.department && (
+                <Typography fontSize="12px" color="error" mt={0.5}>{errors.department}</Typography>
+              )}
+            </Box>
+
+            {/* Employee select — filtered by selected department */}
             <Box ref={fieldRefs.employeeId}>
               <CustomInputLabel label="Select Employee *" />
               <CustomSelect
                 value={form.employeeId}
                 onChange={set("employeeId")}
                 fullWidth height="45px" inputBgColor="#fff" displayEmpty
+                disabled={!form.department}
                 renderValue={(v) => {
-                  const emp = employees.find((e) => e._id === v);
+                  const emp = departmentEmployees.find((e) => e._id === v);
                   if (!emp) return (
-                    <Typography fontSize={13} color="text.secondary">Select Employee</Typography>
+                    <Typography fontSize={13} color="text.secondary">
+                      {form.department ? "Select Employee" : "Select department first"}
+                    </Typography>
                   );
                   return (
                     <Box display="flex" alignItems="center" gap={1}>
@@ -181,19 +224,22 @@ const [employees, setEmployees] = useState([]);
                   );
                 }}
               >
-                {employees.map((emp) => (
-                  <MenuItem key={emp._id} value={emp._id} sx={{ px: 1.5, py: 1, gap: 1.5 }}>
-                    <Avatar src={emp.avatar}
-                      sx={{ width: 32, height: 32, fontSize: "11px", fontWeight: 600,
-                        background: "linear-gradient(135deg, #AA2493, #022179)",
-                        color: "#fff", flexShrink: 0 }}
-                    >{getInitials(emp.fullName)}</Avatar>
-                    <Box>
-                      <Typography fontSize="13px" fontWeight={500}>{emp.fullName}</Typography>
-                      <Typography fontSize="11px" color="text.secondary">{emp.empId}</Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
+                {departmentEmployees.length === 0
+                  ? <MenuItem disabled><Typography fontSize={13} color="text.secondary">No employees in this department</Typography></MenuItem>
+                  : departmentEmployees.map((emp) => (
+                      <MenuItem key={emp._id} value={emp._id} sx={{ px: 1.5, py: 1, gap: 1.5 }}>
+                        <Avatar src={emp.avatar}
+                          sx={{ width: 32, height: 32, fontSize: "11px", fontWeight: 600,
+                            background: "linear-gradient(135deg, #AA2493, #022179)",
+                            color: "#fff", flexShrink: 0 }}
+                        >{getInitials(emp.fullName)}</Avatar>
+                        <Box>
+                          <Typography fontSize="13px" fontWeight={500}>{emp.fullName}</Typography>
+                          <Typography fontSize="11px" color="text.secondary">{emp.empId}</Typography>
+                        </Box>
+                      </MenuItem>
+                    ))
+                }
               </CustomSelect>
               {errors.employeeId && (
                 <Typography fontSize="12px" color="error" mt={0.5}>{errors.employeeId}</Typography>
@@ -235,21 +281,29 @@ const [employees, setEmployees] = useState([]);
               )}
             </Box>
 
-            {/* Increment % */}
-            <Box ref={fieldRefs.percentage}>
-              <CustomInputLabel label="Increment Percentage *" />
-              <TextInput
-                placeholder="e.g. 10"
-                value={form.percentage}
-                onChange={set("percentage")}
-                onKeyDown={(e) => { if (["-","e","E","+"].includes(e.key)) e.preventDefault(); }}
-                inputBgColor="#fff" fullWidth type="number" inputProps={{ min: 1, max: 100 }}
-                error={!!errors.percentage} helperText={errors.percentage}
-                InputStartIcon={
-                  <Typography fontSize="13px" color="#808080" fontWeight={500}>%</Typography>
-                }
-              />
-            </Box>
+          {/* Increment % */}
+          <Box ref={fieldRefs.percentage}>
+            <CustomInputLabel label="Increment Percentage *" />
+            <TextInput
+              placeholder="e.g. 10"
+              value={form.percentage}
+              onChange={(e) => {
+                // ── Strip everything except digits — catches every path that could
+                // produce a negative/invalid value: typing "-", pasting, and
+                // clicking the native spinner's down arrow with the mouse (which
+                // fires no keydown event, so a keyboard-only guard can't catch it). ──
+                const digitsOnly = e.target.value.replace(/[^\d]/g, "");
+                setForm((prev) => ({ ...prev, percentage: digitsOnly }));
+                if (errors.percentage) setErrors((prev) => ({ ...prev, percentage: "" }));
+              }}
+              onKeyDown={(e) => { if (["-","e","E","+","."].includes(e.key)) e.preventDefault(); }}
+              inputBgColor="#fff" fullWidth type="number" inputProps={{ min: 0, max: 100 }}
+              error={!!errors.percentage} helperText={errors.percentage}
+              InputStartIcon={
+                <Typography fontSize="13px" color="#808080" fontWeight={500}>%</Typography>
+              }
+            />
+          </Box>
 
             {/* Live salary breakdown — shown once employee + percentage are both filled */}
             {calcBreakdown && pct > 0 && (

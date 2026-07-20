@@ -11,7 +11,7 @@ const tableHeader = [
   { id: "pm",          label: "PM"         },
   { id: "startDate",   label: "Start Date" },
   { id: "endDate",     label: "End Date"   },
-  { id: "status",      label: "Status"     },
+  { id: "status",      label: "Project Status"     },
   { id: "progress",    label: "Progress"   },
 ];
 

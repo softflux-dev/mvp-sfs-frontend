@@ -88,7 +88,7 @@ const Performance = () => {
 
   const statsData = [
     { id: 1, title: "Avg Completion Rate", value: stats.avgCompletionRate, description: "Across all employees", icon: completionIcon },
-    { id: 2, title: "Overdue Tasks",       value: String(stats.overdueTasks), description: "Needs attention", icon: overdueIcon, isHighlighted: stats.overdueTasks > 0 },
+    { id: 2, title: "Overdue Tasks",       value: String(stats.overdueTasks), description: "Needs attention", icon: overdueIcon },
     { id: 3, title: "Top Performer",       value: stats.topPerformer, description: "Highest completion rate", icon: performerIcon },
     { id: 4, title: "Workload Balance",    value: stats.workloadBalance, description: stats.workloadBalance === "Good" ? "Evenly distributed" : "Some employees overloaded", icon: balanceIcon },
   ];

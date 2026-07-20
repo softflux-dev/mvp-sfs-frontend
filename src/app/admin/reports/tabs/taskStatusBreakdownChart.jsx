@@ -56,7 +56,7 @@ const TaskStatusBreakdownChart = ({ data = [], loading = false, emptyLabel = "No
   return (
     <Box>
       <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1}>
-        Task Status Breakdown
+        Task Pipeline Status Breakdown
       </Typography>
 
       {loading ? (

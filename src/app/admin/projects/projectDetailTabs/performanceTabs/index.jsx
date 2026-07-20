@@ -46,20 +46,19 @@ const PerformanceTab = ({ project = {} }) => {
   return (
     <Box sx={{ mt: 2 }}>
 
-      {/* ── Row 1: Project Progress + Delayed Tasks ───────────────────────── */}
-      <Grid container spacing={3}>
-        <Grid item size={{ xs: 12, md: 6 }}>
-          <PerformanceProjectProgressChart data={data.progressChart} loading={loading} />
-        </Grid>
+      {/* ── Row 1: Project Progress — full width so it has room to scroll
+             horizontally as modules are added, without competing for space ── */}
+      <PerformanceProjectProgressChart data={data.progressChart} loading={loading} />
+
+      {/* ── Row 2: Delayed Tasks + Workload Distribution side by side ────── */}
+      <Grid container spacing={3} sx={{ mt: 3 }}>
         <Grid item size={{ xs: 12, md: 6 }}>
           <DelayedTasks tasks={data.delayed} loading={loading} />
         </Grid>
+        <Grid item size={{ xs: 12, md: 6 }}>
+          <WorkloadDistribution data={data.workload} loading={loading} />
+        </Grid>
       </Grid>
-
-      {/* ── Row 2: Workload Distribution ──────────────────────────────────── */}
-      <Box sx={{ mt: 3 }}>
-        <WorkloadDistribution data={data.workload} loading={loading} />
-      </Box>
 
       {/* ── Row 3: Member performance table ───────────────────────────────── */}
       <Box sx={{ mt: 3, bgcolor: "#fff", borderRadius: "25px", p: 2 }}>

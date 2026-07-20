@@ -66,7 +66,7 @@ const WorkloadDistribution = ({ data = [], loading = false }) => {
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
         <Typography fontSize="18px" fontWeight={600} color="text.primary">
-          Workload Distribution
+          Active Tasks Distribution
         </Typography>
 
         <Box

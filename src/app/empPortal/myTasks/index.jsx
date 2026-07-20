@@ -106,14 +106,14 @@ const MyTasks = () => {
         projects={allProjects}   // ← always full list, never shrinks
         stages={stages}
         onFilterChange={(f) => {
-  setSelectedProject(f.project || "");
-  handleFilterChange({
-    search:   f.search   || "",
-    status:   f.status   || "",
-    priority: f.priority || "",
-    project:  f.project  || "",
-  });
-}}
+        setSelectedProject(f.project || "");
+        handleFilterChange({
+          search:   f.search   || "",
+          status:   f.status   || "",
+          priority: f.priority || "",
+          project:  f.project  || "",
+        });
+      }}
       />
 
       {/* Content */}

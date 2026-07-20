@@ -6,7 +6,7 @@ const DelayedTasks = ({ tasks = [], loading = false }) => {
   return (
     <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", p: 3, boxShadow: "0 1px 3px rgba(0,0,0,0.05)", height: "100%", display: "flex", flexDirection: "column" }}>
       <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={3}>
-        Delayed Tasks
+        Overdue Tasks
       </Typography>
 
       {loading ? (

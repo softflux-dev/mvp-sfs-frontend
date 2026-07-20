@@ -72,7 +72,7 @@ const TeamPerformance = () => {
 
   const statsData = [
     { id: 1, title: "Avg Completion Rate",     value: loading ? "—" : stats.avgCompletionRate, icon: completeIcon },
-    { id: 2, title: "Delayed Tasks",           value: loading ? "—" : String(stats.delayedTasks), icon: overdueIcon  },
+    { id: 2, title: "Overdue Tasks",           value: loading ? "—" : String(stats.delayedTasks), icon: overdueIcon  },
     { id: 3, title: "Total Tasks This Period", value: loading ? "—" : String(stats.totalTasks),   icon: taskIcon     },
   ];
 

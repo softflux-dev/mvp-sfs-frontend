@@ -21,7 +21,7 @@ const DelayedTasks = ({ tasks = [], loading = false }) => {
       {/* Header */}
       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2.5 }}>
         <Typography fontSize="18px" fontWeight={600} color="text.primary">
-          Delayed Tasks{" "}
+          Overdue Tasks{" "}
           <Typography component="span" fontSize="18px" fontWeight={600} color="text.primary">
             ({tasks.length})
           </Typography>
@@ -34,7 +34,7 @@ const DelayedTasks = ({ tasks = [], loading = false }) => {
         </Box>
       ) : tasks.length === 0 ? (
         <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-          <Typography fontSize={13} color="text.secondary">No delayed tasks 🎉</Typography>
+          <Typography fontSize={13} color="text.secondary">No overdue tasks 🎉</Typography>
         </Box>
       ) : (
         <ScrollContainer>

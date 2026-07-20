@@ -534,7 +534,7 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
 
             {/* 8. Task Status */}
             <Box ref={fieldRefs.status}>
-              <CustomInputLabel label="Task Status *" />
+              <CustomInputLabel label="Task Pipeline Status *" />
               <CustomSelect value={formData.status} onChange={handleChange("status")} fullWidth height="45px" inputBgColor="#fff" displayEmpty
                 disabled={showProjectSelector && !selectedProject}
                 renderValue={(v) =>
