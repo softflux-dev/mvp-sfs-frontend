@@ -8,6 +8,7 @@ import PaginatedTable            from "../../../../components/dynamicTable";
 import TaskStatusBreakdownChart  from "./taskStatusBreakdownChart";
 import { getProjectsApi, getProjectByIdApi } from "../../../../api/modules/project";
 import { getProjectTasksApi }                from "../../../../api/modules/task";
+import { useCompanyProfile }                 from "../../../../hooks/companySettings";
 import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
 
 const STAGE_COLORS = ["#2B6EFF", "#AA2493", "#F97316", "#04C373", "#030229"];
@@ -63,6 +64,8 @@ const TaskCompletionTab = forwardRef((props, ref) => {
   const [tasks,           setTasks]            = useState([]);
   const [loading,         setLoading]          = useState(false);
 
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+
   useEffect(() => {
     getProjectsApi({ limit: 100 }).then((res) => {
       if (res?.status === 200 || res?.status === 201) {
@@ -111,11 +114,17 @@ const TaskCompletionTab = forwardRef((props, ref) => {
   }));
 
   // ── Export ────────────────────────────────────────────────────────────
+  // Now async: createReportDoc awaits the company logo fetch/conversion.
   useImperativeHandle(ref, () => ({
-    exportData: () => {
+    exportData: async () => {
       if (!selectedProject) return;
 
-      const doc = createReportDoc("Task Completion Report", selectedProject.projectName);
+      const branding = {
+        logoUrl:     companyProfile?.logoUrl     || "",
+        companyName: companyProfile?.companyName || "",
+      };
+
+      const doc = await createReportDoc("Task Completion Report", selectedProject.projectName, branding);
 
       const uniqueAssignees = new Set(
         tasks.flatMap((t) => (t.assignees || []).map((a) => a._id))
@@ -131,6 +140,7 @@ const TaskCompletionTab = forwardRef((props, ref) => {
         head: ["Stage", "Task Count"],
         body: chartData.map((c) => [c.name, String(c.value)]),
         startY: y,
+        companyName: branding.companyName,
       });
 
       addReportTable(doc, {
@@ -142,6 +152,7 @@ const TaskCompletionTab = forwardRef((props, ref) => {
           t.status,
         ]),
         startY: y + 8,
+        companyName: branding.companyName,
       });
 
       const safeName = selectedProject.projectName.replace(/\s+/g, "-").toLowerCase();

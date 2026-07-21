@@ -7,6 +7,7 @@ import Filter          from "../../../../components/filterBar/filter";
 import PaginatedTable  from "../../../../components/dynamicTable";
 import { useHRLeaves } from "../../../../hooks/leave";
 import { getEmployeesApi } from "../../../../api/modules/employee";
+import { useCompanyProfile } from "../../../../hooks/companySettings";
 import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
 
 const tableHeader = [
@@ -65,6 +66,8 @@ const LeaveReportTab = forwardRef((props, ref) => {
     });
   }, []);
 
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+
   const [currentDate, setCurrentDate] = useState(startOfCurrentMonth());
   const [uiFilters,   setUiFilters]   = useState({});
 
@@ -105,8 +108,13 @@ const LeaveReportTab = forwardRef((props, ref) => {
   }, [leaves, year, month, uiFilters]);
 
   useImperativeHandle(ref, () => ({
-    exportData: () => {
-      const doc = createReportDoc("Leave Report", `${monthName} ${year}`);
+    exportData: async () => {
+      const branding = {
+        logoUrl:     companyProfile?.logoUrl     || "",
+        companyName: companyProfile?.companyName || "",
+      };
+
+      const doc = await createReportDoc("Leave Report", `${monthName} ${year}`, branding);
 
       const approved = tableData.filter((l) => l.leaveStatus === "Approved").length;
       const pending  = tableData.filter((l) => l.leaveStatus === "Pending").length;
@@ -125,6 +133,7 @@ const LeaveReportTab = forwardRef((props, ref) => {
           l.name, l.leaveType, l.fromDate, l.toDate, String(l.days), l.approvedBy, l.leaveStatus,
         ]),
         startY: y,
+        companyName: branding.companyName,
       });
 
       savePdf(doc, `leave-report-${monthName}-${year}.pdf`.toLowerCase());

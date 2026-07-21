@@ -7,7 +7,9 @@ const SERVER_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const FileAttachment = ({ attachment, isOwn }) => {
   const fileName = attachment?.fileName || String(attachment);
-  const url      = attachment?.url ? `${SERVER_URL}${attachment.url}` : null;
+  const url = attachment?.url
+  ? (attachment.url.startsWith("http") ? attachment.url : `${SERVER_URL}${attachment.url}`)
+  : null;
   return (
     <Box
       component={url ? "a" : "div"}

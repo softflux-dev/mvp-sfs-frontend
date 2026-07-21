@@ -30,15 +30,23 @@ export const useCompanyProfile = () => {
     }
   }, []);
 
-  // formData: { companyName, industry, address, website, logoFile? }
+  // formData: { companyName, industry, address, website, logoFile?, bannerFile? }
   const saveProfile = useCallback(async (formData) => {
     setActionLoading(true);
     setError("");
     try {
-      let logoUrl;
+      let logoUrl, bannerUrl;
+
       if (formData.logoFile) {
         const uploaded = await uploadToCloudinary(formData.logoFile, "company");
         logoUrl = uploaded.url;
+      }
+
+      // ── banner upload — same Cloudinary flow, separate folder so
+      // logo and banner assets don't mix in the media library. ────────────
+      if (formData.bannerFile) {
+        const uploaded = await uploadToCloudinary(formData.bannerFile, "company/banner");
+        bannerUrl = uploaded.url;
       }
 
       const payload = {
@@ -47,7 +55,8 @@ export const useCompanyProfile = () => {
         address:     formData.address     || "",
         website:     formData.website     || "",
       };
-      if (logoUrl) payload.logoUrl = logoUrl;
+      if (logoUrl)   payload.logoUrl   = logoUrl;
+      if (bannerUrl) payload.bannerUrl = bannerUrl;
 
       const res = await updateCompanyProfileApi(payload);
       if (res?.status === 200 || res?.status === 201) {

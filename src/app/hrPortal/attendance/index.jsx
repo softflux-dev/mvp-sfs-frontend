@@ -14,6 +14,7 @@ import ImportAttendanceDialog from "./importAttendanceDialog";
 import PartialPunchDialog     from "./partialPunchDialog";
 import SuccessPopup           from "../../../components/popups/confirmationDialog";
 import { useAttendanceSummary, useAttendanceImport } from "../../../hooks/attendance";
+import { useCompanyProfile } from "../../../hooks/companySettings";
 import { getPartialRecordsApi } from "../../../api/modules/attendance";
 import { exportAttendancePdf }  from "../../../utils/exportAttendancePdf";
 import ExportPdfDialog from "./exportPdfDialog";
@@ -42,6 +43,8 @@ const AttendanceMonitoring = () => {
   const {
     importLogs, setImportLogs, logsLoading, importing, importWarning, importRecords,
   } = useAttendanceImport();
+
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
 
   // ── Check partial count on mount ─────────────────────────────────────────
   const checkPartial = useCallback(async () => {
@@ -92,11 +95,17 @@ const AttendanceMonitoring = () => {
 
   const handleExportPdf = () => setExportDialogOpen(true);
 
-  const handleConfirmExport = ({ records, title }) => {
+  // ── Now async: exportAttendancePdf awaits the company logo fetch/
+  // conversion before drawing the PDF header. ────────────────────────────
+  const handleConfirmExport = async ({ records, title }) => {
     if (!records.length) return;
     setExporting(true);
     try {
-      exportAttendancePdf(records, { title });
+      await exportAttendancePdf(records, {
+        title,
+        logoUrl:     companyProfile?.logoUrl     || "",
+        companyName: companyProfile?.companyName || "",
+      });
     } finally {
       setExporting(false);
     }

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
 import PaginatedTable from "../../../../components/dynamicTable";
 import { usePayroll }  from "../../../../hooks/payroll";
+import { useCompanyProfile } from "../../../../hooks/companySettings";
 import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
 
 const tableHeader = [
@@ -31,6 +32,8 @@ const PayrollReportTab = forwardRef((props, ref) => {
   const [currentDate, setCurrentDate] = useState(null);
   const [resolving,   setResolving]   = useState(true);
   const [hasAnyData,  setHasAnyData]  = useState(true);
+
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
 
   useEffect(() => {
     let cancelled = false;
@@ -105,10 +108,15 @@ const PayrollReportTab = forwardRef((props, ref) => {
   const total = tableData.reduce((sum, r) => sum + (r.netPay || 0), 0);
 
   useImperativeHandle(ref, () => ({
-    exportData: () => {
+    exportData: async () => {
       if (!hasAnyData || !currentDate) return;
 
-      const doc = createReportDoc("Payroll Report", `${monthName} ${year}`);
+      const branding = {
+        logoUrl:     companyProfile?.logoUrl     || "",
+        companyName: companyProfile?.companyName || "",
+      };
+
+      const doc = await createReportDoc("Payroll Report", `${monthName} ${year}`, branding);
 
       const totalBase       = tableData.reduce((s, r) => s + r.baseSalary, 0);
       const totalBonus      = tableData.reduce((s, r) => s + r.bonus, 0);
@@ -132,6 +140,7 @@ const PayrollReportTab = forwardRef((props, ref) => {
         ]),
         startY: y,
         columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+        companyName: branding.companyName,
       });
 
       doc.setFontSize(11);

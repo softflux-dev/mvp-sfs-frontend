@@ -11,6 +11,7 @@ import WorkloadDistributionChart from "./workloadDistributionChart";
 import TaskCompletionSpeedChart  from "./taskCompletionSpeedChart";
 import { usePerformance }        from "../../../hooks/performance";
 import { useDepartment }         from "../../../hooks/department";
+import { useCompanyProfile }     from "../../../hooks/companySettings";
 import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../utils/reportPdfExport";
 
 import completionIcon from "../../../assets/icons/task-completion.svg";
@@ -64,6 +65,7 @@ const Performance = () => {
   const navigate = useNavigate();
   const { departments, fetchDepartments } = useDepartment();
   const { data, loading, fetchPerformance } = usePerformance();
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW: fetched once, used at export time
 
   const [filters, setFilters] = useState({});
   const debounceRef = useRef(null);
@@ -94,10 +96,17 @@ const Performance = () => {
   ];
 
   // ── Export ────────────────────────────────────────────────────────────
-  const handleExport = () => {
+  // Now async: createReportDoc awaits the company logo fetch/conversion
+  // before drawing the header, so the button click itself becomes async too.
+  const handleExport = async () => {
     if (loading || !data) return;
 
-    const doc = createReportDoc("Performance Monitoring Report");
+    const branding = {
+      logoUrl:     companyProfile?.logoUrl     || "",
+      companyName: companyProfile?.companyName || "",
+    };
+
+    const doc = await createReportDoc("Performance Monitoring Report", "", branding);
 
     let y = addSummaryCards(doc, [
       { label: "Avg Completion Rate", value: stats.avgCompletionRate },
@@ -114,6 +123,7 @@ const Performance = () => {
         String(m.inProgress), String(m.delayed), m.avgTime, `${m.completionRate}%`,
       ]),
       startY: y,
+      companyName: branding.companyName,
     });
 
     // ── Workload distribution table ─────────────────────────────────────
@@ -127,6 +137,7 @@ const Performance = () => {
         head: ["Employee", "Active Tasks"],
         body: workload.map((w) => [w.name, String(w.activeTasks)]),
         startY: y + 14,
+        companyName: branding.companyName,
       });
     }
 
@@ -148,6 +159,7 @@ const Performance = () => {
           String(t.daysOverdue),
         ]),
         startY: 26,
+        companyName: branding.companyName,
       });
     }
 

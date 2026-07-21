@@ -125,30 +125,7 @@ const PerformanceProjectProgressChart = ({ data = [], loading = false }) => {
         <Box sx={{ overflowX: "auto", maxWidth: "100%" }}>
           <Box sx={{ width: chartWidth }}>
 
-            {/* Cards row */}
-            <Box display="flex">
-              <Box sx={{ width: AXIS_WIDTH + MARGIN.left, flexShrink: 0 }} />
-              {data.map((m, i) => {
-                const Icon = ICONS[i % ICONS.length];
-                return (
-                  <Box key={m.moduleId || m.name} sx={{ width: COLUMN_WIDTH, pr: 2, boxSizing: "border-box", flexShrink: 0 }}>
-                    <Box display="flex" gap={1}>
-                      <Box sx={{ width: 32, height: 32, borderRadius: "8px", bgcolor: "#F3E8FB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Icon size={16} color="#AA2493" />
-                      </Box>
-                      <Box minWidth={0}>
-                        <Typography fontSize={13} fontWeight={700} color="text.primary" noWrap title={m.name}>
-                          {m.name}
-                        </Typography>
-                        <Typography fontSize={12} color="text.secondary">
-                          {describeModule(m)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Box>
-                );
-              })}
-            </Box>
+          
 
             {/* Chart — fixed width matches cards row exactly */}
             <BarChart

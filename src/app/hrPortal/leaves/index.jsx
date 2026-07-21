@@ -1,8 +1,6 @@
 // src/app/hrPortal/leaves/index.jsx 
 import { useState, useRef }  from "react";
 import { Box, Grid }         from "@mui/material";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import HeaderText                from "../../../components/headerText";
 import CustomButton              from "../../../components/customButton";
 import Filter                    from "../../../components/filterBar/filter";
@@ -11,6 +9,8 @@ import ConfirmationDialog        from "../../../components/popups/confirmation";
 import SuccessPopup              from "../../../components/popups/confirmationDialog";
 import LeaveRequestDetailDialog  from "./leaveRequestDetailDialog";
 import { useHRLeaves }           from "../../../hooks/leave";
+import { useCompanyProfile }     from "../../../hooks/companySettings";
+import { createReportDoc, addReportTable, savePdf } from "../../../utils/reportPdfExport";
 
 import ExportIcon from "../../../assets/icons/download-icon-white.svg";
 import viewIcon   from "../../../assets/icons/view.svg";
@@ -67,10 +67,13 @@ const LeaveManagement = () => {
     handleRowsPerPageChange,
   } = useHRLeaves();
 
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+
   const [actionSuccess, setActionSuccess] = useState({ open: false, message: "" });
   const [apiError,      setApiError]      = useState("");
   const [viewOpen,      setViewOpen]      = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
+  const [exporting,     setExporting]     = useState(false); // ← NEW
 
   const confirmRef = useRef();
 
@@ -145,44 +148,42 @@ const handleReject = (row, hrNotes = "") => {
   });
 };
 
+// ── Export — now uses the shared reportPdfExport utility, so it gets the
+// same dynamic logo, company name, and "Powered by Sprintexa" footer as
+// every other report in the app, instead of building its own plain jsPDF
+// document inline. ─────────────────────────────────────────────────────
+const handleExportPDF = async () => {
+  setExporting(true);
+  try {
+    const branding = {
+      logoUrl:     companyProfile?.logoUrl     || "",
+      companyName: companyProfile?.companyName || "",
+    };
 
-const handleExportPDF = () => {
-  const doc = new jsPDF();
+    const doc = await createReportDoc("Leave Management Report", "", branding);
 
-  // Header
-  doc.setFontSize(16);
-  doc.setTextColor(170, 36, 147);
-  doc.text("Leave Management Report", 14, 18);
+    addReportTable(doc, {
+      head: ["Emp ID", "Employee", "Type", "From", "To", "Days", "Reason", "Submitted", "Status"],
+      body: tableData.map((l) => [
+        l.empId || "—",
+        l.name,
+        l.leaveType,
+        l.fromDate,
+        l.toDate,
+        String(l.days),
+        l.reasonFull || l.reason,
+        l.submittedDate,
+        l.status,
+      ]),
+      startY: 44,
+      columnStyles: { 4: { cellWidth: 14 }, 7: { cellWidth: 20 } },
+      companyName: branding.companyName,
+    });
 
-  doc.setFontSize(10);
-  doc.setTextColor(120);
-  doc.text(
-    `Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
-    14, 26
-  );
-
-  autoTable(doc, {
-    startY: 32,
-    head: [["Emp ID","Employee", "Type", "From", "To", "Days", "Reason", "Submitted", "Status"]],
-    body: tableData.map((l) => [
-      l.empId || "—",
-      l.name,
-      l.leaveType,
-      l.fromDate,
-      l.toDate,
-      l.days,
-      l.reasonFull || l.reason,
-      l.submittedDate,
-      l.status,
-    ]),
-    headStyles:          { fillColor: [170, 36, 147], textColor: 255, fontStyle: "bold", fontSize: 9 },
-    bodyStyles:          { fontSize: 8 },
-    alternateRowStyles:  { fillColor: [250, 245, 255] },
-    styles:              { cellPadding: 3, overflow: "linebreak" },
-    columnStyles:        { 4: { cellWidth: 12 }, 7: { cellWidth: 20 } },
-  });
-
-  doc.save(`leave-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+    savePdf(doc, `leave-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  } finally {
+    setExporting(false);
+  }
 };
 
   return (
@@ -197,10 +198,11 @@ const handleExportPDF = () => {
         <Grid size={{ xs: 12, md: 4 }}>
           <Box display="flex" justifyContent="flex-end">
             <CustomButton
-              btnLabel="Export PDF"
+              btnLabel={exporting ? "Exporting..." : "Export PDF"}
               variant="gradient"
               startIcon={<img src={ExportIcon} alt="export" style={{ width: 15, height: 15 }} />}
-               handlePressBtn={handleExportPDF}
+              handlePressBtn={handleExportPDF}
+              isDisabled={exporting}
             />
           </Box>
         </Grid>

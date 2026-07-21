@@ -18,29 +18,35 @@ const INDUSTRY_OPTIONS = [
   { value: "education",   label: "Education"   },
   { value: "retail",      label: "Retail"      },
 ];
-
 const MAX_LOGO_SIZE_MB = 2;
 const ALLOWED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+
+// ── Banner upload constraints. SVG intentionally excluded — most email
+// clients (Outlook especially) don't reliably render SVG in <img> tags,
+// and the banner's whole purpose is to appear inside emails. ────────────
+const MAX_BANNER_SIZE_MB = 3;
+const ALLOWED_BANNER_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 // Accepts: example.com, www.example.com, https://example.com, with optional path
 const WEBSITE_REGEX = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/\S*)?$/i;
 
 const INITIAL_FORM = {
-  companyName: "",
-  industry:    "",
-  address:     "",
-  website:     "",
-  logoFile:    null,
-  logoPreview: "",
+  companyName:   "",
+  industry:      "",
+  address:       "",
+  website:       "",
+  logoFile:      null,
+  logoPreview:   "",
+  bannerFile:    null,
+  bannerPreview: "",
 };
-
-
 
 
 const resolveLogoUrl = (logoUrl) => logoUrl || "";
 
 const CompanyProfileTab = () => {
-  const fileInputRef = useRef(null);
+  const fileInputRef   = useRef(null);
+  const bannerInputRef = useRef(null);
   const { profile, loading, actionLoading, error, saveProfile } = useCompanyProfile();
   const setCompanyLogo = useCompanyLogoStore((state) => state.setLogoUrl);
 
@@ -48,17 +54,20 @@ const CompanyProfileTab = () => {
   const [errors,      setErrors]      = useState({});
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [logoError,   setLogoError]   = useState("");
+  const [bannerError, setBannerError] = useState("");
 
   // Populate form once the profile loads from the backend
   useEffect(() => {
     if (profile) {
       setFormData({
-        companyName: profile.companyName || "",
-        industry:    profile.industry    || "",
-        address:     profile.address     || "",
-        website:     profile.website     || "",
-        logoFile:    null,
-        logoPreview: resolveLogoUrl(profile.logoUrl),
+        companyName:   profile.companyName || "",
+        industry:      profile.industry    || "",
+        address:       profile.address     || "",
+        website:       profile.website     || "",
+        logoFile:      null,
+        logoPreview:   resolveLogoUrl(profile.logoUrl),
+        bannerFile:    null,
+        bannerPreview: resolveLogoUrl(profile.bannerUrl),
       });
     }
   }, [profile]);
@@ -94,7 +103,30 @@ const CompanyProfileTab = () => {
     }));
   };
 
-  const validate = () => {
+  // ── Banner upload handler — same validation pattern as logo ─────────────
+  const handleBannerChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBannerError("");
+
+    if (!ALLOWED_BANNER_TYPES.includes(file.type)) {
+      setBannerError("Banner must be a JPG, PNG, or WEBP image.");
+      return;
+    }
+    if (file.size > MAX_BANNER_SIZE_MB * 1024 * 1024) {
+      setBannerError(`Banner must be smaller than ${MAX_BANNER_SIZE_MB}MB.`);
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      bannerFile:    file,
+      bannerPreview: URL.createObjectURL(file),
+    }));
+  };
+
+ const validate = () => {
     const e = {};
 
     if (!formData.companyName.trim()) {
@@ -146,8 +178,10 @@ const CompanyProfileTab = () => {
       // replacing the temporary blob: URL used during preview.
       setFormData((prev) => ({
         ...prev,
-        logoFile: null,
-        logoPreview: resolveLogoUrl(result.profile?.logoUrl) || prev.logoPreview,
+        logoFile:      null,
+        logoPreview:   resolveLogoUrl(result.profile?.logoUrl) || prev.logoPreview,
+        bannerFile:    null,
+        bannerPreview: resolveLogoUrl(result.profile?.bannerUrl) || prev.bannerPreview,
       }));
     }
   };
@@ -172,52 +206,123 @@ const CompanyProfileTab = () => {
         </Box>
       )}
 
-      {/* ── Logo upload ──────────────────────────────────────────────────── */}
-      <Box display="flex" alignItems="center" gap={2} mb={1}>
-        <Avatar
-          src={formData.logoPreview}
-          sx={{
-            width: 72,
-            height: 72,
-            fontSize: "24px",
-            fontWeight: 700,
-          }}
-        >
-          {!formData.logoPreview && (formData.companyName?.charAt(0).toUpperCase() || "S")}
-        </Avatar>
+      {/* ── Logo + Banner upload — side by side, aligned with the form
+          field columns below (each takes half width, matching the
+          md:6/md:6 Grid pattern used further down). ─────────────────────── */}
+      <Grid container spacing={2} mb={1}>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/svg+xml"
-          hidden
-          onChange={handleLogoChange}
-        />
+        {/* Logo upload — left column */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Avatar
+              src={formData.logoPreview}
+              sx={{
+                width: 72,
+                height: 72,
+                fontSize: "24px",
+                fontWeight: 700,
+              }}
+            >
+              {!formData.logoPreview && (formData.companyName?.charAt(0).toUpperCase() || "S")}
+            </Avatar>
 
-        <Box>
-          <CustomButton
-            type="button"
-            btnBgColor="primary.lightGray"
-            btnTextColor="text.primary"
-            startIcon={
-              <img src={UploadIcon} alt="upload" style={{ width: 15, height: 15, marginLeft: 20 }} />
-            }
-            width="auto"
-            textWeight={true}
-            btnLabel="Upload Logo"
-            handlePressBtn={() => fileInputRef.current?.click()}
-          />
-          <Typography fontSize="11px" color="text.secondary" mt={0.5}>
-            JPG, PNG, WEBP or SVG · max {MAX_LOGO_SIZE_MB}MB
-          </Typography>
-        </Box>
-      </Box>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/svg+xml"
+              hidden
+              onChange={handleLogoChange}
+            />
 
-      {logoError && (
-        <Typography fontSize="12px" color="error" mb={2}>{logoError}</Typography>
-      )}
+            <Box>
+              <CustomButton
+                type="button"
+                btnBgColor="primary.lightGray"
+                btnTextColor="text.primary"
+                startIcon={
+                  <img src={UploadIcon} alt="upload" style={{ width: 15, height: 15, marginLeft: 20 }} />
+                }
+                width="auto"
+                textWeight={true}
+                btnLabel="Upload Logo"
+                handlePressBtn={() => fileInputRef.current?.click()}
+              />
+              <Typography fontSize="11px" color="text.secondary" mt={0.5}>
+                JPG, PNG, WEBP or SVG · max {MAX_LOGO_SIZE_MB}MB
+              </Typography>
+              <Typography fontSize="11px" color="text.secondary">
+                Used in reports, the app bar, and everywhere else in the system.
+              </Typography>
+            </Box>
+          </Box>
+          {logoError && (
+            <Typography fontSize="12px" color="error" mt={1}>{logoError}</Typography>
+          )}
+        </Grid>
 
-      {/* ── Form fields ──────────────────────────────────────────────────── */}
+        {/* Banner upload — right column */}
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Box
+              sx={{
+                width: 140,
+                height: 72,
+                borderRadius: "10px",
+                border: "1px solid #E5E7EB",
+                backgroundColor: "#F5F5F5",
+                backgroundImage: formData.bannerPreview ? `url(${formData.bannerPreview})` : "none",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {!formData.bannerPreview && (
+                <Typography fontSize="10px" color="text.secondary" textAlign="center" px={1}>
+                  No banner uploaded
+                </Typography>
+              )}
+            </Box>
+
+            <input
+              ref={bannerInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              hidden
+              onChange={handleBannerChange}
+            />
+
+            <Box>
+              <CustomButton
+                type="button"
+                btnBgColor="primary.lightGray"
+                btnTextColor="text.primary"
+                startIcon={
+                  <img src={UploadIcon} alt="upload" style={{ width: 15, height: 15, marginLeft: 20 }} />
+                }
+                width="auto"
+                textWeight={true}
+                btnLabel="Upload Email Banner"
+                handlePressBtn={() => bannerInputRef.current?.click()}
+              />
+              <Typography fontSize="11px" color="text.secondary" mt={0.5}>
+                JPG, PNG or WEBP · max {MAX_BANNER_SIZE_MB}MB
+              </Typography>
+              <Typography fontSize="11px" color="text.secondary">
+                Used only in emails. If not uploaded, your logo will be used instead.
+              </Typography>
+            </Box>
+          </Box>
+          {bannerError && (
+            <Typography fontSize="12px" color="error" mt={1}>{bannerError}</Typography>
+          )}
+        </Grid>
+
+      </Grid>
+
+{/* ── Form fields ──────────────────────────────────────────────────── */}
       <Box sx={{ borderRadius: "16px", p: 3, display: "flex", flexDirection: "column", gap: 2.5 }}>
         <Grid container spacing={2}>
           {/* Company Name */}
@@ -287,8 +392,7 @@ const CompanyProfileTab = () => {
           </Grid>
         </Grid>
       </Box>
-
-      {/* ── Save button ──────────────────────────────────────────────────── */}
+   {/* ── Save button ──────────────────────────────────────────────────── */}
       <Box display="flex" justifyContent="flex-end" mt={2.5}>
         <CustomButton
           btnLabel={actionLoading ? "Saving..." : "Save Changes"}

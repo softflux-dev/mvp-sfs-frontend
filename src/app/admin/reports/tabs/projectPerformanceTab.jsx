@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import Filter         from "../../../../components/filterBar/filter";
 import PaginatedTable  from "../../../../components/dynamicTable";
 import { useProject }  from "../../../../hooks/project";
+import { useCompanyProfile } from "../../../../hooks/companySettings";
 import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
 
 const tableHeader = [
@@ -37,6 +38,8 @@ const ProjectPerformanceTab = forwardRef((props, ref) => {
     handleRowsPerPageChange,
   } = useProject();
 
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+
   const tableData = projects.map((proj) => ({
     id:             proj._id,
     projectName:    proj.projectName,
@@ -52,8 +55,13 @@ const ProjectPerformanceTab = forwardRef((props, ref) => {
   }));
 
   useImperativeHandle(ref, () => ({
-    exportData: () => {
-      const doc = createReportDoc("Project Performance Report");
+    exportData: async () => {
+      const branding = {
+        logoUrl:     companyProfile?.logoUrl     || "",
+        companyName: companyProfile?.companyName || "",
+      };
+
+      const doc = await createReportDoc("Project Performance Report", "", branding);
 
       const completed  = tableData.filter((p) => p.status === "Completed").length;
       const inProgress = tableData.filter((p) => p.status?.replace("_", " ") === "In progress").length;
@@ -70,6 +78,7 @@ const ProjectPerformanceTab = forwardRef((props, ref) => {
           p.projectName, p.pm, p.startDate, p.endDate, p.status, `${p.progress}%`,
         ]),
         startY: y,
+        companyName: branding.companyName,
       });
 
       savePdf(doc, `project-performance-${new Date().toISOString().slice(0, 10)}.pdf`);

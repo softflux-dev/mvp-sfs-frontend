@@ -27,8 +27,10 @@ const Reports = () => {
   const [activeTab, setActiveTab] = useState(1);
   const tabRefs = useRef({}); // { 1: ref, 2: ref, ... }
 
-  const handleExport = () => {
-    tabRefs.current[activeTab]?.exportData?.();
+  // ── exportData is now async on every tab (waits for the company logo to
+  // load before drawing the PDF header), so this just awaits it too. ───────
+  const handleExport = async () => {
+    await tabRefs.current[activeTab]?.exportData?.();
   };
 
   return (

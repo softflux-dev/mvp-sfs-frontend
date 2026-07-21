@@ -7,25 +7,32 @@ import PayslipTemplate from "./payslipTemplate";
 import jsPDF           from "jspdf";
 import html2canvas     from "html2canvas";
 import DownloadIcon    from "../../../assets/icons/download-icon-white.svg";
-import LogoSrc         from "../../../assets/images/softflux-logo.png";
+import { useCompanyProfile } from "../../../hooks/companySettings";
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-// ── Logo cached once at module level ─────────────────────────────────────────
-let _logo = "";
-export const getLogo = () => new Promise((resolve) => {
-  if (_logo) { resolve(_logo); return; }
+// ── Logo cache — keyed by URL, so it only refetches when the company logo
+// actually changes (e.g. after a new upload in Settings → Company Profile).
+// Pass no URL / empty string to get "" back (template falls back to
+// showing the company's initials instead of an image). ─────────────────────
+let _logoCache = { url: "", dataUrl: "" };
+
+export const getLogo = (logoUrl = "") => new Promise((resolve) => {
+  if (!logoUrl) { resolve(""); return; }
+  if (_logoCache.url === logoUrl && _logoCache.dataUrl) { resolve(_logoCache.dataUrl); return; }
+
   const img = new Image();
   img.crossOrigin = "anonymous";
   img.onload = () => {
     const c = document.createElement("canvas");
     c.width = img.naturalWidth; c.height = img.naturalHeight;
     c.getContext("2d").drawImage(img, 0, 0);
-    _logo = c.toDataURL("image/png");
-    resolve(_logo);
+    const dataUrl = c.toDataURL("image/png");
+    _logoCache = { url: logoUrl, dataUrl };
+    resolve(dataUrl);
   };
   img.onerror = () => resolve("");
-  img.src = LogoSrc;
+  img.src = logoUrl;
 });
 
 // ── Capture a DOM node → base64 PDF string ───────────────────────────────────
@@ -44,7 +51,7 @@ export const captureToPdfBase64 = async (node) => {
 
 // ── Hidden payslip renderer — used by index.jsx to generate email PDF ─────────
 // Renders PayslipTemplate for a given payroll and exposes captureToBase64()
-export const HiddenPayslipCapture = forwardRef(({ payroll, month, year, logoDataUrl }, ref) => {
+export const HiddenPayslipCapture = forwardRef(({ payroll, month, year, logoDataUrl, companyName }, ref) => {
   const nodeRef = useRef();
 
   useImperativeHandle(ref, () => ({
@@ -54,7 +61,7 @@ export const HiddenPayslipCapture = forwardRef(({ payroll, month, year, logoData
   return (
     <Box sx={{ position: "fixed", top: "-9999px", left: "-9999px", zIndex: -1 }}>
       <Box ref={nodeRef}>
-        <PayslipTemplate payroll={payroll} month={month} year={year} logoDataUrl={logoDataUrl} />
+        <PayslipTemplate payroll={payroll} month={month} year={year} logoDataUrl={logoDataUrl} companyName={companyName} />
       </Box>
     </Box>
   );
@@ -64,10 +71,17 @@ export const HiddenPayslipCapture = forwardRef(({ payroll, month, year, logoData
 const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
   const templateRef  = useRef();
   const [downloading, setDownloading] = useState(false);
-  const [logoDataUrl, setLogoDataUrl] = useState(_logo);
+  const [logoDataUrl, setLogoDataUrl] = useState("");
   const monthLabel = `${MONTH_NAMES[month] || ""} ${year || ""}`;
 
-  useEffect(() => { getLogo().then(setLogoDataUrl); }, []);
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW — self-contained, same pattern as other tabs
+  const companyName = companyProfile?.companyName?.trim() || "Sprintexa";
+
+  useEffect(() => {
+    if (companyProfile?.logoUrl) {
+      getLogo(companyProfile.logoUrl).then(setLogoDataUrl);
+    }
+  }, [companyProfile?.logoUrl]);
 
   const handleDownload = async () => {
     if (!templateRef.current) return;
@@ -151,7 +165,7 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
       {/* Hidden PayslipTemplate — captured on Download click */}
       <Box sx={{ position: "fixed", top: "-9999px", left: "-9999px", zIndex: -1 }}>
         <Box ref={templateRef}>
-          <PayslipTemplate payroll={payroll} month={month} year={year} logoDataUrl={logoDataUrl} />
+          <PayslipTemplate payroll={payroll} month={month} year={year} logoDataUrl={logoDataUrl} companyName={companyName} />
         </Box>
       </Box>
     </DialogContainer>

@@ -4,6 +4,9 @@ import { Box, Typography } from "@mui/material";
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const fmt = (n) => Number(n || 0).toLocaleString("en-PK");
 
+const getInitials = (name = "") =>
+  name.split(" ").map((w) => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "S";
+
 const SectionLabel = ({ children, mt = 2 }) => (
   <Box mt={mt} mb={1} pb={0.75} sx={{ borderBottom: "1px solid #ede0f5" }}>
     <Typography sx={{ fontSize: "10px", fontWeight: 700, color: "#AA2493", textTransform: "uppercase", letterSpacing: "1px" }}>
@@ -52,7 +55,7 @@ const HourCard = ({ label, value, color }) => (
   </Box>
 );
 
-const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "" }) => {
+const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyName = "Sprintexa" }) => {
   const monthName = MONTH_NAMES[month] || "";
 
   // ── Debug: log what we receive ────────────────────────────────────────────
@@ -81,32 +84,41 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
   return (
     <Box sx={{ fontFamily: "'Segoe UI', Arial, sans-serif", background: "#fff", width: "720px", position: "relative", overflow: "hidden" }}>
 
-      {/* Watermark */}
+      {/* Watermark — now uses the dynamic company name */}
       <Box sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", opacity: 0.03, fontSize: "64px", fontWeight: 900, color: "#022179", whiteSpace: "nowrap", pointerEvents: "none", letterSpacing: "6px", zIndex: 0 }}>
-        SOFTWARE FLUX
+        {companyName.toUpperCase()}
       </Box>
 
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <Box sx={{ background: "linear-gradient(135deg, #022179 0%, #AA2493 100%)", p: "22px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {/* ── Header — background color removed, now light/neutral so ANY
+          logo color (including black/dark logos) stays visible. Layout,
+          spacing, and structure are otherwise unchanged. ──────────────── */}
+      <Box sx={{
+        background: "#F8F8FA", borderBottom: "2px solid #AA2493",
+        p: "22px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
         <Box display="flex" alignItems="center" gap={1.75}>
-          <Box sx={{ width: 52, height: 52, borderRadius: "10px", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
+          <Box sx={{
+            width: 52, height: 52, borderRadius: "10px",
+            background: "#fff", border: "1px solid #E5E7EB",
+            display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0,
+          }}>
             {logoDataUrl
               ? <img src={logoDataUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-              : <Typography sx={{ fontSize: "15px", fontWeight: 800, color: "#fff" }}>SF</Typography>
+              : <Typography sx={{ fontSize: "15px", fontWeight: 800, color: "#022179" }}>{getInitials(companyName)}</Typography>
             }
           </Box>
           <Box>
-            <Typography sx={{ fontSize: "16px", fontWeight: 700, color: "#fff" }}>Software Flux Solutions</Typography>
-            <Typography sx={{ fontSize: "11px", color: "rgba(255,255,255,0.72)", mt: "2px" }}>HR Management System</Typography>
+            <Typography sx={{ fontSize: "16px", fontWeight: 700, color: "#1a1a2e" }}>{companyName}</Typography>
+            <Typography sx={{ fontSize: "11px", color: "#67768B", mt: "2px" }}>HR Management System</Typography>
           </Box>
         </Box>
         <Box textAlign="right">
-          <Typography sx={{ fontSize: "20px", fontWeight: 700, color: "#fff" }}>Salary Slip</Typography>
-          <Typography sx={{ fontSize: "12px", color: "rgba(255,255,255,0.72)", mt: "3px" }}>For the Month of {monthName}, {year}</Typography>
+          <Typography sx={{ fontSize: "20px", fontWeight: 700, color: "#AA2493" }}>Salary Slip</Typography>
+          <Typography sx={{ fontSize: "12px", color: "#67768B", mt: "3px" }}>For the Month of {monthName}, {year}</Typography>
         </Box>
       </Box>
 
-      {/* ── Body ───────────────────────────────────────────────────────── */}
+      {/* ── Body — unchanged ───────────────────────────────────────────── */}
       <Box sx={{ p: "24px 32px 28px", position: "relative", zIndex: 1 }}>
 
         <SectionLabel mt={0}>Employee Details</SectionLabel>
@@ -187,7 +199,9 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
           </Box>
         </Box>
 
-        {/* Net Pay */}
+        {/* Net Pay — unchanged, still keeps its own gradient (this is the
+            results callout, not the header — user's request only targeted
+            the header background) */}
         <Box sx={{ background: "linear-gradient(135deg, #022179 0%, #AA2493 100%)", borderRadius: "10px", p: "16px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2.5 }}>
           <Box>
             <Typography sx={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>Net Salary Payable</Typography>
@@ -203,7 +217,7 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
 
         <Box sx={{ display: "flex", justifyContent: "space-between", mt: 2, pt: 1.5, borderTop: "1px dashed #e5e5e5" }}>
           <Typography sx={{ fontSize: "10px", color: "#bbb" }}>System-generated slip · No signature required</Typography>
-          <Typography sx={{ fontSize: "10px", color: "#bbb" }}>Software Flux Solutions</Typography>
+          <Typography sx={{ fontSize: "10px", color: "#bbb" }}>{companyName} · Powered by Sprintexa</Typography>
         </Box>
       </Box>
     </Box>

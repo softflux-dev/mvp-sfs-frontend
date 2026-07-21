@@ -15,6 +15,7 @@ import SuccessPopup       from "../../../components/popups/confirmationDialog";
 import ViewPayslipDialog, { HiddenPayslipCapture, getLogo } from "./viewPayslipDialog";
 import EditPayrollDialog  from "./editPayrollDialog";
 import { usePayroll }     from "../../../hooks/payroll";
+import { useCompanyProfile } from "../../../hooks/companySettings";
 import GlobalStyle        from "../../../style/style";
 import { sendPayslipWithPdfApi } from "../../../api/modules/payroll";
 
@@ -47,6 +48,7 @@ const menuOptions = [
 
 const PayrollManagement = () => {
   const { payrolls, loading, actionLoading, error, fetchPayroll, generatePayroll,updatePayroll } = usePayroll();
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
 
   const [selectedDate,    setSelectedDate]    = useState(new Date());
   const [hasGenerated,    setHasGenerated]    = useState(false);
@@ -70,14 +72,22 @@ const PayrollManagement = () => {
   const currentMonth = selectedDate?.getMonth()    ?? new Date().getMonth();
   const currentYear  = selectedDate?.getFullYear() ?? new Date().getFullYear();
 
+  const companyName = companyProfile?.companyName?.trim() || "Sprintexa";
+
   useEffect(() => {
     (async () => {
       const result = await fetchPayroll(new Date().getMonth(), new Date().getFullYear());
       if (result?.data?.length > 0) setHasGenerated(true);
     })();
-    // Pre-load logo
-    getLogo().then(setLogoDataUrl);
   }, []);
+
+  // ── Load company logo whenever the company profile's logoUrl changes
+  // (e.g. right after an admin uploads a new one in Settings). ─────────────
+  useEffect(() => {
+    if (companyProfile?.logoUrl) {
+      getLogo(companyProfile.logoUrl).then(setLogoDataUrl);
+    }
+  }, [companyProfile?.logoUrl]);
 
   const tableData = payrolls.map((p) => ({
     id:              p.id || p._id,
@@ -134,7 +144,7 @@ const PayrollManagement = () => {
     setSending(true);
     setApiError("");
     try {
-      const logo = logoDataUrl || await getLogo();
+      const logo = logoDataUrl || (companyProfile?.logoUrl ? await getLogo(companyProfile.logoUrl) : "");
       setLogoDataUrl(logo);
 
       // 1. Mount hidden PayslipTemplate for each employee
@@ -266,10 +276,6 @@ const PayrollManagement = () => {
             openTo="month"
             slotProps={{ 
               textField: { size: "small", sx: { width: 200 } },
-              // ── Same fix as the Filter component's monthyear picker: MUI X
-              // renders selected month/year buttons with role="radio" +
-              // aria-checked="true" regardless of version, so target that
-              // directly rather than guessing internal class names. ─────────────
               popper: {
                 sx: {
                   "& [role='radio'][aria-checked='true']": {
@@ -331,6 +337,7 @@ const PayrollManagement = () => {
             month={currentMonth}
             year={currentYear}
             logoDataUrl={logoDataUrl}
+            companyName={companyName}
           />
         ))}
 

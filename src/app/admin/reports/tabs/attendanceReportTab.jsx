@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 
 import PaginatedTable from "../../../../components/dynamicTable";
 import { getAttendanceSummaryApi } from "../../../../api/modules/attendance";
+import { useCompanyProfile }       from "../../../../hooks/companySettings";
 import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
 
 const tableHeader = [
@@ -52,6 +53,8 @@ const AttendanceReportTab = forwardRef((props, ref) => {
   const [loading,      setLoading]      = useState(true);
   const [currentDate,  setCurrentDate]  = useState(null);
 
+  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+
   useEffect(() => {
     setLoading(true);
     getAttendanceSummaryApi({ months: 12 }).then((res) => {
@@ -94,10 +97,15 @@ const AttendanceReportTab = forwardRef((props, ref) => {
   }, [summary, month, year, currentDate]);
 
   useImperativeHandle(ref, () => ({
-    exportData: () => {
+    exportData: async () => {
       if (!currentDate) return;
 
-      const doc = createReportDoc("Attendance Report", `${monthName} ${year}`);
+      const branding = {
+        logoUrl:     companyProfile?.logoUrl     || "",
+        companyName: companyProfile?.companyName || "",
+      };
+
+      const doc = await createReportDoc("Attendance Report", `${monthName} ${year}`, branding);
 
       const totalPresent = tableData.reduce((s, r) => s + r.present, 0);
       const totalAbsent  = tableData.reduce((s, r) => s + r.absent, 0);
@@ -116,6 +124,7 @@ const AttendanceReportTab = forwardRef((props, ref) => {
         head: ["Employee", "Present", "Absent", "Leave", "Attendance %"],
         body: tableData.map((r) => [r.name, String(r.present), String(r.absent), String(r.leave), `${r.attendanceRate}%`]),
         startY: y,
+        companyName: branding.companyName,
       });
 
       savePdf(doc, `attendance-report-${monthName}-${year}.pdf`.toLowerCase());
