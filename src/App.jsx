@@ -4,6 +4,7 @@ import { ProtectedLayout, AuthProtectedLayout } from "./routes/RoutesLayout";
 import { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES, PM_ROUTES, EMP_ROUTES } from "./routes";
 import MainLayout from "./components/layout";
 
+
 function App() {
   return (
     <BrowserRouter>

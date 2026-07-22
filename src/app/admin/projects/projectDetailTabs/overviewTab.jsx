@@ -8,11 +8,13 @@ import progressIcon from "../../../../assets/icons/time-icon.svg";
 import overdueIcon  from "../../../../assets/icons/overdue-time.svg";
 import completedIcon from "../../../../assets/icons/completed-icon-white.svg";
 import { getProjectStatsApi }  from "../../../../api/modules/project";
+import { useFormatCurrency } from "../../../../utils/formatCurrency";
 
 
 
 const OverviewTab = ({ project = {}, role = "admin" }) => {
     const isPM = role === "pm";
+    const { format } = useFormatCurrency(); 
 
   const [stats, setStats] = useState({
     total: 0, completed: 0, inProgress: 0, overdue: 0,
@@ -44,7 +46,7 @@ const OverviewTab = ({ project = {}, role = "admin" }) => {
     { label: "Start Date",     value: project.startDate || "Jan 15, 2026"  },
     { label: "End Date",       value: project.endDate   || "Jun 30, 2026"  },
     { label: "Days Remaining", value: daysRemaining                        },
-    !isPM && { label: "Budget", value: project.budget != null ? `$${Number(project.budget).toLocaleString()}` : "$0" },
+    !isPM && { label: "Budget", value: format(project.budget ?? 0, { decimals: 0 }) },
 
   ].filter(Boolean);
 

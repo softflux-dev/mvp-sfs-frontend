@@ -1,6 +1,7 @@
 // src/routes/RoutesLayout.jsx
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import useUserStore from "../zustand/useUserStore";
+import { useCurrencyBootstrap, usePhoneConfigBootstrap } from "../hooks/companySettings";  
 
 // Detail/nested pages — always accessible regardless of role
 const ALWAYS_ALLOWED_PATTERNS = [
@@ -72,6 +73,9 @@ const isPathAllowed = (user, pathname) => {
 export const ProtectedLayout = () => {
   const { user }   = useUserStore();
   const location   = useLocation();
+
+  useCurrencyBootstrap();  
+   usePhoneConfigBootstrap();   
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />;

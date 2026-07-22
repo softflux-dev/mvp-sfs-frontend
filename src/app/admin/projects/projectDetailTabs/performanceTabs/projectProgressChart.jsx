@@ -18,7 +18,7 @@ const COLORS = {
 const COLUMN_WIDTH    = 220;
 const MIN_CHART_WIDTH = 560;
 const AXIS_WIDTH   = 46;
-const CHART_HEIGHT = 300;
+const CHART_HEIGHT = 320;
 const MARGIN = { top: 10, right: 20, left: 0, bottom: 5 };
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -80,6 +80,23 @@ const StaticLegend = () => (
   </Box>
 );
 
+// ── X-axis tick — module name on line 1, its category on line 2 ──────────
+const ModuleAxisTick = ({ x, y, payload, chartData = [] }) => {
+  const category = chartData.find((d) => d.name === payload.value)?.category || "";
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={14} textAnchor="middle" fill="#374151" fontSize={12}>
+        {payload.value}
+      </text>
+      {category && (
+        <text x={0} y={0} dy={30} textAnchor="middle" fill="#9CA3AF" fontSize={11}>
+          {category}
+        </text>
+      )}
+    </g>
+  );
+};
+
 const PerformanceProjectProgressChart = ({ data = [], loading = false }) => {
   const rawMax   = Math.max(10, ...data.map((d) => d.total || 0));
   const step     = getNiceStep(rawMax);
@@ -136,8 +153,15 @@ const PerformanceProjectProgressChart = ({ data = [], loading = false }) => {
               margin={MARGIN}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#374151" }} axisLine={{ stroke: "#E5E7EB" }} tickLine={false} interval={0} />
-              <YAxis
+                <XAxis
+                  dataKey="name"
+                  height={48}
+                  tick={<ModuleAxisTick chartData={data} />}
+                  axisLine={{ stroke: "#E5E7EB" }}
+                  tickLine={false}
+                  interval={0}
+                />             
+                <YAxis
                 width={AXIS_WIDTH}
                 domain={[0, niceMax]}
                 ticks={ticks}

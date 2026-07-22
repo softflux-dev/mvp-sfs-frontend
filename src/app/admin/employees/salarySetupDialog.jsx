@@ -9,6 +9,7 @@ import {
 } from "../../../components";
 import CustomInputLabel    from "../../../components/customInputLabel";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const ALLOWANCE_FIELDS = [
   { key: "securityAllowance",   label: "Security Allowance"   },
@@ -47,6 +48,7 @@ const SalarySetupDialog = ({
 }) => {
   const [salary, setSalary] = useState({ ...EMPTY_SALARY });
   const [errors, setErrors] = useState({});
+  const { symbol, format } = useFormatCurrency(); 
 
  const fieldRefs = {
     basicSalary: useRef(null),
@@ -160,7 +162,12 @@ useEffect(() => {
     onClose?.();
   };;
 
-  const rsIcon = <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>;
+
+const currencyIcon = (
+  <Typography fontSize="13px" color="#808080" fontWeight={500} whiteSpace="nowrap">
+    {symbol}
+  </Typography>
+);
 
   return (
     <DialogContainer open={open} onClose={handleClose} maxWidth="520px" fullWidth>
@@ -190,7 +197,7 @@ useEffect(() => {
               inputProps={{ min: 0 }}
               error={!!errors.basicSalary}
               helperText={errors.basicSalary}
-              InputStartIcon={rsIcon}
+             InputStartIcon={currencyIcon}
             />
           </Box>
 
@@ -207,7 +214,7 @@ useEffect(() => {
                 fullWidth
                 type="number"
                 inputProps={{ min: 0 }}
-                InputStartIcon={rsIcon}
+                InputStartIcon={currencyIcon}
               />
             </Box>
           ))}
@@ -224,10 +231,10 @@ useEffect(() => {
                 backgroundColor: "#fff", borderRadius: "10px",
                 border: "1.5px solid #AA2493",
               }}>
-                <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>
-                <Typography fontSize="15px" fontWeight={700} color="text.primary">
-                  {totalMonthly.toLocaleString()}
-                </Typography>
+               
+              <Typography fontSize="15px" fontWeight={700} color="text.primary">
+                {format(totalMonthly, { decimals: 0 })}
+              </Typography>
                 <Typography fontSize="11px" color="text.secondary" ml={1}>
                   (Basic + all allowances)
                 </Typography>
@@ -243,9 +250,8 @@ useEffect(() => {
                 backgroundColor: "#fff", borderRadius: "10px",
                 border: "1px solid #E5E7EB",
               }}>
-                <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>
                 <Typography fontSize="15px" fontWeight={600} color="text.primary">
-                  {hourlyRate}
+                  {format(hourlyRate)}
                 </Typography>
                 <Typography fontSize="11px" color="text.secondary" ml={1}>
                   /hr (based on 22 days × 8 hrs)

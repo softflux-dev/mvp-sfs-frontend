@@ -7,6 +7,8 @@ import PaginatedTable from "../../../../components/dynamicTable";
 import { usePayroll }  from "../../../../hooks/payroll";
 import { useCompanyProfile } from "../../../../hooks/companySettings";
 import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../../../../utils/reportPdfExport";
+import { useFormatCurrency, formatCurrencyForPdf } from "../../../../utils/formatCurrency";
+
 
 const tableHeader = [
   { id: "name",       label: "Employee"   },
@@ -33,7 +35,8 @@ const PayrollReportTab = forwardRef((props, ref) => {
   const [resolving,   setResolving]   = useState(true);
   const [hasAnyData,  setHasAnyData]  = useState(true);
 
-  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+  const { profile: companyProfile } = useCompanyProfile(); 
+  const { format } = useFormatCurrency();   
 
   useEffect(() => {
     let cancelled = false;
@@ -122,22 +125,24 @@ const PayrollReportTab = forwardRef((props, ref) => {
       const totalBonus      = tableData.reduce((s, r) => s + r.bonus, 0);
       const totalDeductions = tableData.reduce((s, r) => s + r.deductions, 0);
 
-      let y = addSummaryCards(doc, [
-        { label: "Employees",         value: tableData.length },
-        { label: "Total Base",        value: `Rs${totalBase.toLocaleString()}` },
-        { label: "Total Bonus",       value: `Rs${totalBonus.toLocaleString()}`, color: [4, 195, 115] },
-        { label: "Total Deductions",  value: `Rs${totalDeductions.toLocaleString()}`, color: [255, 0, 0] },
-      ]);
+     
+        let y = addSummaryCards(doc, [
+          { label: "Employees",        value: tableData.length },
+          { label: "Total Base",       value: formatCurrencyForPdf(totalBase, { decimals: 0 }) },
+          { label: "Total Bonus",      value: formatCurrencyForPdf(totalBonus, { decimals: 0 }), color: [4, 195, 115] },
+          { label: "Total Deductions", value: formatCurrencyForPdf(totalDeductions, { decimals: 0 }), color: [255, 0, 0] },
+        ]);
 
       y = addReportTable(doc, {
         head: ["Employee", "Base Salary", "Bonus", "Deductions", "Net Pay"],
-        body: tableData.map((p) => [
-          p.name,
-          `Rs${p.baseSalary.toLocaleString()}`,
-          `Rs${p.bonus.toLocaleString()}`,
-          `Rs${p.deductions.toLocaleString()}`,
-          `Rs${p.netPay.toLocaleString()}`,
-        ]),
+        
+          body: tableData.map((p) => [
+            p.name,
+            formatCurrencyForPdf(p.baseSalary, { decimals: 0 }),
+            formatCurrencyForPdf(p.bonus,      { decimals: 0 }),
+            formatCurrencyForPdf(p.deductions, { decimals: 0 }),
+            formatCurrencyForPdf(p.netPay,     { decimals: 0 }),
+          ]),
         startY: y,
         columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
         companyName: branding.companyName,
@@ -146,7 +151,7 @@ const PayrollReportTab = forwardRef((props, ref) => {
       doc.setFontSize(11);
       doc.setFont(undefined, "bold");
       doc.setTextColor(30, 30, 30);
-      doc.text(`Total Net Pay: Rs${total.toLocaleString()}`, 196, y + 10, { align: "right" });
+     doc.text(`Total Net Pay: ${formatCurrencyForPdf(total, { decimals: 0 })}`, 196, y + 10, { align: "right" });
 
       savePdf(doc, `payroll-report-${monthName}-${year}.pdf`.toLowerCase());
     },
@@ -222,7 +227,7 @@ const PayrollReportTab = forwardRef((props, ref) => {
               Total
             </Typography>
             <Typography fontSize="14px" fontWeight={700} color="text.primary">
-              Rs{total.toLocaleString()}
+              {format(total, { decimals: 0 })}
             </Typography>
           </Box>
         </Box>

@@ -11,6 +11,7 @@ import CustomInputLabel    from "../../../components/customInputLabel";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
 import { useEmployee }     from "../../../hooks/employee";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const getInitials = (name = "") =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -33,6 +34,7 @@ const AddBonusDialog = ({
 }) => {
   const [form,   setForm]   = useState({ ...INITIAL_FORM });
   const [errors, setErrors] = useState({});
+  const { symbol, currency } = useFormatCurrency(); 
 
   const fieldRefs = {
     monthYear:   useRef(null),
@@ -194,7 +196,7 @@ const AddBonusDialog = ({
 
            {/* Amount */}
             <Box ref={fieldRefs.amount}>
-              <CustomInputLabel label="Bonus Amount (Rs) *" />
+             <CustomInputLabel label={`Bonus Amount (${currency.code}) *`} />
               <TextInput
                 placeholder="Enter amount"
                 value={form.amount}
@@ -214,7 +216,9 @@ const AddBonusDialog = ({
                 inputBgColor="#fff" fullWidth type="number" inputProps={{ min: 0 }}
                 error={!!errors.amount} helperText={errors.amount}
                 InputStartIcon={
-                  <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>
+                  <Typography fontSize="13px" color="#808080" fontWeight={500} whiteSpace="nowrap">
+                    {symbol}
+                  </Typography>
                 }
               />
             </Box>

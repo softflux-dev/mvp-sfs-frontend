@@ -1,6 +1,7 @@
 import { Box, Typography, Chip, Grid } from "@mui/material";
 import CustomButton from "../../../components/customButton";
 import editIcon from "../../../assets/icons/edit-icon.svg";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const STATUS_CONFIG = {
   Completed:    { bg: "#04C3731A", color: "#04C373" },
@@ -16,6 +17,7 @@ const STATUS_CONFIG = {
 const ProjectDetailHeader = ({ project = {}, onEditClick, role = "admin" }) => {
   const isPM      = role === "pm";
   const statusCfg = STATUS_CONFIG[project.status] || { bg: "#F5F5F5", color: "#757575" };
+  const { format } = useFormatCurrency();          
 
  // ── Row 1: Client hidden for PM ───────────────────────────────────────────
 const metaRow1 = [
@@ -28,7 +30,7 @@ const metaRow1 = [
 const metaRow2 = [
   { label: "Start Date", value: project.startDate || "—" },
   { label: "End Date",   value: project.endDate   || "—" },
-  !isPM && { label: "Budget", value: project.budget != null ? `$${Number(project.budget).toLocaleString()}` : "—" },
+!isPM && { label: "Budget", value: project.budget != null ? format(project.budget, { decimals: 0 }) : "—" },
 ].filter(Boolean).filter((f) => !isPM || f.value !== "—");
 
   return (

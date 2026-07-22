@@ -45,3 +45,6 @@ export const getEmpProjectByIdApi = (id) =>
 
 export const getProjectPerformanceApi = (id) =>
   api(`${ENDPOINTS.getProjectById}/${id}/performance`, null, "get");
+
+export const pmUpdateProjectStagesApi = (projectId, stages) =>
+  api(`${ENDPOINTS.pmUpdateProjectStages}/${projectId}/stages`, { stages }, "patch");

@@ -4,7 +4,7 @@ import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
 import CustomButton from "../../../components/customButton";
 import jsPDF       from "jspdf";
 import autoTable   from "jspdf-autotable";
-
+import { useFormatCurrency, formatCurrencyForPdf } from "../../../utils/formatCurrency";
 import DownloadIcon from "../../../assets/icons/download-icon-white.svg";
 
 const BREAKDOWN_LABELS = [
@@ -46,9 +46,12 @@ const SectionLabel = ({ children }) => (
 );
 
 const ViewPayslipDialog = ({ open, onClose, payslip }) => {
+    const { format } = useFormatCurrency();         
+
   if (!payslip) return null;
 
-  const fmt = (n) => `Rs ${Number(n || 0).toLocaleString()}`;
+  const fmt    = (n) => format(n, { decimals: 0 });  
+  const pdfFmt = (n) => formatCurrencyForPdf(n, { decimals: 0 });          
   const title = `${payslip.month} ${payslip.year}`;
 
   // ── Download individual payslip as PDF ────────────────────────────────────
@@ -76,11 +79,11 @@ const ViewPayslipDialog = ({ open, onClose, payslip }) => {
         ["Required Hours",        `${payslip.requiredHours  ?? 0} hrs`],
         ["Actual Hours Worked",   `${payslip.actualHours    ?? 0} hrs`],
         ["Shortfall Hours",       `${payslip.shortfallHours ?? 0} hrs`],
-        ["Hourly Rate",           `Rs ${Number(payslip.hourlyRate || 0).toFixed(2)}/hr`],
-        ["Base Monthly Salary",   fmt(payslip.baseSalary)],
-        ["Bonus",                 fmt(payslip.bonus)],
-        ["Deductions",            fmt(payslip.deductions)],
-        ["Net Pay",               fmt(payslip.netPay)],
+        ["Hourly Rate",         `${formatCurrencyForPdf(payslip.hourlyRate || 0)}/hr`],
+        ["Base Monthly Salary", pdfFmt(payslip.baseSalary)],
+        ["Bonus",               pdfFmt(payslip.bonus)],
+        ["Deductions",          pdfFmt(payslip.deductions)],
+        ["Net Pay",             pdfFmt(payslip.netPay)],
       ],
       columnStyles: {
         0: { fontStyle: "bold", cellWidth: 90 },
@@ -127,10 +130,7 @@ const ViewPayslipDialog = ({ open, onClose, payslip }) => {
               value={`${payslip.shortfallHours ?? 0} hrs`}
               color={(payslip.shortfallHours || 0) > 0 ? "#FF3B30" : "text.primary"}
             />
-            <Row
-              label="Hourly Rate"
-              value={`Rs ${Number(payslip.hourlyRate || 0).toFixed(2)}/hr`}
-            />
+          <Row label="Hourly Rate" value={`${format(payslip.hourlyRate || 0)}/hr`} />
 
             {/* ── Salary ──────────────────────────────────────────────────── */}
             <SectionLabel>Salary</SectionLabel>

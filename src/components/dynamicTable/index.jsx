@@ -30,6 +30,7 @@ import Delete from "../../assets/icons/delete-icon-inactive.svg";
 import Edit from "../../assets/icons/editIcon.svg"
 import ProgressBar from "../progressBar";
 import { baseUrl } from "../../api/index";
+import { useFormatCurrency } from "../../utils/formatCurrency";
 
 const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
 
@@ -215,6 +216,7 @@ export default function PaginatedTable({
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedRow, setSelectedRow] = useState(null);
   const openMenu = Boolean(anchorEl);
+  const { format } = useFormatCurrency(); 
 
   const page = serverSidePagination ? externalPage ?? 0 : internalPage;
   const rowsPerPage = serverSidePagination ? externalRowsPerPage ?? 10 : internalRowsPerPage;
@@ -867,7 +869,7 @@ case "payslip_bonus":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#04C373">
-        {row.bonus != null ? `Rs${row.bonus.toLocaleString()}` : "-"}
+       {row.bonus != null ? format(row.bonus, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -877,7 +879,7 @@ case "payslip_deductions":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#FF0000">
-        {row.deductions != null ? `Rs${row.deductions.toLocaleString()}` : "-"}
+       {row.deductions != null ? format(row.deductions, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -1417,7 +1419,7 @@ case "payroll_base_salary":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={400} color="text.black">
-        Rs{row.baseSalary?.toLocaleString() || "-"}
+        {row.baseSalary != null ? format(row.baseSalary, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -1426,7 +1428,7 @@ case "payroll_bonus":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#04C373">
-        Rs{row.bonus?.toLocaleString() || "-"}
+       {row.bonus != null ? format(row.bonus, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -1435,7 +1437,7 @@ case "payroll_deductions":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#FF0000">
-        Rs{row.deductions?.toLocaleString() || "-"}
+        {row.deductions != null ? format(row.deductions, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -1444,7 +1446,7 @@ case "payroll_net_pay":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={600} color="text.primary">
-        Rs{row.netPay?.toLocaleString() || "-"}
+       {row.netPay != null ? format(row.netPay, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2175,7 +2177,7 @@ case "payroll_salary":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="text.black">
-        {row.baseSalary ? `Rs.${row.baseSalary.toLocaleString()}` : "-"}
+        {row.baseSalary ? format(row.baseSalary, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2185,7 +2187,7 @@ case "payroll_bonus_col":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#04C373">
-        {row.bonus ? `Rs.${row.bonus.toLocaleString()}` : "-"}
+        {row.bonus ? format(row.bonus, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2195,7 +2197,7 @@ case "payroll_deductions_col":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#FF0000">
-        {row.deductions ? `Rs.${row.deductions.toLocaleString()}` : "-"}
+        {row.deductions ? format(row.deductions, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2205,7 +2207,7 @@ case "payroll_net":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={700} color="text.primary">
-        {row.netPay ? `Rs.${row.netPay.toLocaleString()}` : "-"}
+       {row.netPay ? format(row.netPay, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2618,7 +2620,7 @@ case "ps_base_salary":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={400} color="text.black">
-        Rs{row.baseSalary?.toLocaleString() || "-"}
+        {row.baseSalary != null ? format(row.baseSalary, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2628,7 +2630,7 @@ case "ps_bonus":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#04C373">
-        Rs{row.bonus?.toLocaleString() || "-"}
+       {row.bonus != null ? format(row.bonus, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2638,7 +2640,7 @@ case "ps_deductions":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={500} color="#FF0000">
-        Rs{row.deductions?.toLocaleString() || "-"}
+        {row.deductions != null ? format(row.deductions, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2648,7 +2650,7 @@ case "ps_net_pay":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={600} color="text.primary">
-        Rs{row.netPay?.toLocaleString() || "-"}
+       {row.netPay != null ? format(row.netPay, { decimals: 0 }) : "-"}
       </Typography>
     </TableCell>
   );
@@ -2982,7 +2984,7 @@ case "bonus_amount":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={600} color="text.primary">
-        Rs {(row.amount || 0).toLocaleString()}
+       {format(row.amount || 0, { decimals: 0 })}
       </Typography>
     </TableCell>
   );
@@ -3050,7 +3052,7 @@ case "increment_prev_salary":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" color="text.secondary">
-        Rs {(row.prevSalary || 0).toLocaleString()}
+       {format(row.prevSalary || 0, { decimals: 0 })}
       </Typography>
     </TableCell>
   );
@@ -3072,7 +3074,7 @@ case "increment_new_salary":
   return (
     <TableCell key={val}>
       <Typography fontSize="13px" fontWeight={700} color="#AA2493">
-        Rs {(row.newSalary || 0).toLocaleString()}
+       {format(row.newSalary || 0, { decimals: 0 })}
       </Typography>
     </TableCell>
   );

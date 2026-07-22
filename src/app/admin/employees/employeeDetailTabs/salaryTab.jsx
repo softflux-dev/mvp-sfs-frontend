@@ -6,6 +6,7 @@ import downloadIcon   from "../../../../assets/icons/download.svg";
 import { getEmployeePayrollHistoryApi } from "../../../../api/modules/payroll";
 import { captureToPdfBase64, getLogo } from "../../../hrPortal/payroll/viewPayslipDialog";
 import PayslipTemplate from "../../../hrPortal/payroll/payslipTemplate";
+import { useFormatCurrency } from "../../../../utils/formatCurrency";
 
 const tableHeader = [
   { id: "month",      label: "Month"      },
@@ -51,6 +52,7 @@ const SalaryTab = ({ employee = {} }) => {
   const [payslips,     setPayslips]     = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [downloadingId, setDownloadingId] = useState(null);
+  const { format } = useFormatCurrency();
 
   useEffect(() => {
     if (!employee.id) return;
@@ -71,10 +73,10 @@ const SalaryTab = ({ employee = {} }) => {
   const tableData = sortedPayslips.map((p) => ({
     id:            p.id,
     month:         `${p.month} ${p.year}`,
-    base:          `Rs${(p.baseSalary || 0).toLocaleString()}`,
+    base:   format(p.baseSalary || 0, { decimals: 0 }),
     bonus:         p.bonus,
     deductions:    p.deductions,
-    netPay:        `Rs${(p.netPay || 0).toLocaleString()}`,
+   netPay: format(p.netPay     || 0, { decimals: 0 }),
     payslipStatus: p.status === "finalized" ? "Paid" : "Draft",
   }));
 
@@ -134,7 +136,7 @@ const SalaryTab = ({ employee = {} }) => {
       <Box display="flex" gap={2} mb={3}>
         <SalaryStatCard
           label="Monthly Salary"
-          value={`Rs${Number(monthlySalary).toLocaleString()}`}
+         value={format(monthlySalary, { decimals: 0 })}
         />
         <SalaryStatCard
           label="Employment Type"

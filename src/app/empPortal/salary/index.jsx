@@ -15,6 +15,8 @@ import { useMyPayslips } from "../../../hooks/empSalary";
 import ExportIcon    from "../../../assets/icons/download-icon-white.svg";
 import DownloadIcon  from "../../../assets/icons/download.svg";
 import ViewIcon      from "../../../assets/icons/view.svg";
+import { useFormatCurrency, formatCurrencyForPdf } from "../../../utils/formatCurrency";
+
 const tableHeader = [
   { id: "checkbox",   label: ""            },
   { id: "month",      label: "Month"       },
@@ -57,6 +59,7 @@ const Salary = () => {
   const [selectedSlip,  setSelectedSlip]  = useState(null);
   const [selectedRows,  setSelectedRows]  = useState([]);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const { format } = useFormatCurrency();          
 
   const { payslips, loading, error } = useMyPayslips(selectedYear);
 
@@ -128,13 +131,13 @@ const Salary = () => {
         ["Leave Days",            String(p.leaveDays      ?? "—")],
         ["Required Hours",        `${p.requiredHours  ?? 0} hrs`],
         ["Actual Hours Worked",   `${p.actualHours    ?? 0} hrs`],
-        ["Extra Hours (Paid)",    `${p.extraHours ?? 0} hrs — Rs ${Number(p.extraAmount || 0).toLocaleString()}`],
-        ["Shortfall Hours",       `${p.shortfallHours ?? 0} hrs`],
-        ["Hourly Rate",           `Rs ${Number(p.hourlyRate || 0).toFixed(2)}/hr`],
-        ["Base Monthly Salary",   `Rs ${Number(p.baseSalary || 0).toLocaleString()}`],
-        ["Bonus",                 `Rs ${Number(p.bonus      || 0).toLocaleString()}`],
-        ["Deductions",            `Rs ${Number(p.deductions || 0).toLocaleString()}`],
-        ["Net Pay",               `Rs ${Number(p.netPay     || 0).toLocaleString()}`],
+        ["Extra Hours (Paid)",  `${p.extraHours ?? 0} hrs — ${formatCurrencyForPdf(p.extraAmount || 0, { decimals: 0 })}`],
+        ["Shortfall Hours",     `${p.shortfallHours ?? 0} hrs`],
+        ["Hourly Rate",         `${formatCurrencyForPdf(p.hourlyRate || 0)}/hr`],
+        ["Base Monthly Salary", formatCurrencyForPdf(p.baseSalary || 0, { decimals: 0 })],
+        ["Bonus",               formatCurrencyForPdf(p.bonus      || 0, { decimals: 0 })],
+        ["Deductions",          formatCurrencyForPdf(p.deductions || 0, { decimals: 0 })],
+        ["Net Pay",             formatCurrencyForPdf(p.netPay     || 0, { decimals: 0 })],
       ],
       columnStyles: { 0: { fontStyle: "bold", cellWidth: 90 }, 1: { halign: "right" } },
       bodyStyles:   { fontSize: 9 },
@@ -152,7 +155,8 @@ const Salary = () => {
     }
   };
 
-  const fmt = (n) => `Rs ${Number(n || 0).toLocaleString()}`;
+const fmt = (n) => format(n, { decimals: 0 });
+
 
   // ── Bulk export PDF (selected rows, or all if none selected) ──────────────
   const handleExportPDF = () => {
@@ -179,10 +183,10 @@ const Salary = () => {
       head: [["Month", "Base Salary", "Bonus", "Deductions", "Net Pay", "Status"]],
       body: toExport.map((r) => [
         r.month,
-        `Rs ${Number(r.baseSalary || 0).toLocaleString()}`,
-        `Rs ${Number(r.bonus      || 0).toLocaleString()}`,
-        `Rs ${Number(r.deductions || 0).toLocaleString()}`,
-        `Rs ${Number(r.netPay     || 0).toLocaleString()}`,
+        formatCurrencyForPdf(r.baseSalary || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.bonus      || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.deductions || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.netPay     || 0, { decimals: 0 }),
         r.status || "—",
       ]),
       headStyles:         { fillColor: [170, 36, 147], textColor: 255, fontStyle: "bold", fontSize: 9 },
@@ -194,7 +198,10 @@ const Salary = () => {
     const finalY = doc.lastAutoTable.finalY + 6;
     doc.setFontSize(10);
     doc.setTextColor(170, 36, 147);
-    doc.text(`Total Net Pay: Rs ${toExport.reduce((s, r) => s + (r.netPay || 0), 0).toLocaleString()}`, 14, finalY);
+    doc.text(
+  `Total Net Pay: ${formatCurrencyForPdf(toExport.reduce((s, r) => s + (r.netPay || 0), 0), { decimals: 0 })}`,
+      14, finalY
+    );
 
     doc.save(`salary-${selectedYear}.pdf`);
     setExportSuccess(true);

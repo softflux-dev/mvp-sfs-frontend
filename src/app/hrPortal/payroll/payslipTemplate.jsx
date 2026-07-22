@@ -1,8 +1,9 @@
 // src/app/hrPortal/payroll/payslipTemplate.jsx —
 import { Box, Typography } from "@mui/material";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const fmt = (n) => Number(n || 0).toLocaleString("en-PK");
+
 
 const getInitials = (name = "") =>
   name.split(" ").map((w) => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "S";
@@ -22,10 +23,11 @@ const DetailCell = ({ label, value, borderRight, borderBottom }) => (
   </Box>
 );
 
-const TblHead = () => (
+
+const TblHead = ({ code = "PKR" }) => (
   <Box sx={{ display: "grid", gridTemplateColumns: "1fr 110px", background: "#022179", borderRadius: "8px 8px 0 0" }}>
     <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#fff", p: "8px 12px" }}>Component</Typography>
-    <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#fff", p: "8px 12px", textAlign: "right" }}>PKR</Typography>
+    <Typography sx={{ fontSize: "11px", fontWeight: 600, color: "#fff", p: "8px 12px", textAlign: "right" }}>{code}</Typography>
   </Box>
 );
 
@@ -57,6 +59,9 @@ const HourCard = ({ label, value, color }) => (
 
 const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyName = "Sprintexa" }) => {
   const monthName = MONTH_NAMES[month] || "";
+  const { currency, symbol, format } = useFormatCurrency();
+
+    const fmt = (n) => format(n, { showSymbol: false, decimals: 0 });
 
   // ── Debug: log what we receive ────────────────────────────────────────────
   console.log("[PayslipTemplate] payroll.salaryBreakdown:", payroll.salaryBreakdown);
@@ -137,7 +142,7 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
           <Box>
             <SectionLabel mt={0}>Earnings</SectionLabel>
             <Box sx={{ border: "1px solid #ebebeb", borderRadius: "8px", overflow: "hidden" }}>
-              <TblHead />
+              <TblHead code={currency.code} />
               {breakdown.map((r) => (
                 <TblRow
                   key={r.label}
@@ -154,7 +159,7 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
                   label="Overtime Pay"
                   value={fmt(payroll.extraAmount)}
                   color="#059669" bg="#f0fdf4"
-                  sub={`${payroll.extraHours}h × Rs ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`}
+                 sub={`${payroll.extraHours}h × ${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`}
                 />
               )}
               <TblFoot label="Gross Earnings" value={fmt(grossEarnings)} color="#AA2493" />
@@ -165,14 +170,14 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
           <Box>
             <SectionLabel mt={0}>Deductions</SectionLabel>
             <Box sx={{ border: "1px solid #ebebeb", borderRadius: "8px", overflow: "hidden" }}>
-              <TblHead />
+              <TblHead code={currency.code} />
               <TblRow
                 label="Shortfall Deduction"
                 value={fmt(payroll.deductions)}
                 color={(payroll.deductions || 0) > 0 ? "#DC2626" : "#bbb"}
                 sub={
                   (payroll.shortfallHours || 0) > 0
-                    ? `${payroll.shortfallHours}h × Rs ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`
+                   ? `${payroll.shortfallHours}h × ${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`
                     : "No shortfall this month"
                 }
               />
@@ -194,7 +199,7 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
               ) : (
                 <HourCard label="Shortfall" value={`${payroll.shortfallHours || 0}h`} color="#DC2626" />
               )}
-              <HourCard label="Hourly Rate" value={`Rs ${Number(payroll.hourlyRate || 0).toFixed(0)}`} color="#AA2493" />
+              <HourCard label="Hourly Rate" value={`${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}`} color="#AA2493" />
             </Box>
           </Box>
         </Box>
@@ -208,9 +213,9 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
             <Typography sx={{ fontSize: "14px", fontWeight: 700, color: "#fff" }}>{monthName} {year}</Typography>
           </Box>
           <Box textAlign="right">
-            <Typography sx={{ fontSize: "24px", fontWeight: 700, color: "#fff" }}>PKR {fmt(payroll.netPay)}</Typography>
+            <Typography sx={{ fontSize: "24px", fontWeight: 700, color: "#fff" }}>{currency.code} {fmt(payroll.netPay)}</Typography>
             <Typography sx={{ fontSize: "11px", color: "rgba(255,255,255,0.65)", mt: "2px" }}>
-              Gross Rs {fmt(grossEarnings)} − Deductions Rs {fmt(payroll.deductions)}
+              Gross {symbol} {fmt(grossEarnings)} − Deductions {symbol} {fmt(payroll.deductions)}
             </Typography>
           </Box>
         </Box>

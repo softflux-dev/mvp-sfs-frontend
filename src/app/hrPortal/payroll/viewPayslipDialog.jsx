@@ -8,6 +8,7 @@ import jsPDF           from "jspdf";
 import html2canvas     from "html2canvas";
 import DownloadIcon    from "../../../assets/icons/download-icon-white.svg";
 import { useCompanyProfile } from "../../../hooks/companySettings";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -73,8 +74,9 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
   const [downloading, setDownloading] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState("");
   const monthLabel = `${MONTH_NAMES[month] || ""} ${year || ""}`;
+  const { format } = useFormatCurrency();         
 
-  const { profile: companyProfile } = useCompanyProfile(); // ← NEW — self-contained, same pattern as other tabs
+  const { profile: companyProfile } = useCompanyProfile(); 
   const companyName = companyProfile?.companyName?.trim() || "Sprintexa";
 
   useEffect(() => {
@@ -120,7 +122,7 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
               (payroll.extraHours || 0) > 0
                 ? { label: "Extra Hours (Paid)", value: `${payroll.extraHours} hrs`, color: "#04C373" }
                 : { label: "Shortfall Hours", value: `${payroll.shortfallHours || 0} hrs`, color: (payroll.shortfallHours||0) > 0 ? "#FF3B30" : "text.primary" },
-              { label: "Hourly Rate",     value: `Rs ${Number(payroll.hourlyRate||0).toFixed(2)}/hr` },
+             { label: "Hourly Rate", value: `${format(payroll.hourlyRate || 0)}/hr` },
             ].map((r) => (
               <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
                 <Typography fontSize="13px" color="text.secondary">{r.label}</Typography>
@@ -129,10 +131,10 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
             ))}
             <Divider sx={{ my: 1.5, borderColor: "#E5E7EB" }} />
             {[
-              { label: "Base Salary", value: `Rs ${Number(payroll.baseSalary  ||0).toLocaleString()}` },
-             { label: "Bonus",       value: `+ Rs ${Number(payroll.bonus     ||0).toLocaleString()}`, color: "#04C373" },
-              ...(payroll.extraAmount > 0 ? [{ label: "Overtime Pay", value: `+ Rs ${Number(payroll.extraAmount||0).toLocaleString()}`, color: "#04C373" }] : []),
-              { label: "Deductions",  value: `- Rs ${Number(payroll.deductions||0).toLocaleString()}`, color: "#FF3B30" },
+             { label: "Base Salary", value: format(payroll.baseSalary || 0, { decimals: 0 }) },
+             { label: "Bonus",       value: `+ ${format(payroll.bonus || 0, { decimals: 0 })}`, color: "#04C373" },
+            ...(payroll.extraAmount > 0 ? [{ label: "Overtime Pay", value: `+ ${format(payroll.extraAmount || 0, { decimals: 0 })}`, color: "#04C373" }] : []),
+            { label: "Deductions",  value: `- ${format(payroll.deductions || 0, { decimals: 0 })}`, color: "#FF3B30" },
             ].map((r) => (
               <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
                 <Typography fontSize="13px" color="text.secondary">{r.label}</Typography>
@@ -143,7 +145,7 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
             <Box display="flex" justifyContent="space-between" alignItems="center" py={1}>
               <Typography fontSize="15px" fontWeight={700} color="text.primary">Net Pay</Typography>
               <Typography fontSize="17px" fontWeight={700} color="#AA2493">
-                Rs {Number(payroll.netPay||0).toLocaleString()}
+                {format(payroll.netPay || 0, { decimals: 0 })}
               </Typography>
             </Box>
           </Box>

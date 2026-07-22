@@ -13,7 +13,9 @@ import GlobalStyle         from "../../../style/style";
 import { useDepartment }   from "../../../hooks/department";
 import { useRole }         from "../../../hooks/role";
 import SalarySetupDialog   from "./salarySetupDialog";
-
+import PhoneInput from "../../../components/phoneInput";
+import { usePhoneConfigStore } from "../../../zustand/usePhoneConfigStore";
+import { validatePhone, parseE164 } from "../../../utils/phone";
 import avatarPlaceholder from "../../../assets/icons/avatar-placeholder.svg";
 import cameraIcon        from "../../../assets/icons/camera-icon.svg";
 import { baseUrl } from "../../../api/index";
@@ -42,7 +44,8 @@ const EMPLOYMENT_TYPE_OPTIONS = [
 const INITIAL_FORM = {
   fullName:       "",
   email:          "",
-  phone:          "",
+  phoneCountry:   "",
+  phoneNational:  "",
   department:     "",
   role:           "",
   employmentType: "",
@@ -65,6 +68,10 @@ const AddEmployee = ({
 }) => {
   const { departments, fetchDepartments } = useDepartment();
   const { roles,       fetchRoles }       = useRole();
+  const { countries, allowedCountries, defaultCountry } = usePhoneConfigStore();
+  const phoneCountries = allowedCountries.length
+    ? countries.filter((c) => allowedCountries.includes(c.code))
+    : countries;
 
 
 
@@ -99,12 +106,23 @@ const AddEmployee = ({
   }, [open]);
 
   useEffect(() => {
+    if (open) return;
+    setSalaryOpen(false);
+    setPendingFormData(null);
+    setSalaryDraft(null);
+    setErrors({});
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     if (editingEmployee) {
+      // Stored phone is E.164 — split it back into country + national parts
+      const parsed = parseE164(editingEmployee.phone);
       setFormData({
         fullName:       editingEmployee.name          || editingEmployee.fullName || "",
         email:          editingEmployee.email         || "",
-        phone:          editingEmployee.phone         || "",
+        phoneCountry:   parsed?.country        || editingEmployee.phoneCountry || defaultCountry,
+        phoneNational:  parsed?.nationalNumber || "",
         department:     editingEmployee.departmentId  || "",
         role:           editingEmployee.roleId        || "",
         employmentType: editingEmployee.type          || editingEmployee.employmentType || "",
@@ -115,11 +133,10 @@ const AddEmployee = ({
                           ? String(editingEmployee.monthlySalary) : "",
         machineId:      editingEmployee.machineId     || "",
         avatarFile:     null,
-       avatarPreview: resolveAvatarUrl(editingEmployee.avatar) || "",
-
+        avatarPreview:  resolveAvatarUrl(editingEmployee.avatar) || "",
       });
     } else {
-      setFormData(INITIAL_FORM);
+      setFormData({ ...INITIAL_FORM, phoneCountry: defaultCountry });
     }
     setErrors({});
   }, [editingEmployee, open]);
@@ -193,12 +210,10 @@ const handleDepartmentChange = (e) => {
     } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}$/.test(formData.email.trim())) {
       e.email = "Please enter a valid email address";
     }
-    if (formData.phone.trim()) {
-      if (!/^\d+$/.test(formData.phone.trim())) {
-        e.phone = "Phone number must contain digits only.";
-      } else if (formData.phone.trim().length !== 11) {
-        e.phone = "Phone number must be exactly 11 digits.";
-      }
+    if (formData.phoneNational?.trim()) {
+      const country = phoneCountries.find((c) => c.code === formData.phoneCountry);
+      const result  = validatePhone(country, formData.phoneNational);
+      if (!result.valid) e.phone = result.message;
     }
     if (!formData.department)       e.department     = "Department is required";
     if (!formData.role)             e.role           = "Role is required";
@@ -241,12 +256,22 @@ const handleDepartmentChange = (e) => {
 
 
   // Step 2 — salary dialog calls this with the salary breakdown
+
   const handleSalaryDone = (salaryData) => {
     setSalaryDraft(salaryData);   // keep a copy in case the save below fails
     setSalaryOpen(false);
+
+    // Phone goes to the backend in canonical E.164 form
+    const country = phoneCountries.find((c) => c.code === pendingFormData.phoneCountry);
+    const parsed  = pendingFormData.phoneNational
+      ? validatePhone(country, pendingFormData.phoneNational)
+      : null;
+
     // Merge step 1 + step 2 and call the parent's onSave
     onSave?.({
       ...pendingFormData,
+      phone:           parsed?.valid ? parsed.e164 : "",
+      phoneCountry:    pendingFormData.phoneCountry || "",
       monthlySalary:   salaryData.monthlySalary,
       hourlyRate:      salaryData.hourlyRate,
       salaryBreakdown: salaryData.salaryBreakdown,
@@ -370,21 +395,30 @@ const handleDepartmentChange = (e) => {
                 error={!!errors.email} helperText={errors.email} />
             </Box>
 
+       
             {/* Phone */}
             <Box ref={fieldRefs.phone}>
               <CustomInputLabel label="Phone" />
-              <TextInput
-                placeholder="Enter Phone"
-                value={formData.phone}
-                onChange={handleChange("phone")}
-                onKeyDown={blockNonNumericKeys}
-                inputBgColor="#fff"
-                fullWidth
-                type="tel"
-                inputProps={{ maxLength: 15 }}
-                error={!!errors.phone}
-                helperText={errors.phone}
-              />
+              {phoneCountries.length === 0 ? (
+                <Typography fontSize="12px" color="text.secondary">
+                  No phone format configured. Set one in Settings → Company Profile.
+                </Typography>
+              ) : (
+                <PhoneInput
+                  value={{ country: formData.phoneCountry, nationalNumber: formData.phoneNational }}
+                  onChange={(val) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      phoneCountry:  val.country,
+                      phoneNational: val.nationalNumber,
+                    }));
+                    if (errors.phone) setErrors((prev) => ({ ...prev, phone: "" }));
+                  }}
+                  countries={phoneCountries}
+                  error={errors.phone}
+                  countryWidth={130}
+                />
+              )}
             </Box>
 
             {/* Department + Role */}

@@ -5,11 +5,13 @@ import CustomInputLabel    from "../../../components/customInputLabel";
 import TextInput           from "../../../components/textInput";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ bonus: "", deductions: "", reason: "" });
   const [successOpen, setSuccessOpen] = useState(false);
+  const { format } = useFormatCurrency();          
 
   useEffect(() => {
     if (open) {
@@ -70,7 +72,7 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
               Base Salary
             </Typography>
             <Typography fontSize="13px" color="text.secondary">
-              ${(payroll.baseSalary ?? 7395).toLocaleString()}
+             {format(payroll.baseSalary ?? 7395, { decimals: 0 })}
             </Typography>
           </Box>
 
@@ -136,7 +138,7 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
               <Typography fontSize="13px" color="text.secondary">
                 Net Pay:{" "}
                 <Typography component="span" fontSize="13px" fontWeight={700} color="text.primary">
-                  ${netPay.toLocaleString()}
+                 {format(netPay, { decimals: 0 })}
                 </Typography>
               </Typography>
             </Box>

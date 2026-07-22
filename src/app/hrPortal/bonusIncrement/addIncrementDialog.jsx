@@ -14,6 +14,7 @@ import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
 import { getEmployeesApi } from "../../../api/modules/employee";
 import { useDepartment }   from "../../../hooks/department";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const getInitials = (name = "") =>
   name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
@@ -44,6 +45,7 @@ const AddIncrementDialog = ({
 }) => {
   const [form,   setForm]   = useState({ ...INITIAL_FORM });
   const [errors, setErrors] = useState({});
+  const { format } = useFormatCurrency();         
 
   const { departments, fetchDepartments } = useDepartment();
 
@@ -254,10 +256,10 @@ const AddIncrementDialog = ({
                   height: "45px", display: "flex", alignItems: "center", px: 2, gap: 1,
                   backgroundColor: "#fff", borderRadius: "10px", border: "1px solid #E5E7EB",
                 }}>
-                  <Typography fontSize="13px" color="#808080" fontWeight={500}>Rs</Typography>
-                  <Typography fontSize="15px" fontWeight={700} color="text.primary">
-                    {(selectedEmployee.monthlySalary || 0).toLocaleString()}
-                  </Typography>
+              
+                <Typography fontSize="15px" fontWeight={700} color="text.primary">
+                  {format(selectedEmployee.monthlySalary || 0, { decimals: 0 })}
+                </Typography>
                 </Box>
               </Box>
             )}
@@ -319,14 +321,13 @@ const AddIncrementDialog = ({
                     <Box key={key} display="flex" justifyContent="space-between" alignItems="center" mb={1}>
                       <Typography fontSize="12px" color="text.secondary">{label}</Typography>
                       <Box display="flex" alignItems="center" gap={1}>
-                        <Typography fontSize="12px" color="text.secondary"
-                          sx={{ textDecoration: "line-through" }}
-                        >
-                          Rs {original.toLocaleString()}
-                        </Typography>
-                        <Typography fontSize="12px" fontWeight={600} color="#04C373">
-                          Rs {updated.toLocaleString()}
-                        </Typography>
+                   
+                      <Typography fontSize="12px" color="text.secondary" sx={{ textDecoration: "line-through" }}>
+                        {format(original, { decimals: 0 })}
+                      </Typography>
+                      <Typography fontSize="12px" fontWeight={600} color="#04C373">
+                        {format(updated, { decimals: 0 })}
+                      </Typography>
                       </Box>
                     </Box>
                   );
@@ -338,9 +339,11 @@ const AddIncrementDialog = ({
                   <Typography fontSize="13px" fontWeight={700} color="text.primary">
                     New Total Monthly
                   </Typography>
-                  <Typography fontSize="14px" fontWeight={700} color="#AA2493">
-                    Rs {newTotal.toLocaleString()}
-                  </Typography>
+                
+                <Typography fontSize="14px" fontWeight={700} color="#AA2493">
+                  {format(newTotal, { decimals: 0 })}
+                </Typography>
+                 
                 </Box>
               </Box>
             )}

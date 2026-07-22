@@ -1,16 +1,20 @@
-import { useState, useEffect }                    from "react";
+import { useState, useEffect, useRef }                    from "react";
 import { Box, Typography, TextField, IconButton } from "@mui/material";
 import { useNavigate }                            from "react-router-dom";
+import useUserStore from "../../../../zustand/useUserStore";
 import { DragDropContext, Droppable, Draggable }  from "@hello-pangea/dnd";
 import CheckIcon  from "@mui/icons-material/Check";
 import CloseIcon  from "@mui/icons-material/Close";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
-
+import DeleteOutlineIcon  from "@mui/icons-material/DeleteOutline";
+import ConfirmationDialog from "../../../../components/popups/confirmation";
+import { updateProjectStagesApi, pmUpdateProjectStagesApi } from "../../../../api/modules/project";
 import PipelineCard              from "../../../../components/cards/pipelineCard";
 import ConfigureStagesDialog     from "./configureStagesDialog";
 import { useTask }               from "../../../../hooks/task";
-import { updateProjectStagesApi } from "../../../../api/modules/project";
+
+
 
 const DEFAULT_STAGES = [
   { id: "stage_1", label: "Stage 1" },
@@ -20,21 +24,42 @@ const DEFAULT_STAGES = [
   { id: "stage_5", label: "Stage 5" },
 ];
 
-// Builds a stage array of the requested length, preserving the id/label
-// of any existing stage at the same index (so renamed stages and the
-// tasks already sitting in "stage_1", "stage_2", etc. are unaffected).
-// Extra new stages beyond the existing count get fresh "Stage N" labels.
-const buildStages = (count, existing = []) =>
-  Array.from({ length: count }, (_, i) => existing[i] || { id: `stage_${i + 1}`, label: `Stage ${i + 1}` });
+const MIN_STAGES = 3;
 
-const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) => {
+
+
+const buildStages = (count, existing = []) => {
+  const used   = new Set(existing.map((s) => s.id));
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    if (existing[i]) { result.push(existing[i]); continue; }
+    let n = i + 1;
+    while (used.has(`stage_${n}`)) n++;
+    used.add(`stage_${n}`);
+    result.push({ id: `stage_${n}`, label: `Stage ${n}` });
+  }
+  return result;
+};
+
+
+const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange, role = "admin" }) => {
   const navigate = useNavigate();
   const { tasks, loading, updateTask } = useTask(project.id);
+  const { user } = useUserStore();
+
+
+  const saveStagesApi = user?.role === "ADMIN"
+  ? updateProjectStagesApi
+  : pmUpdateProjectStagesApi;
+
 
   const [columns,      setColumns]      = useState([]);
   const [editingId,    setEditingId]    = useState(null);
   const [editingLabel, setEditingLabel] = useState("");
   const [savingStages, setSavingStages] = useState(false);
+  const [stageError,   setStageError]   = useState("");
+
+  const confirmRef = useRef();  
 
   // ── Configure Stages dialog state ─────────────────────────────────────────
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
@@ -95,7 +120,7 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) 
 
     setSavingStages(true);
     try {
-      const res = await updateProjectStagesApi(project.id, updated);
+      const res = await saveStagesApi(project.id, updated);
       if (res?.status === 200 || res?.status === 201) {
         onStagesChange?.(updated);
       }
@@ -110,11 +135,53 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) 
 
   const cancelEdit = () => setEditingId(null);
 
+  // ── Delete a stage — blocked while it still holds tasks ──────────────────
+  const handleDeleteStage = (stage) => {
+    const taskCount = columns.find((c) => c.id === stage.id)?.tasks.length || 0;
+
+    if (stages.length <= MIN_STAGES) {
+      setStageError(`A pipeline must keep at least ${MIN_STAGES} stages.`);
+      return;
+    }
+    if (taskCount > 0) {
+      setStageError(
+        `"${stage.label}" still has ${taskCount} task${taskCount > 1 ? "s" : ""}. ` +
+        `Drag them into another stage first, then delete it.`
+      );
+      return;
+    }
+
+    setStageError("");
+    confirmRef.current?.open({
+      title:       "Delete Stage?",
+      description: `"${stage.label}" will be removed from this project's pipeline.`,
+      confirmText: "Yes, Delete",
+      cancelText:  "Cancel",
+      onConfirm: async () => {
+        const updated = stages.filter((s) => s.id !== stage.id);
+        setSavingStages(true);
+        try {
+          const res = await saveStagesApi(project.id, updated);
+          if (res?.status === 200 || res?.status === 201) {
+            onStagesChange?.(updated);
+          } else {
+            setStageError(res?.data?.message || "Failed to delete stage.");
+          }
+        } catch {
+          setStageError("Something went wrong.");
+        } finally {
+          setSavingStages(false);
+        }
+      },
+    });
+  };
+
  const handleConfigureStages = async (newCount) => {
   setSavingStages(true);
   const updated = buildStages(newCount, stages);   // ← builds the new, longer array
   try {
-    const res = await updateProjectStagesApi(project.id, updated);
+    
+    const res = await saveStagesApi(project.id, updated);
     if (res?.status === 200 || res?.status === 201) {
       onStagesChange?.(updated);   // ← pushes the new array up to ProjectDetail's `stages` state
     }
@@ -190,6 +257,23 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) 
         </Box>
       </Box>
 
+      {stageError && (
+        <Box
+          mb={2} px={2} py={1.5}
+          sx={{ backgroundColor: "#FFF7ED", borderRadius: "10px", border: "1px solid #FED7AA",
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 2 }}
+        >
+          <Typography fontSize={13} color="#C2410C">{stageError}</Typography>
+          <Typography
+            fontSize={12} color="#C2410C" fontWeight={600}
+            sx={{ cursor: "pointer", flexShrink: 0 }}
+            onClick={() => setStageError("")}
+          >
+            Dismiss
+          </Typography>
+        </Box>
+      )}
+
       <DragDropContext onDragEnd={onDragEnd}>
         <Box
           sx={{
@@ -249,19 +333,31 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) 
                         </IconButton>
                       </>
                     ) : (
+                     
                       <>
-                        <Typography fontSize="13px" fontWeight={600} color="text.primary">
+                        <Typography fontSize="13px" fontWeight={600} color="text.primary" sx={{ flex: 1, minWidth: 0 }}>
                           {col.label}{" "}
                           <Typography component="span" fontSize="12px" fontWeight={500} color="text.secondary">
                             ({col.tasks.length})
                           </Typography>
                         </Typography>
-                        <Box
-                          onClick={() => startEdit(col)}
-                          sx={{ ml: 0.5, cursor: "pointer", display: "flex", alignItems: "center" }}
-                        >
+                        <Box onClick={() => startEdit(col)} sx={{ ml: 0.5, cursor: "pointer", display: "flex", alignItems: "center" }}>
                           <EditOutlinedIcon sx={{ fontSize: "14px" }} />
                         </Box>
+                        {stages.length > MIN_STAGES && (
+                          <Box
+                            onClick={() => !savingStages && handleDeleteStage(col)}
+                            title={col.tasks.length > 0 ? "Move its tasks out before deleting" : "Delete stage"}
+                            sx={{
+                              cursor: savingStages ? "default" : "pointer",
+                              display: "flex", alignItems: "center",
+                              color: col.tasks.length > 0 ? "#D1D5DB" : "#9CA3AF",
+                              "&:hover": { color: col.tasks.length > 0 ? "#D1D5DB" : "#DC2626" },
+                            }}
+                          >
+                            <DeleteOutlineIcon sx={{ fontSize: "15px" }} />
+                          </Box>
+                        )}
                       </>
                     )}
                   </Box>
@@ -331,6 +427,7 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange }) 
         currentCount={stages.length}
         loading={savingStages}
       />
+      <ConfirmationDialog ref={confirmRef} />
     </>
   );
 };

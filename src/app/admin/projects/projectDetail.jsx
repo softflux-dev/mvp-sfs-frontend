@@ -191,11 +191,7 @@ const ProjectDetail = () => {
       )}
       {activeTab === 3 && <ModulesTab     project={project} />}
       {activeTab === 4 && (
-        <PipelineTab
-          project={project}
-          stages={stages}
-          onStagesChange={setStages}
-        />
+        <PipelineTab project={project} stages={stages} onStagesChange={setStages} role="pm" />
       )}
       {activeTab === 5 && (
         <TasksTab

@@ -98,6 +98,7 @@ const ENDPOINTS = {
   pmUpdateTask:         "pm/projects",
   pmDeleteTask:         "pm/projects",
   pmGetProjects: "pm/projects",
+  pmUpdateProjectStages: "pm/projects",
 
   // ── Employee Portal (/api/employee/...) ──────────────────────────────────
   empGetMyTasks:   "employee/tasks",
@@ -152,8 +153,14 @@ getHolidays: "hr/holidays",
 
 getCompanyProfile:    "admin/settings/company",
 updateCompanyProfile: "admin/settings/company",
+// ── Currency ──────────────────────────────────────────────────────────────
+getCurrencies:     "admin/settings/company/currencies", // admin only — full list for the select
+getActiveCurrency: "settings/currency", 
 getWorkingHours:    "admin/settings/working-hours",
 updateWorkingHours: "admin/settings/working-hours",
+// ── Phone / countries ─────────────────────────────────────────────────────
+getCountries:   "admin/settings/company/countries",
+getPhoneConfig: "settings/phone-config",            
 
 getLeavePolicy:    "admin/settings/leave-policy",
 updateLeavePolicy: "admin/settings/leave-policy",

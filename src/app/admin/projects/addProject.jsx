@@ -10,6 +10,7 @@ import {
 import CustomInputLabel    from "../../../components/customInputLabel";
 import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
+import { useFormatCurrency } from "../../../utils/formatCurrency";
 
 const STATUS_OPTIONS = [
   { value: "new",         label: "New"         },
@@ -42,6 +43,7 @@ const AddProject = ({
 }) => {
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [errors,   setErrors]   = useState({});
+  const { symbol, currency } = useFormatCurrency();
 
   const fieldRefs = {
     projectName:    useRef(null),
@@ -296,15 +298,20 @@ const handleSave = () => {
                 </CustomSelect>
                 {errors.status && <Typography fontSize="12px" color="error" mt={0.5}>{errors.status}</Typography>}
               </Box>
+            
               <Box>
-                <CustomInputLabel label="Budget" />
+                <CustomInputLabel label={`Budget (${currency.code})`} />
                 <TextInput placeholder="0" value={formData.budget}
                   onChange={handleBudgetChange} inputBgColor="#fff"
                   fullWidth type="number"
                   onKeyDown={blockInvalidNumericKeys}
                   onPaste={blockNegativePaste}
                   inputProps={{ min: 0 }}
-                  InputStartIcon={<span style={{ fontSize: "14px", color: "#808080", fontWeight: 500 }}>$</span>}
+                  InputStartIcon={
+                    <span style={{ fontSize: "14px", color: "#808080", fontWeight: 500, whiteSpace: "nowrap" }}>
+                      {symbol}
+                    </span>
+                  }
                 />
               </Box>
             </Box>
