@@ -1,6 +1,6 @@
 // src/app/admin/settings/tabs/companyProfileTab.jsx
 import { useState, useRef, useEffect } from "react";
-import { Box, Typography, Avatar, MenuItem, Grid, CircularProgress, TextField, InputAdornment } from "@mui/material";
+import { Box, Typography, Avatar, MenuItem, Grid, CircularProgress, TextField, Autocomplete, Chip } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -71,7 +71,7 @@ const CompanyProfileTab = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [logoError,   setLogoError]   = useState("");
   const [bannerError, setBannerError] = useState("");
-  const [countrySearch, setCountrySearch] = useState("");
+  
 
   // Populate form once the profile loads from the backend
   useEffect(() => {
@@ -109,23 +109,9 @@ const CompanyProfileTab = () => {
     formData.phoneCountries.includes(c.code)
   );
 
-  // Filtered list for the format picker. Selected countries always stay
-  // rendered — MUI needs a MenuItem for every value or it warns about
-  // out-of-range values and the chips vanish while searching.
-  const filteredCountries = (() => {
-    const q = countrySearch.trim().toLowerCase();
-    if (!q) return countries;
-    return countries.filter(
-      (c) =>
-        formData.phoneCountries.includes(c.code) ||
-        c.name.toLowerCase().includes(q) ||
-        c.code.toLowerCase().includes(q) ||
-        c.dial.includes(q.replace(/\D/g, ""))
-    );
-  })();
+ 
 
-const handleFormatsChange = (e) => {
-    const next = e.target.value;
+const handleFormatsChange = (next) => {
     setFormData((prev) => ({
       ...prev,
       phoneCountries: next,
@@ -573,79 +559,69 @@ const handleFormatsChange = (e) => {
           {/* ── Phone Number Format — the actual setting ───────────────── */}
           <Grid size={{ xs: 12, md: 6 }}>
             <CustomInputLabel label="Phone Number Format *" />
-            <CustomSelect
+            <Autocomplete
               multiple
-              value={formData.phoneCountries}
-              onChange={handleFormatsChange}
-              fullWidth
-              height="45px"
-              inputBgColor="#F5F5F5"
+              disableCloseOnSelect
+              options={countries}
+              loading={countriesLoading}
               disabled={countriesLoading}
-              displayEmpty
-              onClose={() => setCountrySearch("")}
-              MenuProps={{
-                PaperProps: { sx: { maxHeight: 320, borderRadius: "14px", mt: 0.5 } },
-                autoFocus: false,
-              }}
-              renderValue={(selected) => {
-                if (!selected?.length) {
-                  return (
-                    <Typography fontSize={13} color="text.secondary">
-                      {countriesLoading ? "Loading countries..." : "Select country format(s)"}
-                    </Typography>
-                  );
-                }
-                const picked = countries.filter((c) => selected.includes(c.code));
+              value={countries.filter((c) => formData.phoneCountries.includes(c.code))}
+              onChange={(e, selected) => handleFormatsChange(selected.map((c) => c.code))}
+              isOptionEqualToValue={(opt, val) => opt.code === val.code}
+              getOptionLabel={(opt) => `${opt.name} (+${opt.dial})`}
+              ListboxProps={{ style: { maxHeight: 300 } }}
+              renderOption={(props, opt) => {
+                const { key, ...rest } = props;
                 return (
-                  <Typography fontSize={13} noWrap>
-                    {picked.map((c) => `${c.flag} +${c.dial}`).join(", ")}
-                  </Typography>
+                  <Box component="li" key={opt.code} {...rest}>
+                    <Typography fontSize={13} noWrap>
+                      {opt.flag}&nbsp; {opt.name}&nbsp;
+                      <Typography component="span" fontSize={12} color="text.secondary">
+                        +{opt.dial}
+                      </Typography>
+                    </Typography>
+                  </Box>
                 );
               }}
-            >
-     
-             {/* Search — sticky so it stays put while the list scrolls */}
-             {/* Search — sticky so it stays put while the list scrolls */}
-              <Box sx={{ px: 1.5, py: 1, position: "sticky", top: 0, bgcolor: "#fff", zIndex: 1 }}
-                   onKeyDown={(e) => e.stopPropagation()}
-                   onClick={(e) => e.stopPropagation()}>
+              renderTags={(value, getTagProps) =>
+                value.map((opt, index) => {
+                  const { key, ...rest } = getTagProps({ index });
+                  return (
+                    <Chip
+                      key={opt.code}
+                      {...rest}
+                      size="small"
+                      label={`${opt.flag} +${opt.dial}`}
+                      sx={{ fontSize: 12, height: 24, borderRadius: "8px" }}
+                    />
+                  );
+                })
+              }
+              renderInput={(params) => (
                 <TextField
-                  autoFocus
-                  size="small"
-                  fullWidth
-                  placeholder="Search country"
-                  value={countrySearch}
-                  onChange={(e) => setCountrySearch(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon sx={{ fontSize: 16, color: "#9CA3AF" }} />
-                      </InputAdornment>
-                    ),
-                    sx: { fontSize: 13, borderRadius: "10px" },
+                  {...params}
+                  placeholder={
+                    formData.phoneCountries.length
+                      ? ""
+                      : countriesLoading ? "Loading countries..." : "Search and select country"
+                  }
+                  error={!!errors.phoneCountries}
+                  sx={{
+                    backgroundColor: "#F5F5F5",
+                    borderRadius: "12px",
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: "12px",
+                      minHeight: "45px",
+                      py: "4px",
+                      fontSize: 13,
+                      "& fieldset": { border: "1px solid #fff" },
+                      "&:hover fieldset": { borderColor: "#9CA3AF" },
+                      "&.Mui-focused fieldset": { borderColor: "#AA2493" },
+                    },
                   }}
                 />
-              </Box>
-
-              {filteredCountries.length === 0 && (
-                <MenuItem disabled>
-                  <Typography fontSize={13} color="text.secondary">No match</Typography>
-                </MenuItem>
               )}
-
-              {filteredCountries.map((c) => (
-                <MenuItem key={c.code} value={c.code}>
-                  <Typography fontSize={13} noWrap>
-                    {c.flag}&nbsp; {c.name}&nbsp;
-                    <Typography component="span" fontSize={12} color="text.secondary">
-                      +{c.dial}
-                    </Typography>
-                  </Typography>
-                </MenuItem>
-              ))}
-
-            
-            </CustomSelect>
+            />
             {errors.phoneCountries && (
               <Typography fontSize="12px" color="error" mt={0.5}>{errors.phoneCountries}</Typography>
             )}
