@@ -20,6 +20,7 @@ const TRACKED_TYPES = {
   sick:      "Sick Leave",
   casual:    "Casual Leave",
   emergency: "Emergency Leave",
+  maternity:  "Maternity Leave",
 };
 
 /* ── quota bar ────────────────────────────────────────────────────────────── */
@@ -110,12 +111,13 @@ const LeaveRequestDetailDialog = ({
     }
   }, [open, employeeMongoId]);
 
-  // Quota state
-  const requestedBalance  = balance?.[leaveTypeKey] || null;
-  const willBeUnpaid      = isTrackedType && requestedBalance && requestedBalance.remaining <= 0;
-  const willBePartialUnpaid =
+  // ── Quota state — informational ONLY ─────────────────────────────────────
+  // Every approved leave is paid regardless of remaining quota, so this can
+  // no longer say anything about pay. It exists so HR can see how much of an
+  // allowance is left before deciding whether to approve.
+  const requestedBalance = balance?.[leaveTypeKey] || null;
+  const overQuota =
     isTrackedType && requestedBalance &&
-    requestedBalance.remaining > 0 &&
     (leave.days || 0) > requestedBalance.remaining;
 
   const statusCfg = STATUS_CONFIG[leave.status] || { bg: "#F5F5F5", color: "#757575" };
@@ -208,11 +210,14 @@ const LeaveRequestDetailDialog = ({
             </Typography>
           </Box>
 
-          {/* ── Leave Balance ───────────────────────────────────────────── */}
+          {/* ── Leave Balance — approval guidance, not a pay rule ───────── */}
           {isPending && isTrackedType && (
             <Box sx={{ border: "1px solid #F0F0F0", borderRadius: "14px", p: 2.5 }}>
-              <Typography fontSize="13px" fontWeight={700} color="text.primary" mb={1.5}>
+              <Typography fontSize="13px" fontWeight={700} color="text.primary" mb={0.5}>
                 Leave Balance ({new Date().getFullYear()})
+              </Typography>
+              <Typography fontSize="11px" color="text.secondary" mb={1.5}>
+                For reference when deciding. All approved leave is paid.
               </Typography>
 
               {balanceLoading && (
@@ -242,8 +247,9 @@ const LeaveRequestDetailDialog = ({
                 </Box>
               )}
 
-              {/* Quota warnings / confirmation */}
-              {!balanceLoading && willBeUnpaid && (
+              {/* Over-quota notice — flags the allowance only. It does NOT
+                  affect pay: payroll treats every approved leave as paid. */}
+              {!balanceLoading && overQuota && (
                 <Box mt={1.5} sx={{
                   display: "flex", alignItems: "flex-start", gap: 1.25,
                   backgroundColor: "#FFF7E6", border: "1px solid #FFE0A3",
@@ -252,36 +258,18 @@ const LeaveRequestDetailDialog = ({
                   <AlertTriangle size={15} color="#B45309" style={{ marginTop: 2, flexShrink: 0 }} />
                   <Box>
                     <Typography fontSize="12px" fontWeight={700} color="#B45309">
-                      No {TRACKED_TYPES[leaveTypeKey]} quota remaining
+                      Exceeds remaining {TRACKED_TYPES[leaveTypeKey]} allowance
                     </Typography>
                     <Typography fontSize="11px" color="#92400E" mt={0.4} lineHeight={1.5}>
-                      If approved, this leave will be marked as <strong>unpaid</strong> and
-                      counted as absent in attendance.
+                      {requestedBalance.remaining} day(s) remaining, {leave.days} requested.
+                      Approving is still allowed and the leave will be paid in full —
+                      this is a policy flag only.
                     </Typography>
                   </Box>
                 </Box>
               )}
 
-              {!balanceLoading && willBePartialUnpaid && (
-                <Box mt={1.5} sx={{
-                  display: "flex", alignItems: "flex-start", gap: 1.25,
-                  backgroundColor: "#FFF7E6", border: "1px solid #FFE0A3",
-                  borderRadius: "10px", px: 2, py: 1.5,
-                }}>
-                  <AlertTriangle size={15} color="#B45309" style={{ marginTop: 2, flexShrink: 0 }} />
-                  <Box>
-                    <Typography fontSize="12px" fontWeight={700} color="#B45309">
-                      Only {requestedBalance.remaining} of {leave.days} day(s) covered
-                    </Typography>
-                    <Typography fontSize="11px" color="#92400E" mt={0.4} lineHeight={1.5}>
-                      <strong>{leave.days - requestedBalance.remaining}</strong> day(s) will be
-                      treated as <strong>unpaid</strong>.
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-
-              {!balanceLoading && balance && !willBeUnpaid && !willBePartialUnpaid && (
+              {!balanceLoading && balance && !overQuota && (
                 <Box mt={1.5} sx={{
                   display: "flex", alignItems: "center", gap: 1,
                   backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0",
@@ -289,7 +277,7 @@ const LeaveRequestDetailDialog = ({
                 }}>
                   <CheckCircle size={14} color="#16A34A" style={{ flexShrink: 0 }} />
                   <Typography fontSize="12px" color="#15803D" fontWeight={500}>
-                    Sufficient quota — this leave will be fully paid.
+                    Within the remaining allowance.
                   </Typography>
                 </Box>
               )}
@@ -328,20 +316,6 @@ const LeaveRequestDetailDialog = ({
             />
           </Box>
 
-          {/* Show unpaid badge on already-approved unpaid leaves */}
-          {!isPending && leave.status === "Approved" && leave.isUnpaid && (
-            <Box sx={{
-              display: "flex", alignItems: "center", gap: 1,
-              backgroundColor: "#FFF7E6", border: "1px solid #FFE0A3",
-              borderRadius: "10px", px: 2, py: 1.25,
-            }}>
-              <AlertTriangle size={14} color="#B45309" style={{ flexShrink: 0 }} />
-              <Typography fontSize="12px" color="#B45309" fontWeight={500}>
-                Approved as unpaid — no quota was available at the time of approval.
-              </Typography>
-            </Box>
-          )}
-
         </Box>
       </DialogBody>
 
@@ -351,7 +325,7 @@ const LeaveRequestDetailDialog = ({
           onConfirm={handleApprove}
           showCancelBtn
           cancelText="Reject"
-          confirmText={willBeUnpaid ? "Approve as Unpaid" : "Approve"}
+          confirmText="Approve"
           variant="gradient"
           confirmLoading={loading}
         />

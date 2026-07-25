@@ -9,13 +9,17 @@ import SuccessPopup        from "../../../components/popups/confirmationDialog";
 import CustomButton  from "../../../components/customButton";
 import calendarIcon  from "../../../assets/icons/tasks.svg";
 
+// Keys must match the enum in models/employee/leave.js. "half_day" was never
+// a valid value — rows using it rendered the raw key instead of a label.
 const LEAVE_TYPE_LABELS = {
   sick:      "Sick Leave",
   casual:    "Casual Leave",
   annual:    "Annual Leave",
   maternity: "Maternity Leave",
-  half_day:  "Half Day",
   emergency: "Emergency Leave",
+  short:     "Short Leave",
+  full_day:  "Full Day Leave",
+  unpaid:    "Unpaid Leave",   // legacy rows only — no longer selectable
 };
 
 const tableHeader = [

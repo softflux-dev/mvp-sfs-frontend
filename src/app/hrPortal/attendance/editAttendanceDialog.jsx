@@ -73,9 +73,11 @@ const validateHoursField = (raw) => {
  *               Title: "Edit Attendance". Date is shown read-only.
  *
  * CREATE mode — pass `record={null}` AND `manualEntry={{ employeeId, date }}`.
- *               Title: "Manual Attendance Entry". Date is editable
- *               (defaults to manualEntry.date, e.g. a weekend with no record).
+ *               Title: "Manual Attendance Entry". Date is editable.
  *               Used by the "Manual Entry" button in Attendance Detail.
+ *
+ * Either mode marks the record isManual server-side, so a later attendance
+ * re-import will not overwrite it.
  */
 const EditAttendanceDialog = ({
   open, onClose, record = null, manualEntry = null, onSave, loading = false,
@@ -135,14 +137,10 @@ const EditAttendanceDialog = ({
     const checkIn  = formatTime(form.checkIn);
     const checkOut = formatTime(form.checkOut);
 
-    let hoursStr = "";
-    if (form.checkIn?.isValid() && form.checkOut?.isValid()) {
-      const diffMins = form.checkOut.diff(form.checkIn, "minute");
-      const netMins  = Math.max(0, diffMins - 60);
-      const h = Math.floor(netMins / 60);
-      const m = netMins % 60;
-      hoursStr = `${h}h ${m}m`;
-    }
+    // NOTE: hours are deliberately NOT computed here. The backend recalculates
+    // them from checkIn/checkOut using the configured break, and ignores any
+    // value sent from the client — computing it here with a hardcoded break
+    // only produced a number that silently disagreed with payroll.
 
     // ── Both fields are optional — blank/whitespace safely becomes 0,
     // and validation above already guarantees no negative or >24 values. ────
@@ -165,7 +163,6 @@ const EditAttendanceDialog = ({
         ...record,
         checkIn,
         checkOut,
-        hours:            hoursStr,
         attendanceStatus: form.attendanceStatus,
         notes:            form.notes,
         offSiteHours,
@@ -278,6 +275,12 @@ const EditAttendanceDialog = ({
               </Box>
             </Box>
 
+            <Typography fontSize="11px" color="text.secondary" mt={-1.5}>
+              For a work-from-home day, enter the hours under Off-Site and leave
+              Check-In/Out blank — the day still counts as worked. No break is
+              deducted from off-site or extra hours.
+            </Typography>
+
             {/* Status */}
             <Box>
               <CustomInputLabel label="Status" />
@@ -287,7 +290,7 @@ const EditAttendanceDialog = ({
                 fullWidth height="45px" inputBgColor="#fff"
               >
                 <MenuItem value="">
-                  {isCreateMode ? "Auto-detect (based on check-in/out)" : "Select Status"}
+                  {isCreateMode ? "Auto-detect (based on hours entered)" : "Select Status"}
                 </MenuItem>
                 {STATUS_OPTIONS.map((s) => (
                   <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>

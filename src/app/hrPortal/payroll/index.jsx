@@ -29,17 +29,34 @@ const tableHeader = [
   { id: "working",    label: "Req. Days"   },
   { id: "present",    label: "Present"     },
   { id: "leave",      label: "Leave"       },
+  { id: "extraHours", label: "Extra Hrs"   },
   { id: "baseSalary", label: "Base Salary" },
   { id: "bonus",      label: "Bonus"       },
+  { id: "overtime",   label: "Overtime"    },
   { id: "deductions", label: "Deductions"  },
   { id: "netPay",     label: "Net Pay"     },
   { id: "actions",    label: ""            },
 ];
+
+// MUST stay index-for-index aligned with tableHeader above — a mismatch
+// silently renders every later cell under the wrong column heading.
 const displayRows = [
-  "payroll_checkbox","payroll_emp_id", "employee_details","payroll_department",
-  "payroll_working","payroll_present","payroll_leave","payroll_salary",
-  "payroll_bonus_col","payroll_deductions_col","payroll_net","actions_menu",
+  "payroll_checkbox",
+  "payroll_emp_id",
+  "employee_details",
+  "payroll_department",
+  "payroll_working",
+  "payroll_present",
+  "payroll_leave",
+  "payroll_extra_hours",
+  "payroll_salary",
+  "payroll_bonus_col",
+  "payroll_overtime",
+  "payroll_deductions_col",
+  "payroll_net",
+  "actions_menu",
 ];
+
 const menuOptions = [
   { value: "view_payslip", label: "View Payslip" },
   { value: "edit_payroll", label: "Edit Payroll"  },
@@ -48,7 +65,7 @@ const menuOptions = [
 
 const PayrollManagement = () => {
   const { payrolls, loading, actionLoading, error, fetchPayroll, generatePayroll,updatePayroll } = usePayroll();
-  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+  const { profile: companyProfile } = useCompanyProfile();
 
   const [selectedDate,    setSelectedDate]    = useState(new Date());
   const [hasGenerated,    setHasGenerated]    = useState(false);
@@ -103,14 +120,38 @@ const PayrollManagement = () => {
     bonus:           p.bonusAmount,
     deductions:      p.deductionAmount,
     netPay:          p.netSalary,
-    requiredHours:   p.requiredHours,
-    actualHours:     p.actualHours,
-    shortfallHours:  p.shortfallHours,
-    hourlyRate:      p.hourlyRate,
+
+    // ── Derivation, so the payslip can explain every number ──────────────
+    totalCalendarDays: p.totalCalendarDays,
+    baseWorkingDays:   p.baseWorkingDays,
+    baseWorkingHours:  p.baseWorkingHours,
+    paidHolidays:      p.paidHolidays,
+    paidAbsenceDays:   p.paidAbsenceDays,
+    paidAbsenceHours:  p.paidAbsenceHours,
+    requiredHours:     p.requiredHours,
+    rateBasisHours:    p.rateBasisHours,
+    workingHoursDay:   p.workingHoursDay,
+
+    actualHours:      p.actualHours,
+    onSiteHours:      p.onSiteHours,
+    offSiteHours:     p.offSiteHours,
+    loggedExtraHours: p.loggedExtraHours,
+    shortfallHours:   p.shortfallHours,
+    hourlyRate:       p.hourlyRate,
+    extraHours:       p.extraHours,
+    extraAmount:      p.extraAmount,
+    otMultiplier:     p.otMultiplier,
+    offDayWorkedDays: p.offDayWorkedDays,
+    absentDays:       p.absentDays,
+    lateDays:         p.lateDays,
+    hasAttendanceData: p.hasAttendanceData,
+
     status:          p.status,
     salaryBreakdown: p.salaryBreakdown  || {},
     employmentType:  p.employmentType   || "",
   }));
+
+  const unverified = tableData.filter((r) => !r.hasAttendanceData);
 
   const handleDateChange = async (date) => {
     setSelectedDate(date);
@@ -232,16 +273,6 @@ const PayrollManagement = () => {
     });
   };
 
-  const totals = tableData.reduce(
-    (acc, r) => ({
-      baseSalary: acc.baseSalary + (r.baseSalary || 0),
-      bonus:      acc.bonus      + (r.bonus      || 0),
-      deductions: acc.deductions + (r.deductions || 0),
-      netPay:     acc.netPay     + (r.netPay     || 0),
-    }),
-    { baseSalary: 0, bonus: 0, deductions: 0, netPay: 0 }
-  );
-
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <>
@@ -305,6 +336,23 @@ const PayrollManagement = () => {
           </Box>
         )}
 
+        {/* ── Unverified rows — no attendance imported for these employees.
+            They are paid in full rather than deducted a whole month, so HR
+            must know the figure is unchecked. ──────────────────────────── */}
+        {hasGenerated && !loading && unverified.length > 0 && (
+          <Box mb={2} px={2.5} py={1.75} sx={{
+            backgroundColor: "#FFF7E6", borderRadius: "12px", border: "1px solid #FFE0A3",
+          }}>
+            <Typography fontSize="13px" color="#B45309" fontWeight={500}>
+              {unverified.length} employee{unverified.length !== 1 ? "s have" : " has"} no attendance
+              records for {MONTH_NAMES[currentMonth]} {currentYear} — paid in full with no deduction.
+              Check their Attendance Machine ID, or import the sheet for this month.
+            </Typography>
+            <Typography fontSize="11px" color="#92400E" mt={0.5}>
+              {unverified.map((r) => r.name).filter(Boolean).join(", ")}
+            </Typography>
+          </Box>
+        )}
 
         {(error || apiError) && (
           <Box mb={2} px={2} py={1.5} sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}>
@@ -347,6 +395,8 @@ const PayrollManagement = () => {
           open={editOpen}
           onClose={() => { setEditOpen(false); setSelectedPayroll(null); }}
           payroll={selectedPayroll || {}}
+          month={currentMonth}
+          year={currentYear}
           onSave={async (formData) => {
             const result = await updatePayroll(selectedPayroll.id, {
               bonus:      Number(formData.bonus) || 0,

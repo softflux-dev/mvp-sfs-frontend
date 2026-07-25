@@ -22,6 +22,7 @@ const tableHeader = [
   { id: "month",      label: "Month"       },
   { id: "baseSalary", label: "Base Salary" },
   { id: "bonus",      label: "Bonus"       },
+  { id: "overtime",   label: "Overtime"    },
   { id: "deductions", label: "Deductions"  },
   { id: "netPay",     label: "Net Pay"     },
   { id: "status",     label: "Status"      },
@@ -29,14 +30,15 @@ const tableHeader = [
 ];
 
 const displayRows = [
-  "payroll_checkbox",   
+  "payroll_checkbox",
   "ps_month",
   "ps_base_salary",
   "ps_bonus",
+  "payroll_overtime",
   "ps_deductions",
   "ps_net_pay",
-  "ps_payroll_status",  
-  "ps_actions",         
+  "ps_payroll_status",
+  "ps_actions",
 ];
 
 const StatCard = ({ label, value, sub, accent = "text.primary", bg = "#fff" }) => (
@@ -59,7 +61,7 @@ const Salary = () => {
   const [selectedSlip,  setSelectedSlip]  = useState(null);
   const [selectedRows,  setSelectedRows]  = useState([]);
   const [exportSuccess, setExportSuccess] = useState(false);
-  const { format } = useFormatCurrency();          
+  const { format } = useFormatCurrency();
 
   const { payslips, loading, error } = useMyPayslips(selectedYear);
 
@@ -69,25 +71,30 @@ const Salary = () => {
 
   const totals = payslips.reduce(
     (acc, p) => ({
-      base:       acc.base       + (p.baseSalary || 0),
-      bonus:      acc.bonus      + (p.bonus      || 0),
-      deductions: acc.deductions + (p.deductions || 0),
-      net:        acc.net        + (p.netPay     || 0),
+      base:       acc.base       + (p.baseSalary  || 0),
+      bonus:      acc.bonus      + (p.bonus       || 0),
+      overtime:   acc.overtime   + (p.extraAmount || 0),
+      deductions: acc.deductions + (p.deductions  || 0),
+      net:        acc.net        + (p.netPay      || 0),
     }),
-    { base: 0, bonus: 0, deductions: 0, net: 0 }
+    { base: 0, bonus: 0, overtime: 0, deductions: 0, net: 0 }
   );
 
   const tableData = [...payslips]
     .sort((a, b) => b.monthIndex - a.monthIndex)
     .map((p) => ({
-      id:         p.id,
-      month:      `${p.month} ${p.year}`,
-      baseSalary: p.baseSalary,
-      bonus:      p.bonus,
-      deductions: p.deductions,
-      netPay:     p.netPay,
-      status:     p.status,   // "draft" | "finalized"
-      _raw:       p,
+      id:           p.id,
+      month:        `${p.month} ${p.year}`,
+      baseSalary:   p.baseSalary,
+      bonus:        p.bonus,
+      deductions:   p.deductions,
+      netPay:       p.netPay,
+      // Overtime — the renderer reads extraAmount / extraHours / otMultiplier
+      extraHours:   p.extraHours,
+      extraAmount:  p.extraAmount,
+      otMultiplier: p.otMultiplier,
+      status:       p.status,   // "draft" | "finalized"
+      _raw:         p,
     }));
 
   // ── Row selection ──────────────────────────────────────────────────────────
@@ -122,23 +129,44 @@ const Salary = () => {
       14, 26
     );
 
+    const body = [
+      ["Base Working Days",    `${p.baseWorkingDays ?? "—"} days`],
+      ["Paid Holidays / Leave", `${p.paidAbsenceDays ?? 0} days`],
+      ["Required Working Days", String(p.requiredDays   ?? "—")],
+      ["Present Days",          String(p.presentDays    ?? "—")],
+      ["Absent Days",           String(p.absentDays     ?? "—")],
+      ["Leave Days",            String(p.leaveDays      ?? "—")],
+      ["Required Hours",        `${p.requiredHours  ?? 0} hrs`],
+      ["Actual Hours Worked",   `${p.actualHours    ?? 0} hrs`],
+    ];
+
+    if ((p.extraHours || 0) > 0) {
+      body.push([
+        "Extra Hours (Paid)",
+        `${p.extraHours} hrs × ${p.otMultiplier ?? 1}x — ${formatCurrencyForPdf(p.extraAmount || 0, { decimals: 0 })}`,
+      ]);
+    } else {
+      body.push(["Shortfall Hours", `${p.shortfallHours ?? 0} hrs`]);
+    }
+
+    // Spell out the rate denominator — it's the first thing anyone questions.
+    body.push([
+      "Hourly Rate",
+      `${formatCurrencyForPdf(p.hourlyRate || 0)}/hr` +
+        (p.rateBasisHours ? ` (salary ÷ ${p.rateBasisHours} hrs)` : ""),
+    ]);
+
+    body.push(["Base Monthly Salary", formatCurrencyForPdf(p.baseSalary || 0, { decimals: 0 })]);
+    body.push(["Bonus",               formatCurrencyForPdf(p.bonus      || 0, { decimals: 0 })]);
+    if ((p.extraAmount || 0) > 0) {
+      body.push(["Overtime Pay",      formatCurrencyForPdf(p.extraAmount, { decimals: 0 })]);
+    }
+    body.push(["Deductions",          formatCurrencyForPdf(p.deductions || 0, { decimals: 0 })]);
+    body.push(["Net Pay",             formatCurrencyForPdf(p.netPay     || 0, { decimals: 0 })]);
+
     autoTable(doc, {
       startY: 32,
-      body: [
-        ["Required Working Days", String(p.requiredDays   ?? "—")],
-        ["Present Days",          String(p.presentDays    ?? "—")],
-        ["Absent Days",           String(p.absentDays     ?? "—")],
-        ["Leave Days",            String(p.leaveDays      ?? "—")],
-        ["Required Hours",        `${p.requiredHours  ?? 0} hrs`],
-        ["Actual Hours Worked",   `${p.actualHours    ?? 0} hrs`],
-        ["Extra Hours (Paid)",  `${p.extraHours ?? 0} hrs — ${formatCurrencyForPdf(p.extraAmount || 0, { decimals: 0 })}`],
-        ["Shortfall Hours",     `${p.shortfallHours ?? 0} hrs`],
-        ["Hourly Rate",         `${formatCurrencyForPdf(p.hourlyRate || 0)}/hr`],
-        ["Base Monthly Salary", formatCurrencyForPdf(p.baseSalary || 0, { decimals: 0 })],
-        ["Bonus",               formatCurrencyForPdf(p.bonus      || 0, { decimals: 0 })],
-        ["Deductions",          formatCurrencyForPdf(p.deductions || 0, { decimals: 0 })],
-        ["Net Pay",             formatCurrencyForPdf(p.netPay     || 0, { decimals: 0 })],
-      ],
+      body,
       columnStyles: { 0: { fontStyle: "bold", cellWidth: 90 }, 1: { halign: "right" } },
       bodyStyles:   { fontSize: 9 },
       styles:       { cellPadding: 4 },
@@ -155,8 +183,7 @@ const Salary = () => {
     }
   };
 
-const fmt = (n) => format(n, { decimals: 0 });
-
+  const fmt = (n) => format(n, { decimals: 0 });
 
   // ── Bulk export PDF (selected rows, or all if none selected) ──────────────
   const handleExportPDF = () => {
@@ -180,13 +207,14 @@ const fmt = (n) => format(n, { decimals: 0 });
 
     autoTable(doc, {
       startY: 32,
-      head: [["Month", "Base Salary", "Bonus", "Deductions", "Net Pay", "Status"]],
+      head: [["Month", "Base Salary", "Bonus", "Overtime", "Deductions", "Net Pay", "Status"]],
       body: toExport.map((r) => [
         r.month,
-        formatCurrencyForPdf(r.baseSalary || 0, { decimals: 0 }),
-        formatCurrencyForPdf(r.bonus      || 0, { decimals: 0 }),
-        formatCurrencyForPdf(r.deductions || 0, { decimals: 0 }),
-        formatCurrencyForPdf(r.netPay     || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.baseSalary  || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.bonus       || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.extraAmount || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.deductions  || 0, { decimals: 0 }),
+        formatCurrencyForPdf(r.netPay      || 0, { decimals: 0 }),
         r.status || "—",
       ]),
       headStyles:         { fillColor: [170, 36, 147], textColor: 255, fontStyle: "bold", fontSize: 9 },
@@ -199,7 +227,7 @@ const fmt = (n) => format(n, { decimals: 0 });
     doc.setFontSize(10);
     doc.setTextColor(170, 36, 147);
     doc.text(
-  `Total Net Pay: ${formatCurrencyForPdf(toExport.reduce((s, r) => s + (r.netPay || 0), 0), { decimals: 0 })}`,
+      `Total Net Pay: ${formatCurrencyForPdf(toExport.reduce((s, r) => s + (r.netPay || 0), 0), { decimals: 0 })}`,
       14, finalY
     );
 
@@ -300,17 +328,20 @@ const fmt = (n) => format(n, { decimals: 0 });
                 accent: latestSlip?.bonus > 0 ? "#04C373" : "text.secondary",
               },
               {
+                label:  "Overtime",
+                value:  fmt(latestSlip?.extraAmount),
+                sub:    (latestSlip?.extraHours || 0) > 0
+                  ? `${latestSlip.extraHours}h × ${latestSlip.otMultiplier ?? 1}x`
+                  : "No extra hours",
+                accent: (latestSlip?.extraAmount || 0) > 0 ? "#04C373" : "text.secondary",
+              },
+              {
                 label:  "Deductions",
                 value:  fmt(latestSlip?.deductions),
                 sub:    latestSlip?.deductions > 0
                   ? `${latestSlip?.shortfallHours}h shortfall`
                   : "No deductions",
                 accent: latestSlip?.deductions > 0 ? "#FF3B30" : "text.secondary",
-              },
-              {
-                label:  "Present Days",
-                value:  `${latestSlip?.presentDays} / ${latestSlip?.requiredDays}`,
-                sub:    `${latestSlip?.absentDays} absent`,
               },
               {
                 label:  `${selectedYear} Net Total`,

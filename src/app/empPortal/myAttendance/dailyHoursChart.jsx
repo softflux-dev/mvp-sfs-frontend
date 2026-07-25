@@ -1,25 +1,36 @@
+// src/app/empPortal/myAttendance/dailyHoursChart.jsx
 import { Box, Typography } from "@mui/material";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
 
-const chartData = [
-  { name: "Mon", hours: 0.5 },
-  { name: "Tue", hours: 3   },
-  { name: "Wed", hours: 1.5 },
-  { name: "Thu", hours: 3.5 },
-  { name: "Fri", hours: 0.8 },
-  { name: "Sat", hours: 3   },
-  { name: "Sun", hours: 1   },
-];
+const DAY_FULL = {
+  Mon: "Monday", Tue: "Tuesday", Wed: "Wednesday", Thu: "Thursday",
+  Fri: "Friday", Sat: "Saturday", Sun: "Sunday",
+};
 
-const totalHrs  = Math.floor(chartData.reduce((s, d) => s + d.hours, 0));
-const totalMins = Math.round((chartData.reduce((s, d) => s + d.hours, 0) - totalHrs) * 60);
+// The API returns hours as a formatted label like "8h 30m". parseFloat() on
+// that yields 8 — silently discarding the minutes on every bar. Parse both
+// parts properly.
+const parseHoursLabel = (str) => {
+  if (!str || str === "–" || str === "-") return 0;
+  const m = String(str).match(/(\d+)h\s*(\d+)?m?/);
+  if (!m) return parseFloat(str) || 0;
+  return (parseInt(m[1], 10) || 0) + (parseInt(m[2], 10) || 0) / 60;
+};
+
+const fmtTotal = (decimal) => {
+  const h = Math.floor(decimal);
+  const m = Math.round((decimal - h) * 60);
+  return `${h} hrs ${m} min`;
+};
 
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload?.length) {
     const d = payload[0].payload;
+    const h = Math.floor(d.hours);
+    const m = Math.round((d.hours - h) * 60);
     return (
       <Box sx={{
         backgroundColor: "#fff",
@@ -29,20 +40,19 @@ const CustomTooltip = ({ active, payload }) => {
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}>
         <Typography fontSize="13px" fontWeight={600} color="text.primary">
-          {d.name === "Mon" ? "Monday"
-            : d.name === "Tue" ? "Tuesday"
-            : d.name === "Wed" ? "Wednesday"
-            : d.name === "Thu" ? "Thursday"
-            : d.name === "Fri" ? "Friday"
-            : d.name === "Sat" ? "Saturday"
-            : "Sunday"}
+          {DAY_FULL[d.name] || d.name}
         </Typography>
         <Typography fontSize="12px" color="#AA2493">
           Working Hours:{" "}
           <Typography component="span" fontSize="12px" fontWeight={700} color="#AA2493">
-            {d.hours}hrs
+            {h}h {m}m
           </Typography>
         </Typography>
+        {d.isOffDay && (
+          <Typography fontSize="11px" color="#F97316" mt={0.5}>
+            Non-working day
+          </Typography>
+        )}
       </Box>
     );
   }
@@ -50,7 +60,10 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 const GradientBar = (props) => {
-  const { x, y, width, height } = props;
+  const { x, y, width, height, payload } = props;
+  // Non-working days get the orange overtime gradient so the chart reads at
+  // a glance rather than needing the tooltip.
+  const gradId = payload?.isOffDay ? "hoursGradientOff" : "hoursGradient";
   return (
     <g>
       <defs>
@@ -58,28 +71,28 @@ const GradientBar = (props) => {
           <stop offset="0%" stopColor="#AA2493" />
           <stop offset="100%" stopColor="#022179" />
         </linearGradient>
+        <linearGradient id="hoursGradientOff" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FDBA74" />
+          <stop offset="100%" stopColor="#F97316" />
+        </linearGradient>
       </defs>
       <rect
         x={x} y={y} width={width} height={height}
-        fill="url(#hoursGradient)" rx={8} ry={8}
+        fill={`url(#${gradId})`} rx={8} ry={8}
       />
     </g>
   );
 };
 
-const DailyHoursChart = ({ breakdown = chartData }) => {
-  // build chart data from breakdown if passed
-  const data = breakdown.length
-    ? breakdown.map((d) => ({
-        name: d.day?.slice(0, 3),
-        hours: d.hours === "–" ? 0 : parseFloat(d.hours) || 0,
-      }))
-    : chartData;
+const DailyHoursChart = ({ breakdown = [] }) => {
+  const data = (breakdown || []).map((d) => ({
+    name:     d.day?.slice(0, 3),
+    hours:    parseHoursLabel(d.hours),
+    isOffDay: !!d.isOffDay,
+  }));
 
-  const total     = data.reduce((s, d) => s + d.hours, 0);
-  const hrs       = Math.floor(total);
-  const mins      = Math.round((total - hrs) * 60);
-  const maxY      = Math.max(...data.map((d) => d.hours), 4);
+  const total = data.reduce((s, d) => s + d.hours, 0);
+  const maxY  = Math.max(...data.map((d) => d.hours), 4);
 
   return (
     <Box mt={3}>
@@ -89,7 +102,7 @@ const DailyHoursChart = ({ breakdown = chartData }) => {
           Daily Hours Worked
         </Typography>
         <Typography fontSize="13px" fontWeight={600} color="text.primary">
-          Total: {hrs} hrs {mins} min
+          Total: {fmtTotal(total)}
         </Typography>
       </Box>
 

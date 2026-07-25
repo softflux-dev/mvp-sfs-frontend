@@ -16,13 +16,18 @@ import DialogActionButtons from "../../../components/dialog/dialogAction";
 import GlobalStyle         from "../../../style/style";
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
 
+// These values MUST match the enum in models/employee/leave.js exactly —
+// anything else is rejected by Mongoose validation on submit.
+// "unpaid" is deliberately omitted: every approved leave is paid, so
+// offering an unpaid type would contradict what payroll actually does.
 const LEAVE_TYPE_OPTIONS = [
   { value: "sick",      label: "Sick Leave"      },
   { value: "casual",    label: "Casual Leave"    },
   { value: "annual",    label: "Annual Leave"    },
   { value: "maternity", label: "Maternity Leave" },
-  { value: "half_day",  label: "Half Day"        },
   { value: "emergency", label: "Emergency Leave" },
+  { value: "short",     label: "Short Leave"     },
+  { value: "full_day",  label: "Full Day Leave"  },
 ];
 
 const INITIAL_FORM = { leaveType: "", fromDate: null, toDate: null, reason: "" };
@@ -48,6 +53,9 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false }) => {
     if (!formData.fromDate)       e.fromDate  = "From date is required";
     if (!formData.toDate)         e.toDate    = "To date is required";
     if (!formData.reason?.trim()) e.reason    = "Reason is required";
+    if (formData.fromDate && formData.toDate && new Date(formData.toDate) < new Date(formData.fromDate)) {
+      e.toDate = "To date cannot be before from date";
+    }
     return e;
   };
 
@@ -137,6 +145,11 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false }) => {
                   helperText={errors.reason}
                 />
               </Box>
+
+              <Typography fontSize="11px" color="text.secondary">
+                Approved leave is paid and does not count against your required
+                working hours for the month.
+              </Typography>
 
             </Box>
           </DialogBody>

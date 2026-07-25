@@ -50,10 +50,11 @@ const TblFoot = ({ label, value, color }) => (
   </Box>
 );
 
-const HourCard = ({ label, value, color }) => (
+const HourCard = ({ label, value, sub, color }) => (
   <Box sx={{ background: "#f9f9f9", border: "1px solid #efefef", borderRadius: "8px", p: "10px 12px", textAlign: "center" }}>
     <Typography sx={{ fontSize: "10px", color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.4px", mb: "4px" }}>{label}</Typography>
     <Typography sx={{ fontSize: "14px", fontWeight: 700, color }}>{value}</Typography>
+    {sub && <Typography sx={{ fontSize: "9px", color: "#bbb", mt: "2px" }}>{sub}</Typography>}
   </Box>
 );
 
@@ -61,11 +62,7 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyN
   const monthName = MONTH_NAMES[month] || "";
   const { currency, symbol, format } = useFormatCurrency();
 
-    const fmt = (n) => format(n, { showSymbol: false, decimals: 0 });
-
-  // ── Debug: log what we receive ────────────────────────────────────────────
-  console.log("[PayslipTemplate] payroll.salaryBreakdown:", payroll.salaryBreakdown);
-  console.log("[PayslipTemplate] payroll.baseSalary:", payroll.baseSalary);
+  const fmt = (n) => format(n, { showSymbol: false, decimals: 0 });
 
   const bd = payroll.salaryBreakdown || {};
 
@@ -79,7 +76,7 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyN
     { label: "Housing Allowance",   value: bd.housingAllowance   ?? 0 },
   ];
 
-const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payroll.extraAmount || 0);
+  const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payroll.extraAmount || 0);
 
   const empType =
     payroll.employmentType === "full_time" ? "Full-time"  :
@@ -89,14 +86,12 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
   return (
     <Box sx={{ fontFamily: "'Segoe UI', Arial, sans-serif", background: "#fff", width: "720px", position: "relative", overflow: "hidden" }}>
 
-      {/* Watermark — now uses the dynamic company name */}
+      {/* Watermark — uses the dynamic company name */}
       <Box sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", opacity: 0.03, fontSize: "64px", fontWeight: 900, color: "#022179", whiteSpace: "nowrap", pointerEvents: "none", letterSpacing: "6px", zIndex: 0 }}>
         {companyName.toUpperCase()}
       </Box>
 
-      {/* ── Header — background color removed, now light/neutral so ANY
-          logo color (including black/dark logos) stays visible. Layout,
-          spacing, and structure are otherwise unchanged. ──────────────── */}
+      {/* ── Header — light/neutral so ANY logo color stays visible ─────── */}
       <Box sx={{
         background: "#F8F8FA", borderBottom: "2px solid #AA2493",
         p: "22px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -123,7 +118,6 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
         </Box>
       </Box>
 
-      {/* ── Body — unchanged ───────────────────────────────────────────── */}
       <Box sx={{ p: "24px 32px 28px", position: "relative", zIndex: 1 }}>
 
         <SectionLabel mt={0}>Employee Details</SectionLabel>
@@ -134,6 +128,25 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
           <DetailCell label="Department"      value={payroll.department  || "—"} borderBottom />
           <DetailCell label="Employment Type" value={empType}                    borderRight />
           <DetailCell label="Pay Period"      value={`${monthName} ${year}`} />
+        </Box>
+
+        {/* ── Attendance derivation — makes every later number explicable ── */}
+        <SectionLabel>Working Days</SectionLabel>
+        <Box sx={{ border: "1px solid #ebebeb", borderRadius: "8px", overflow: "hidden", display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+          <DetailCell
+            label="Base Working Days"
+            value={`${payroll.baseWorkingDays ?? 0} days`}
+            borderRight
+          />
+          <DetailCell
+            label="Paid Holidays / Leave"
+            value={`${payroll.paidAbsenceDays ?? 0} days`}
+            borderRight
+          />
+          <DetailCell
+            label="Required Attendance"
+            value={`${payroll.working ?? payroll.requiredWorkingDays ?? 0} days`}
+          />
         </Box>
 
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mt: 2 }}>
@@ -154,12 +167,12 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
               {(payroll.bonus || 0) > 0 && (
                 <TblRow label="Bonus / Incentive" value={fmt(payroll.bonus)} color="#059669" bg="#f0fdf4" />
               )}
-               {(payroll.extraAmount || 0) > 0 && (
+              {(payroll.extraAmount || 0) > 0 && (
                 <TblRow
                   label="Overtime Pay"
                   value={fmt(payroll.extraAmount)}
                   color="#059669" bg="#f0fdf4"
-                 sub={`${payroll.extraHours}h × ${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`}
+                  sub={`${payroll.extraHours}h × ${symbol}${Number(payroll.hourlyRate || 0).toFixed(0)} × ${payroll.otMultiplier || 1}x`}
                 />
               )}
               <TblFoot label="Gross Earnings" value={fmt(grossEarnings)} color="#AA2493" />
@@ -177,7 +190,7 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
                 color={(payroll.deductions || 0) > 0 ? "#DC2626" : "#bbb"}
                 sub={
                   (payroll.shortfallHours || 0) > 0
-                   ? `${payroll.shortfallHours}h × ${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`
+                    ? `${payroll.shortfallHours}h × ${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}/hr`
                     : "No shortfall this month"
                 }
               />
@@ -190,7 +203,7 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
               />
             </Box>
 
-           <SectionLabel>Hours Summary</SectionLabel>
+            <SectionLabel>Hours Summary</SectionLabel>
             <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
               <HourCard label="Required"    value={`${payroll.requiredHours  || 0}h`} color="#022179" />
               <HourCard label="Actual"      value={`${payroll.actualHours    || 0}h`} color="#059669" />
@@ -199,14 +212,19 @@ const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payrol
               ) : (
                 <HourCard label="Shortfall" value={`${payroll.shortfallHours || 0}h`} color="#DC2626" />
               )}
-              <HourCard label="Hourly Rate" value={`${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}`} color="#AA2493" />
+              {/* Rate denominator spelled out — this is the first thing an
+                  employee questions when they see an overtime figure. */}
+              <HourCard
+                label="Hourly Rate"
+                value={`${symbol} ${Number(payroll.hourlyRate || 0).toFixed(0)}`}
+                sub={payroll.rateBasisHours ? `÷ ${payroll.rateBasisHours}h base` : null}
+                color="#AA2493"
+              />
             </Box>
           </Box>
         </Box>
 
-        {/* Net Pay — unchanged, still keeps its own gradient (this is the
-            results callout, not the header — user's request only targeted
-            the header background) */}
+        {/* Net Pay */}
         <Box sx={{ background: "linear-gradient(135deg, #022179 0%, #AA2493 100%)", borderRadius: "10px", p: "16px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", mt: 2.5 }}>
           <Box>
             <Typography sx={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>Net Salary Payable</Typography>

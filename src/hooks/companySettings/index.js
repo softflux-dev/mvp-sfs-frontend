@@ -154,6 +154,7 @@ export const useCompanyProfile = () => {
         address:     formData.address     || "",
         website:     formData.website     || "",
        currency:       formData.currency || "USD",
+       otMultiplier: formData.otMultiplier ?? 1,
         phoneCountries: formData.phoneCountries || [],
         phones:         (formData.phones || []).map((p) => ({
           label:          p.label || "",

@@ -80,6 +80,7 @@ const PRIORITY_CONFIG = {
    Leave:   { bg: "#2B6EFF1A", color: "#2B6EFF" },
    Holiday: { bg: "#AA24931A", color: "#AA2493" },
    Weekend: { bg: "#F5F5F5",   color: "#9CA3AF" },
+  "Off Day": { bg: "#F5F5F5", color: "#9CA3AF" },
  };
 function TaskAssigneesCell({ row }) {
   const [showAll, setShowAll] = useState(false);
@@ -2444,6 +2445,7 @@ case "tp_completion_rate":
     Late:    { bg: "#AA24931A", color: "#AA2493" },
     Leave:   { bg: "#0051FF1A", color: "#2B6EFF" },
     Weekend: { bg: "#F5F5F5",   color: "#888888" },
+    "Off Day": { bg: "#F5F5F5", color: "#888888" },
   }[row.status] || {};
   return (
     <Chip
@@ -3130,6 +3132,46 @@ case "increment_actions":
     </TableCell>
   );
 }
+// ── Payroll — extra (overtime) hours ──────────────────────────────────────
+case "payroll_extra_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500}
+        color={row.extraHours > 0 ? "#F97316" : "text.secondary"}>
+        {row.extraHours > 0 ? `${row.extraHours}h` : "—"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — shortfall hours ─────────────────────────────────────────────
+case "payroll_shortfall":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500}
+        color={row.shortfallHours > 0 ? "#FF0000" : "text.secondary"}>
+        {row.shortfallHours > 0 ? `${row.shortfallHours}h` : "—"}
+      </Typography>
+    </TableCell>
+  );
+
+// ── Payroll — overtime pay (with multiplier) ──────────────────────────────
+case "payroll_overtime":
+  return (
+    <TableCell key={val}>
+      {row.extraAmount > 0 ? (
+        <Box>
+          <Typography fontSize="13px" fontWeight={500} color="#04C373">
+            {format(row.extraAmount, { decimals: 0 })}
+          </Typography>
+          <Typography fontSize="10px" color="text.secondary">
+            {row.extraHours}h × {row.otMultiplier || 1}x
+          </Typography>
+        </Box>
+      ) : (
+        <Typography fontSize="13px" color="text.secondary">—</Typography>
+      )}
+    </TableCell>
+  );
  
 // ── Payslip History — view eye + download icon ────────────────────────────────
 case "ps_actions":
@@ -3153,6 +3195,75 @@ case "ps_actions":
           <img src={download} alt="download" style={{ width: 20, height: 20 }} />
         </IconButton>
       </Box>
+    </TableCell>
+  );
+
+  // ── Attendance Records — monthly required hours (target) ──────────────────
+case "att_summary_required_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        {row.requiredHoursLabel || "—"}
+      </Typography>
+      <Typography fontSize="10px" color="text.secondary">
+        {row.requiredDays ?? 0} days × {row.workingHoursDay ?? 8}h
+      </Typography>
+    </TableCell>
+  );
+
+  
+// ── Payroll — extra (overtime) hours ──────────────────────────────────────
+case "payroll_extra_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500}
+        color={row.extraHours > 0 ? "#F97316" : "text.secondary"}>
+        {row.extraHours > 0 ? `${row.extraHours}h` : "—"}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Payroll — overtime pay, with the multiplier that produced it ──────────
+case "payroll_overtime":
+  return (
+    <TableCell key={val}>
+      {row.extraAmount > 0 ? (
+        <Box>
+          <Typography fontSize="13px" fontWeight={500} color="#04C373">
+            {format(row.extraAmount, { decimals: 0 })}
+          </Typography>
+          <Typography fontSize="10px" color="text.secondary">
+            {row.extraHours}h × {row.otMultiplier || 1}x
+          </Typography>
+        </Box>
+      ) : (
+        <Typography fontSize="13px" color="text.secondary">—</Typography>
+      )}
+    </TableCell>
+  );
+ 
+// ── Attendance Records — monthly required hours (the target) ──────────────
+case "att_summary_required_hours":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+        {row.requiredHoursLabel || "—"}
+      </Typography>
+      <Typography fontSize="10px" color="text.secondary">
+        {row.requiredDays ?? 0} days × {row.workingHoursDay ?? 8}h
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── OPTIONAL — Attendance Records: balance vs target, at a glance ─────────
+// Only needed if you add a "Balance" column to attendanceRecordsTab.jsx.
+case "att_summary_balance":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600}
+        color={row.balanceHours < 0 ? "#FF0000" : row.balanceHours > 0 ? "#04C373" : "text.secondary"}>
+        {row.balanceHours > 0 ? `+${row.balanceHours}h` : `${row.balanceHours ?? 0}h`}
+      </Typography>
     </TableCell>
   );
   

@@ -8,6 +8,12 @@ import {
   getAnnualSummaryApi,
 } from "../../api/modules/employeeAttendance";
 
+// Format a local Date as "YYYY-MM-DD" without going through toISOString(),
+// which converts to UTC and shifts the day backwards for any timezone behind
+// UTC — that produced a start date one day early and mismatched the backend.
+const ymd = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
 // ── Helper: generate all Mon–Sun weeks overlapping a given month ────────────
 const getWeeksForMonth = (year, month) => {
   const firstDay = new Date(year, month, 1);
@@ -26,14 +32,22 @@ const getWeeksForMonth = (year, month) => {
     weekEnd.setDate(weekEnd.getDate() + 6);
 
     weeks.push({
-      startDate: weekStart.toISOString().split("T")[0],
-      endDate:   weekEnd.toISOString().split("T")[0],
+      startDate: ymd(weekStart),
+      endDate:   ymd(weekEnd),
     });
 
     cursor.setDate(cursor.getDate() + 7);
   }
 
   return weeks;
+};
+
+const EMPTY_MONTH_STATS = {
+  present: 0, absent: 0, late: 0, leave: 0, offDayWorked: 0, percent: "0%",
+};
+
+const EMPTY_WEEK_STATS = {
+  present: 0, absent: 0, late: 0, leave: 0, offDayWorked: 0, worked: "0h 0m",
 };
 
 // ── useDefaultPeriod — resolves which month/year to auto-select on load ─────
@@ -65,7 +79,7 @@ export const useDefaultPeriod = () => {
 
 // ── useMonthStats — stat-card numbers for one month ──────────────────────────
 export const useMonthStats = (month, year) => {
-  const [stats,   setStats]   = useState({ present: 0, absent: 0, late: 0, leave: 0, percent: "0%" });
+  const [stats,   setStats]   = useState(EMPTY_MONTH_STATS);
   const [loading, setLoading] = useState(false);
 
   const fetchStats = useCallback(async () => {
@@ -74,7 +88,7 @@ export const useMonthStats = (month, year) => {
     try {
       const res = await getMonthStatsApi(month, year);
       if (res?.status === 200 || res?.status === 201) {
-        setStats(res.data.data);
+        setStats({ ...EMPTY_MONTH_STATS, ...res.data.data });
       }
     } catch { /* silent */ }
     finally { setLoading(false); }
@@ -86,8 +100,11 @@ export const useMonthStats = (month, year) => {
 };
 
 // ── useMonthlyCalendar — day→status map for the calendar grid ───────────────
+// `offDays` is the list of day-numbers that are NOT configured working days,
+// so the grid can grey them from the real setting instead of assuming Sat/Sun.
 export const useMonthlyCalendar = (month, year) => {
   const [dayMap,  setDayMap]  = useState({});
+  const [offDays, setOffDays] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchCalendar = useCallback(async () => {
@@ -96,7 +113,8 @@ export const useMonthlyCalendar = (month, year) => {
     try {
       const res = await getMonthlyCalendarApi(month, year);
       if (res?.status === 200 || res?.status === 201) {
-        setDayMap(res.data.data.dayMap || {});
+        setDayMap(res.data.data.dayMap  || {});
+        setOffDays(res.data.data.offDays || []);
       }
     } catch { /* silent */ }
     finally { setLoading(false); }
@@ -104,7 +122,7 @@ export const useMonthlyCalendar = (month, year) => {
 
   useEffect(() => { fetchCalendar(); }, [fetchCalendar]);
 
-  return { dayMap, loading };
+  return { dayMap, offDays, loading };
 };
 
 // ── useWeeklyAttendance — generates weeks for the month + fetches active week ─
@@ -123,7 +141,7 @@ export const useWeeklyAttendance = (month, year) => {
   const activeWeek = weeks[weekIdx] || null;
 
   const [breakdown, setBreakdown] = useState([]);
-  const [weekStats, setWeekStats] = useState({ present: 0, absent: 0, late: 0, leave: 0, worked: "0h 0m" });
+  const [weekStats, setWeekStats] = useState(EMPTY_WEEK_STATS);
   const [loading,   setLoading]   = useState(false);
 
   useEffect(() => {
@@ -134,7 +152,7 @@ export const useWeeklyAttendance = (month, year) => {
         const res = await getWeekBreakdownApi(activeWeek.startDate, activeWeek.endDate);
         if (res?.status === 200 || res?.status === 201) {
           setBreakdown(res.data.data.breakdown || []);
-          setWeekStats(res.data.data.stats || { present: 0, absent: 0, late: 0, leave: 0, worked: "0h 0m" });
+          setWeekStats({ ...EMPTY_WEEK_STATS, ...(res.data.data.stats || {}) });
         }
       } catch { /* silent */ }
       finally { setLoading(false); }

@@ -1,4 +1,4 @@
-// src/hooks/attendance.js — FULL REPLACEMENT
+// src/hooks/attendance.js
 import { useState, useCallback, useEffect } from "react";
 import {
   getAttendanceSummaryApi,
@@ -119,6 +119,9 @@ export const useAttendanceDetail = (employeeId, month, year) => {
                   attendanceStatus: updated.attendanceStatus,
                   notes:            updated.notes,
                   isIncomplete:     updated.isIncomplete,
+                  // Any HR edit is flagged manual server-side so a later
+                  // re-import can't wipe it — keep the row in sync.
+                  isManual:         updated.isManual ?? true,
                 }
               : r
           )
@@ -134,8 +137,8 @@ export const useAttendanceDetail = (employeeId, month, year) => {
   }, []);
 
   // ── Create a brand-new record (Manual Entry button) ────────────────────────
-  // Used when a date has NO existing Attendance doc — e.g. a weekend the
-  // employee worked but the machine sheet never captured.
+  // Used when a date has NO existing Attendance doc — e.g. a non-working day
+  // the employee worked, or a work-from-home day the machine never captured.
   const createManualEntry = useCallback(async (payload) => {
     setActionLoading(true);
     try {
@@ -150,8 +153,10 @@ export const useAttendanceDetail = (employeeId, month, year) => {
 
         const formatted = {
           id:               newRecord._id,
-          date:             newRecord.date, 
-          rawDate:          newRecord.date,
+          date:             newRecord.date,
+          // `date` is the display string ("Jun 1, 2026"); rawDate must be the
+          // real Date so sorting and the edit dialog's DatePicker work.
+          rawDate:          newRecord.rawDate || newRecord.date,
           checkIn:          newRecord.checkIn  || "",
           checkOut:         newRecord.checkOut || "",
           hours:            newRecord.hours,
@@ -165,6 +170,8 @@ export const useAttendanceDetail = (employeeId, month, year) => {
           notes:            newRecord.notes || "",
           isIncomplete:     newRecord.isIncomplete || false,
           isOvertime:       newRecord.isOvertime   || false,
+          isManual:         newRecord.isManual     ?? true,
+          isNonWorkingDay:  newRecord.isNonWorkingDay || false,
         };
         // Insert in date order
         setRecords((prev) =>
@@ -187,9 +194,7 @@ export const useAttendanceDetail = (employeeId, month, year) => {
 
 // ── Single source of truth for formatting an import log's date/time —
 // used both right after a fresh import AND when refetching history, so
-// the two paths can never disagree (previously one formatted using the
-// browser's timezone, the other using the backend's, causing the
-// timestamp to visibly change after a page refresh). ─────────────────────
+// the two paths can never disagree. ──────────────────────────────────────
 const formatImportLog = (raw) => ({
   id:        raw._id || raw.id,
   date:      new Date(raw.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -220,14 +225,16 @@ const fetchImportHistory = useCallback(async () => {
     finally { setLogsLoading(false); }
   }, []);
 
- const importRecords = useCallback(async ({ month, year, fileName, fileSize, records,fileBase64 }) => {
+ const importRecords = useCallback(async ({ month, year, fileName, fileSize, records, fileBase64 }) => {
     setImporting(true);
     setImportWarning("");
     setError("");
     try {
-      const res = await importAttendanceApi({ month, year, fileName, fileSize, records,fileBase64 });
+      const res = await importAttendanceApi({ month, year, fileName, fileSize, records, fileBase64 });
       if (res?.status === 200 || res?.status === 201) {
-        const { unmatchedCount, unmatchedIds, partialCount, importLog, isFirstImportForMonth, month: respMonth, year: respYear } = res.data.data;
+        const {
+          unmatchedCount, unmatchedIds, partialCount, skippedManual, importLog,
+        } = res.data.data;
 
         if (importLog) {
           setImportLogs((prev) => [formatImportLog(importLog), ...prev]);
@@ -239,6 +246,11 @@ const fetchImportHistory = useCallback(async () => {
         }
         if (partialCount > 0) {
           warnings.push(`${partialCount} record(s) have only one punch — see the warning banner above to fix.`);
+        }
+        // Reassurance rather than a problem: manual entries and HR edits are
+        // deliberately preserved, so HR knows their typed hours survived.
+        if (skippedManual > 0) {
+          warnings.push(`${skippedManual} manually entered/edited record(s) were preserved and not overwritten.`);
         }
         if (warnings.length) setImportWarning(warnings.join(" · "));
 

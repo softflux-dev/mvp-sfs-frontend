@@ -37,15 +37,18 @@ const displayRows = [
   "lm_actions",
 ];
 
+// Keys match the enum in models/employee/leave.js. "unpaid" is kept only so
+// pre-existing rows still render a readable label — it is no longer offered
+// when applying, since every approved leave is paid.
 const LEAVE_TYPE_LABELS = {
   sick:       "Sick Leave",
   casual:     "Casual Leave",
   annual:     "Annual Leave",
   maternity:  "Maternity Leave",
-  unpaid:     "Unpaid Leave",
   short:      "Short Leave",
   emergency:  "Emergency Leave",
   full_day:   "Full Day Leave",
+  unpaid:     "Unpaid Leave",
 };
 
 // Format a Date as "yyyy-MM-dd" using LOCAL time — avoids the UTC day-shift
@@ -67,13 +70,13 @@ const LeaveManagement = () => {
     handleRowsPerPageChange,
   } = useHRLeaves();
 
-  const { profile: companyProfile } = useCompanyProfile(); // ← NEW
+  const { profile: companyProfile } = useCompanyProfile();
 
   const [actionSuccess, setActionSuccess] = useState({ open: false, message: "" });
   const [apiError,      setApiError]      = useState("");
   const [viewOpen,      setViewOpen]      = useState(false);
   const [selectedLeave, setSelectedLeave] = useState(null);
-  const [exporting,     setExporting]     = useState(false); // ← NEW
+  const [exporting,     setExporting]     = useState(false);
 
   const confirmRef = useRef();
 
@@ -106,14 +109,15 @@ const LeaveManagement = () => {
       ? l.status.charAt(0).toUpperCase() + l.status.slice(1)
       : "Pending",
     hrNotes:       l.hrNotes || "",
-     rejectionReason:  l.rejectionReason || "",   
-     isUnpaid:         l.isUnpaid        || false,
+    rejectionReason:  l.rejectionReason || "",
+    // isUnpaid intentionally NOT mapped — every approved leave is paid, so
+    // surfacing the legacy flag would contradict what payroll actually does.
   }));
 
  const handleApprove = (row, hrNotes = "") => {
   confirmRef.current?.open({
     title:       "Approve Leave?",
-    description: `Approve leave request for ${row.name}?`,
+    description: `Approve leave request for ${row.name}? This leave will be paid and will not count against their required working hours.`,
     confirmText: "Yes, Approve",
     cancelText:  "Cancel",
     onConfirm: async () => {
@@ -148,10 +152,8 @@ const handleReject = (row, hrNotes = "") => {
   });
 };
 
-// ── Export — now uses the shared reportPdfExport utility, so it gets the
-// same dynamic logo, company name, and "Powered by Sprintexa" footer as
-// every other report in the app, instead of building its own plain jsPDF
-// document inline. ─────────────────────────────────────────────────────
+// ── Export — uses the shared reportPdfExport utility, so it gets the same
+// dynamic logo, company name, and footer as every other report. ─────────
 const handleExportPDF = async () => {
   setExporting(true);
   try {
@@ -256,6 +258,11 @@ const handleExportPDF = async () => {
         onApprove={handleApprove}
         onReject={handleReject}
         loading={actionLoading}
+      />
+      <SuccessPopup
+        open={!!apiError}
+        onClose={() => setApiError("")}
+        message={apiError}
       />
     </>
   );

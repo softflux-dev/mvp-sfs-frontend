@@ -1,3 +1,4 @@
+// src/app/hrPortal/payroll/editPayrollDialog.jsx —
 import { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
@@ -7,11 +8,13 @@ import DialogActionButtons from "../../../components/dialog/dialogAction";
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
 import { useFormatCurrency } from "../../../utils/formatCurrency";
 
-const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+const EditPayrollDialog = ({ open, onClose, payroll = {}, month, year, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({ bonus: "", deductions: "", reason: "" });
   const [successOpen, setSuccessOpen] = useState(false);
-  const { format } = useFormatCurrency();          
+  const { format } = useFormatCurrency();
 
   useEffect(() => {
     if (open) {
@@ -23,23 +26,30 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
     }
   }, [open, payroll]);
 
+  // Must mirror the backend's netSalary formula exactly, or the preview shown
+  // here disagrees with what actually saves.
   const netPay =
-    (payroll.baseSalary ?? 0) +
+    (payroll.baseSalary  ?? 0) +
+    (payroll.extraAmount ?? 0) +
     (Number(formData.bonus) || 0) -
     (Number(formData.deductions) || 0);
+
+  const monthLabel = month !== undefined && year
+    ? `${MONTH_NAMES[month] || ""} ${year}`
+    : "—";
 
   const handleChange = (field) => (e) =>
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
 
- const handleSave = async () => {
-  setSaving(true);
-  const result = await onSave?.({ ...payroll, ...formData, netPay });
-  setSaving(false);
-  // Only close on actual success; leave dialog open with data intact on failure
-  if (!result || result.success !== false) {
-    onClose();
-  }
-};
+  const handleSave = async () => {
+    setSaving(true);
+    const result = await onSave?.({ ...payroll, ...formData, netPay });
+    setSaving(false);
+    // Only close on actual success; leave dialog open with data intact on failure
+    if (!result || result.success !== false) {
+      onClose();
+    }
+  };
 
   return (
     <>
@@ -54,7 +64,7 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
               Employee
             </Typography>
             <Typography fontSize="13px" color="text.secondary">
-              {payroll.name || "Sarah Johnson"}
+              {payroll.name || "—"}
             </Typography>
           </Box>
 
@@ -63,18 +73,34 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
               Month
             </Typography>
             <Typography fontSize="13px" color="text.secondary">
-              March 2026
+              {monthLabel}
             </Typography>
           </Box>
 
-          <Box mb={3}>
+          <Box mb={2.5}>
             <Typography fontSize="13px" fontWeight={700} color="text.primary">
               Base Salary
             </Typography>
             <Typography fontSize="13px" color="text.secondary">
-             {format(payroll.baseSalary ?? 7395, { decimals: 0 })}
+              {format(payroll.baseSalary ?? 0, { decimals: 0 })}
             </Typography>
           </Box>
+
+          {/* Overtime is calculated, not editable here — but it feeds net pay,
+              so it has to be visible or the preview looks wrong. */}
+          {(payroll.extraAmount ?? 0) > 0 && (
+            <Box mb={3}>
+              <Typography fontSize="13px" fontWeight={700} color="text.primary">
+                Overtime Pay
+              </Typography>
+              <Typography fontSize="13px" color="#04C373">
+                + {format(payroll.extraAmount, { decimals: 0 })}
+                <Typography component="span" fontSize="11px" color="text.secondary" ml={1}>
+                  {payroll.extraHours}h × {payroll.otMultiplier || 1}x
+                </Typography>
+              </Typography>
+            </Box>
+          )}
 
           {/* ── Editable fields ──────────────────────────────────────────── */}
           <Box
@@ -91,12 +117,13 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
             <Box>
               <CustomInputLabel label="Bonus" />
               <TextInput
-                placeholder="444"
+                placeholder="0"
                 value={formData.bonus}
                 onChange={handleChange("bonus")}
                 inputBgColor="#fff"
                 fullWidth
                 type="number"
+                inputProps={{ min: 0 }}
               />
             </Box>
 
@@ -104,12 +131,13 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
             <Box>
               <CustomInputLabel label="Deductions" />
               <TextInput
-                placeholder="94"
+                placeholder="0"
                 value={formData.deductions}
                 onChange={handleChange("deductions")}
                 inputBgColor="#fff"
                 fullWidth
                 type="number"
+                inputProps={{ min: 0 }}
               />
             </Box>
 
@@ -138,7 +166,7 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
               <Typography fontSize="13px" color="text.secondary">
                 Net Pay:{" "}
                 <Typography component="span" fontSize="13px" fontWeight={700} color="text.primary">
-                 {format(netPay, { decimals: 0 })}
+                  {format(netPay, { decimals: 0 })}
                 </Typography>
               </Typography>
             </Box>
@@ -153,6 +181,7 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, onSave }) => {
           cancelText="Cancel"
           confirmText="Save Changes"
           variant="gradient"
+          confirmLoading={saving}
         />
       </DialogContainer>
 

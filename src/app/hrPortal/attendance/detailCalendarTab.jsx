@@ -8,6 +8,7 @@ const STATUS_STYLES = {
   Late:    { bg: "#1000A3", color: "#fff" },
   Absent:  { bg: "#FF0004", color: "#fff" },
   Leave:   { bg: "#48B504", color: "#fff" },
+  Holiday: { bg: "#AA2493", color: "#fff" },
 };
 
 const LEGEND = [
@@ -15,6 +16,7 @@ const LEGEND = [
   { label: "Late",     color: "#1000A3" },
   { label: "Absent",   color: "#FF0004" },
   { label: "On Leave", color: "#48B504" },
+  { label: "Holiday",  color: "#AA2493" },
 ];
 
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -37,12 +39,16 @@ const DetailCalendarTab = ({ dailyRecords = [], initialMonth, initialYear }) => 
   const month     = currentDate.getMonth();
   const monthName = currentDate.toLocaleString("default", { month: "long" });
 
-  // Build a map of day-of-month -> status from dailyRecords for this month/year
-  const dayMap = {};
+  // Build maps of day-of-month → status and → isNonWorkingDay for this month.
+  // `isNonWorkingDay` comes straight from the backend (getEmployeeDetail),
+  // which reads Settings → Working Days — the UI must not re-derive it.
+  const dayMap    = {};
+  const offDayMap = {};
   dailyRecords.forEach((rec) => {
     const d = new Date(rec.date);
     if (d.getFullYear() === year && d.getMonth() === month) {
-      dayMap[d.getDate()] = rec.attendanceStatus;
+      dayMap[d.getDate()]    = rec.attendanceStatus;
+      offDayMap[d.getDate()] = !!rec.isNonWorkingDay;
     }
   });
 
@@ -56,15 +62,15 @@ const DetailCalendarTab = ({ dailyRecords = [], initialMonth, initialYear }) => 
   const trailing = (7 - (cells.length % 7)) % 7;
   for (let d = 1; d <= trailing; d++) cells.push({ overflow: d });
 
-  const isWeekend = (idx) => {
-    const col = idx % 7;
-    return col === 5 || col === 6;
-  };
-
   const counts = { Present: 0, Late: 0, Absent: 0, Leave: 0 };
   Object.values(dayMap).forEach((s) => {
     if (counts[s] !== undefined) counts[s]++;
   });
+
+  // Days worked outside the configured working week — paid, but not required.
+  const offDayWorked = Object.keys(dayMap).filter(
+    (d) => offDayMap[d] && ["Present", "Late"].includes(dayMap[d])
+  ).length;
 
   return (
     <Box mt={2} bgcolor="#fff" borderRadius="25px" p={3}>
@@ -106,9 +112,13 @@ const DetailCalendarTab = ({ dailyRecords = [], initialMonth, initialYear }) => 
         {cells.map((day, idx) => {
           const isOverflow = day && typeof day === "object";
           const dayNum     = isOverflow ? day.overflow : day;
-          const weekend    = isWeekend(idx);
-          const status     = !isOverflow && day && !weekend ? dayMap[day] || null : null;
-          const style      = status ? STATUS_STYLES[status] : null;
+
+          // The record's own status is authoritative. Previously weekend
+          // cells were forced blank, so a Saturday someone actually worked
+          // showed as an empty grey box.
+          const status = !isOverflow && day ? dayMap[day] || null : null;
+          const style  = status ? STATUS_STYLES[status] : null;
+          const offDay = !isOverflow && day ? !!offDayMap[day] : false;
 
           const bgColor   = style ? style.bg : "#F1F1F1";
           const textColor = style ? style.color : (isOverflow || !day) ? "#D0D0D0" : "#000";
@@ -120,6 +130,9 @@ const DetailCalendarTab = ({ dailyRecords = [], initialMonth, initialYear }) => 
                 height: 50, borderRadius: "10px",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 backgroundColor: bgColor,
+                // Non-working day that was worked gets an outline so it reads
+                // as overtime rather than a normal attendance day.
+                border: offDay && style ? "2px solid #F97316" : "none",
               }}
             >
               <Typography fontSize="13px" fontWeight={600} color={textColor}>
@@ -138,19 +151,24 @@ const DetailCalendarTab = ({ dailyRecords = [], initialMonth, initialYear }) => 
             <Typography fontSize="12px" color="text.secondary">{item.label}</Typography>
           </Box>
         ))}
+        <Box display="flex" alignItems="center" gap={0.75}>
+          <Box sx={{ width: 10, height: 10, borderRadius: "3px", border: "2px solid #F97316" }} />
+          <Typography fontSize="12px" color="text.secondary">Worked on a non-working day</Typography>
+        </Box>
       </Box>
 
       {/* Summary counts */}
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1.5, mt: 2.5 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 1.5, mt: 2.5 }}>
         {[
-          { label: "Present", value: counts.Present, bg: "#F5F5F5",   color: "#000"    },
-          { label: "Late",    value: counts.Late,    bg: "#1000A31A", color: "#1000A3" },
-          { label: "Absent",  value: counts.Absent,  bg: "#FF00041A", color: "#FF0004" },
-          { label: "Leave",   value: counts.Leave,   bg: "#48B5041A", color: "#48B504" },
+          { label: "Present",  value: counts.Present, bg: "#F5F5F5",   color: "#000"    },
+          { label: "Late",     value: counts.Late,    bg: "#1000A31A", color: "#1000A3" },
+          { label: "Absent",   value: counts.Absent,  bg: "#FF00041A", color: "#FF0004" },
+          { label: "Leave",    value: counts.Leave,   bg: "#48B5041A", color: "#48B504" },
+          { label: "Off-Day Worked", value: offDayWorked, bg: "#F973161A", color: "#F97316" },
         ].map((item) => (
           <Box key={item.label} sx={{ backgroundColor: item.bg, borderRadius: "12px", py: 1.5, display: "flex", flexDirection: "column", alignItems: "center", gap: 0.25 }}>
             <Typography fontSize="20px" fontWeight={700} color={item.color}>{item.value}</Typography>
-            <Typography fontSize="11px" color="text.secondary">{item.label}</Typography>
+            <Typography fontSize="11px" color="text.secondary" textAlign="center">{item.label}</Typography>
           </Box>
         ))}
       </Box>

@@ -66,15 +66,12 @@ const WorkingHoursTab = () => {
     if (errors.workingDays) setErrors((prev) => ({ ...prev, workingDays: "" }));
   };
 
-  // ── Auto-calculated Daily Work Hours = (End - Start) - Break ─────────────
-  // Single source of truth — Start/End/Break are the real inputs, this is
-  // always derived from them so it can never go out of sync.
   const shiftHoursRaw = (() => {
-    if (!formData.startTime?.isValid?.() || !formData.endTime?.isValid?.()) return null;
-    let diffMins = formData.endTime.diff(formData.startTime, "minute");
-    if (diffMins < 0) diffMins += 24 * 60;  // handle overnight shifts gracefully
-    return diffMins / 60;
-  })();
+  if (!formData.startTime?.isValid?.() || !formData.endTime?.isValid?.()) return null;
+  const diffMins = formData.endTime.diff(formData.startTime, "minute");
+  if (diffMins <= 0) return null;          // was: if (diffMins < 0) diffMins += 24*60
+  return diffMins / 60;
+})();
 
   const breakHoursNum = parseFloat(formData.breakHours) || 0;
   const dailyWorkHours = shiftHoursRaw != null ? Math.max(0, shiftHoursRaw - breakHoursNum) : null;
@@ -88,12 +85,12 @@ const WorkingHoursTab = () => {
     if (!formData.endTime?.isValid?.()) {
       e.endTime = "End time is required.";
     }
-    if (
-      formData.startTime?.isValid?.() && formData.endTime?.isValid?.() &&
-      formData.startTime.isSame(formData.endTime)
-    ) {
-      e.endTime = "End time cannot be the same as start time.";
-    }
+   if (
+  formData.startTime?.isValid?.() && formData.endTime?.isValid?.() &&
+  formData.endTime.diff(formData.startTime, "minute") <= 0
+) {
+  e.endTime = "End time must be after start time.";  
+}
 
     if (!formData.workingDays.length) {
       e.workingDays = "Select at least one working day.";

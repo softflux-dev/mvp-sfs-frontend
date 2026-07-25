@@ -3,12 +3,12 @@ import { Box, Typography, Chip, CircularProgress } from "@mui/material";
 import { useMonthlyCalendar } from "../../../hooks/employeeAttendance";
 
 const DAY_STATUS_CONFIG = {
-  Present: { bg: "#04C3731A", color: "#04C373" },
-  Absent:  { bg: "#FF00001A", color: "#FF0000" },
-  Late:    { bg: "#F973161A", color: "#F97316" },
-  Leave:   { bg: "#2B6EFF1A", color: "#2B6EFF" },
-  Holiday: { bg: "#AA24931A", color: "#AA2493" },
-  Weekend: { bg: "#F5F5F5",   color: "#9CA3AF" },
+  Present:   { bg: "#04C3731A", color: "#04C373" },
+  Absent:    { bg: "#FF00001A", color: "#FF0000" },
+  Late:      { bg: "#F973161A", color: "#F97316" },
+  Leave:     { bg: "#2B6EFF1A", color: "#2B6EFF" },
+  Holiday:   { bg: "#AA24931A", color: "#AA2493" },
+  "Off Day": { bg: "#F5F5F5",   color: "#9CA3AF" },
 };
 
 const LegendDot = ({ color, label }) => (
@@ -21,7 +21,10 @@ const LegendDot = ({ color, label }) => (
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
-  const { dayMap, loading } = useMonthlyCalendar(selectedMonth, selectedYear);
+  // offDays comes from Settings → Working Days via the backend, so the grid
+  // no longer assumes Sat/Sun. A day with a real record always wins over the
+  // off-day label — that's how weekend work stays visible.
+  const { dayMap, offDays = [], loading } = useMonthlyCalendar(selectedMonth, selectedYear);
 
   const year      = selectedYear;
   const month     = selectedMonth;
@@ -30,7 +33,6 @@ const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
   const firstDay    = new Date(year, month, 1).getDay();
   const startOffset = (firstDay + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const isWeekend   = (idx) => { const c = idx % 7; return c === 5 || c === 6; };
 
   const cells = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);
@@ -61,8 +63,12 @@ const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
           {/* Calendar grid */}
           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", border: "1px solid #F0F0F0", borderRadius: "12px", overflow: "hidden" }}>
             {cells.map((day, idx) => {
-              const status = day ? (isWeekend(idx) ? "Weekend" : dayMap[day] || null) : null;
-              const cfg    = status ? DAY_STATUS_CONFIG[status] : null;
+              // Real record first, off-day label only as a fallback — so a
+              // Saturday that was actually worked shows "Present", not "Off Day".
+              const status = day
+                ? (dayMap[day] || (offDays.includes(day) ? "Off Day" : null))
+                : null;
+              const cfg = status ? DAY_STATUS_CONFIG[status] : null;
               return (
                 <Box key={idx} sx={{
                   minHeight: { xs: "70px", md: "90px" }, p: 1,
@@ -94,7 +100,7 @@ const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
             <LegendDot color="#F97316" label="Late"    />
             <LegendDot color="#2B6EFF" label="Leave"   />
             <LegendDot color="#AA2493" label="Holiday" />
-            <LegendDot color="#9CA3AF" label="Weekend" />
+            <LegendDot color="#9CA3AF" label="Off Day" />
           </Box>
         </>
       )}

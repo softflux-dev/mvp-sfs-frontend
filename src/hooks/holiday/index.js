@@ -1,4 +1,4 @@
-// src/hooks/holiday.js — NEW FILE
+// src/hooks/holiday.js
 import { useState, useCallback, useEffect } from "react";
 import {
   getHolidaysApi,
@@ -7,10 +7,12 @@ import {
   deleteHolidayApi,
 } from "../../api/modules/holiday";
 
+// `payType` removed — the Holiday schema has no such field, so Mongoose
+// silently dropped it and the filter never matched anything. Every holiday
+// is paid.
 const defaultFilters = {
   search:  "",
   type:    "",
-  payType: "",
   year:    "",
   page:    1,
   limit:   10,
@@ -29,12 +31,11 @@ export const useHoliday = () => {
     setError("");
     try {
       const params = {
-        page:    customParams.page    ?? filters.page,
-        limit:   customParams.limit   ?? filters.limit,
-        search:  customParams.search  ?? filters.search,
-        type:    customParams.type    ?? filters.type,
-        payType: customParams.payType ?? filters.payType,
-        year:    customParams.year    ?? filters.year,
+        page:   customParams.page   ?? filters.page,
+        limit:  customParams.limit  ?? filters.limit,
+        search: customParams.search ?? filters.search,
+        type:   customParams.type   ?? filters.type,
+        year:   customParams.year   ?? filters.year,
       };
       Object.keys(params).forEach((k) => {
         if (params[k] === "" || params[k] == null) delete params[k];

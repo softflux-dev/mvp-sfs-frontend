@@ -46,6 +46,7 @@ const INITIAL_FORM = {
   address:        "",
   website:        "",
   currency:       "USD",
+  otMultiplier: 1,
   phoneCountries: [],
   phones:         [],
   logoFile:       null,
@@ -53,6 +54,14 @@ const INITIAL_FORM = {
   bannerFile:     null,
   bannerPreview:  "",
 };
+
+const OT_MULTIPLIER_OPTIONS = [
+  { value: 1,    label: "1.0x — Standard pay, no premium"  },
+  { value: 1.25, label: "1.25x — Quarter premium"          },
+  { value: 1.5,  label: "1.5x — Standard overtime premium" },
+  { value: 1.75, label: "1.75x — High premium"             },
+  { value: 2,    label: "2.0x — Double time"               },
+];
 
 const resolveLogoUrl = (logoUrl) => logoUrl || "";
 
@@ -82,6 +91,7 @@ const CompanyProfileTab = () => {
         address:        profile.address        || "",
         website:        profile.website        || "",
         currency:       profile.currency       || "USD",
+        otMultiplier: profile.otMultiplier ?? 1,
         phoneCountries: profile.phoneCountries || [],
         phones:         (profile.phones || []).map((p) => ({
           label:          p.label          || "",
@@ -555,6 +565,23 @@ const handleFormatsChange = (next) => {
               Applied to all amounts across the system — reports, payroll, invoices and emails.
             </Typography>
           </Grid>
+
+          <Grid size={{ xs: 12, md: 6 }}>
+              <CustomInputLabel label="Overtime Multiplier *" />
+              <CustomSelect
+                value={formData.otMultiplier}
+                onChange={handleChange("otMultiplier")}
+                fullWidth height="45px" inputBgColor="#F5F5F5"
+              >
+                {OT_MULTIPLIER_OPTIONS.map((o) => (
+                  <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
+                ))}
+              </CustomSelect>
+              <Typography fontSize="11px" color="text.secondary" mt={0.5}>
+                Applied to extra hours worked beyond required hours. Extra hours first
+                cover any shortfall; only the remainder is paid at this rate.
+              </Typography>
+            </Grid>
 
           {/* ── Phone Number Format — the actual setting ───────────────── */}
           <Grid size={{ xs: 12, md: 6 }}>

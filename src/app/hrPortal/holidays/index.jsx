@@ -55,7 +55,7 @@ const HolidayManagement = () => {
   const handleDeleteClick = (row) => {
     confirmDialogRef.current?.open({
       title:       "Delete Holiday?",
-      description: `"${row.name}" will be permanently removed. This may affect attendance/payroll calculations for the dates it covers.`,
+      description: `"${row.name}" will be permanently removed. Payroll for any month it covers will recalculate with one more required working day per employee.`,
       confirmText: "Yes, Delete",
       cancelText:  "Cancel",
       onConfirm: async () => {
@@ -120,6 +120,16 @@ const HolidayManagement = () => {
         </Grid>
       </Grid>
 
+      {/* ── Payroll dependency notice ─────────────────────────────────── */}
+      <Box mb={2} px={2} py={1.5} sx={{ backgroundColor: "#F0F9FF", borderRadius: "10px", border: "1px solid #BAE6FD" }}>
+        <Typography fontSize={12} color="#0369A1">
+          All holidays are paid. A holiday falling on a configured working day
+          reduces every employee's required hours for that month — make sure this
+          list is complete before generating payroll. Holidays on non-working
+          days are ignored.
+        </Typography>
+      </Box>
+
       {/* Error banner */}
       {(error || apiError) && (
         <Box mb={2} px={2} py={1.5} sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}>
@@ -127,15 +137,14 @@ const HolidayManagement = () => {
         </Box>
       )}
 
-      {/* Filter */}
+      {/* Filter — payType removed, the Holiday schema has no such field */}
       <Filter
         mode="holidays"
         onFilterChange={(filterValues) => {
           handleFilterChange({
-            search:  filterValues.search  || "",
-            type:    filterValues.type    || "",
-            payType: filterValues.payType || "",
-            year:    filterValues.year    || "",
+            search: filterValues.search || "",
+            type:   filterValues.type   || "",
+            year:   filterValues.year   || "",
           });
         }}
       />
