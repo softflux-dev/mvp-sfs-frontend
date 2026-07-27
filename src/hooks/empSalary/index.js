@@ -3,9 +3,10 @@ import { useState, useCallback, useEffect } from "react";
 import { getMyPayslipsApi } from "../../api/modules/empSalary";
 
 export const useMyPayslips = (year) => {
-  const [payslips,  setPayslips]  = useState([]);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState("");
+  const [payslips, setPayslips] = useState([]);
+  const [company,  setCompany]  = useState({ companyName: "", logoUrl: "" });
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
 
   const fetchPayslips = useCallback(async (yr) => {
     setLoading(true);
@@ -14,6 +15,7 @@ export const useMyPayslips = (year) => {
       const res = await getMyPayslipsApi({ year: yr || year });
       if (res?.status === 200 || res?.status === 201) {
         setPayslips(res.data.data.payslips || []);
+        if (res.data.data.company) setCompany(res.data.data.company);
         return { success: true };
       }
       const msg = res?.data?.message || "Failed to fetch salary data.";
@@ -30,5 +32,5 @@ export const useMyPayslips = (year) => {
 
   useEffect(() => { fetchPayslips(year); }, [year]);
 
-  return { payslips, loading, error, fetchPayslips };
+  return { payslips, company, loading, error, fetchPayslips };
 };

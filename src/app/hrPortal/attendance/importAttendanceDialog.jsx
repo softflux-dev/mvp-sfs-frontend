@@ -120,6 +120,17 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
       setError("Please select a file to import.");
       return;
     }
+     // ── Guard: can't import a month that hasn't happened yet ──────────────
+  const now = new Date();
+  const selectedYM = yearDate.year() * 12 + month;
+  const currentYM  = now.getFullYear() * 12 + now.getMonth();
+  if (selectedYM > currentYM) {
+    setError(
+      `You can't import attendance for ${MONTHS[month]} ${yearDate.year()} — it's a future month. ` +
+      `Attendance can only be imported for the current or a past month.`
+    );
+    return;
+  }
 
     setParsing(true);
     setError("");

@@ -1,5 +1,5 @@
-// src/app/employeePortal/salary/index.jsx — 
-import { useState } from "react";
+// src/app/employeePortal/salary/index.jsx —
+import { useState, useRef, useEffect } from "react";
 import { Box, Grid, Typography, CircularProgress } from "@mui/material";
 import jsPDF     from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -16,6 +16,15 @@ import ExportIcon    from "../../../assets/icons/download-icon-white.svg";
 import DownloadIcon  from "../../../assets/icons/download.svg";
 import ViewIcon      from "../../../assets/icons/view.svg";
 import { useFormatCurrency, formatCurrencyForPdf } from "../../../utils/formatCurrency";
+
+import PayslipTemplate from "../../hrPortal/payroll/payslipTemplate";
+import { getLogo, captureToPdfBase64 } from "../../hrPortal/payroll/viewPayslipDialog";
+import { createReportDoc, addReportTable, savePdf } from "../../../utils/reportPdfExport";
+
+const MONTH_INDEX = {
+  January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+  July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
+};
 
 const tableHeader = [
   { id: "checkbox",   label: ""            },
@@ -63,7 +72,17 @@ const Salary = () => {
   const [exportSuccess, setExportSuccess] = useState(false);
   const { format } = useFormatCurrency();
 
-  const { payslips, loading, error } = useMyPayslips(selectedYear);
+  const { payslips, company, loading, error } = useMyPayslips(selectedYear);
+
+  // ── Branded per-row PDF ────────────────────────────────────────────────────
+  const [logoDataUrl,  setLogoDataUrl]  = useState("");
+  const [rowToCapture, setRowToCapture] = useState(null);
+  const rowTemplateRef = useRef();
+  const companyName = company?.companyName?.trim() || "Sprintexa";
+
+  useEffect(() => {
+    if (company?.logoUrl) getLogo(company.logoUrl).then(setLogoDataUrl);
+  }, [company?.logoUrl]);
 
   const latestSlip = payslips.length
     ? [...payslips].sort((a, b) => b.monthIndex - a.monthIndex)[0]
@@ -89,15 +108,13 @@ const Salary = () => {
       bonus:        p.bonus,
       deductions:   p.deductions,
       netPay:       p.netPay,
-      // Overtime — the renderer reads extraAmount / extraHours / otMultiplier
       extraHours:   p.extraHours,
       extraAmount:  p.extraAmount,
       otMultiplier: p.otMultiplier,
-      status:       p.status,   // "draft" | "finalized"
+      status:       p.status,
       _raw:         p,
     }));
 
-  // ── Row selection ──────────────────────────────────────────────────────────
   const handleSelectRow = (id) =>
     setSelectedRows((prev) =>
       prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
@@ -113,67 +130,23 @@ const Salary = () => {
     setViewOpen(true);
   };
 
-  // ── Per-row download (single payslip PDF) ─────────────────────────────────
-  const handleDownloadRow = (row) => {
-    const p   = row._raw;
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.setTextColor(170, 36, 147);
-    doc.text(`Payslip — ${row.month}`, 14, 18);
-
-    doc.setFontSize(10);
-    doc.setTextColor(120);
-    doc.text(
-      `Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
-      14, 26
-    );
-
-    const body = [
-      ["Base Working Days",    `${p.baseWorkingDays ?? "—"} days`],
-      ["Paid Holidays / Leave", `${p.paidAbsenceDays ?? 0} days`],
-      ["Required Working Days", String(p.requiredDays   ?? "—")],
-      ["Present Days",          String(p.presentDays    ?? "—")],
-      ["Absent Days",           String(p.absentDays     ?? "—")],
-      ["Leave Days",            String(p.leaveDays      ?? "—")],
-      ["Required Hours",        `${p.requiredHours  ?? 0} hrs`],
-      ["Actual Hours Worked",   `${p.actualHours    ?? 0} hrs`],
-    ];
-
-    if ((p.extraHours || 0) > 0) {
-      body.push([
-        "Extra Hours (Paid)",
-        `${p.extraHours} hrs × ${p.otMultiplier ?? 1}x — ${formatCurrencyForPdf(p.extraAmount || 0, { decimals: 0 })}`,
-      ]);
-    } else {
-      body.push(["Shortfall Hours", `${p.shortfallHours ?? 0} hrs`]);
+  // ── Per-row download — now uses the branded PayslipTemplate ───────────────
+  const handleDownloadRow = async (row) => {
+    setRowToCapture(row._raw);
+    // wait one tick for the hidden template to paint
+    await new Promise((r) => setTimeout(r, 300));
+    if (!rowTemplateRef.current) { setRowToCapture(null); return; }
+    try {
+      const base64 = await captureToPdfBase64(rowTemplateRef.current);
+      const link = document.createElement("a");
+      link.href = `data:application/pdf;base64,${base64}`;
+      link.download = `payslip-${row._raw.month}-${row._raw.year}.pdf`;
+      link.click();
+    } catch (err) {
+      console.error("Download failed:", err);
+    } finally {
+      setRowToCapture(null);
     }
-
-    // Spell out the rate denominator — it's the first thing anyone questions.
-    body.push([
-      "Hourly Rate",
-      `${formatCurrencyForPdf(p.hourlyRate || 0)}/hr` +
-        (p.rateBasisHours ? ` (salary ÷ ${p.rateBasisHours} hrs)` : ""),
-    ]);
-
-    body.push(["Base Monthly Salary", formatCurrencyForPdf(p.baseSalary || 0, { decimals: 0 })]);
-    body.push(["Bonus",               formatCurrencyForPdf(p.bonus      || 0, { decimals: 0 })]);
-    if ((p.extraAmount || 0) > 0) {
-      body.push(["Overtime Pay",      formatCurrencyForPdf(p.extraAmount, { decimals: 0 })]);
-    }
-    body.push(["Deductions",          formatCurrencyForPdf(p.deductions || 0, { decimals: 0 })]);
-    body.push(["Net Pay",             formatCurrencyForPdf(p.netPay     || 0, { decimals: 0 })]);
-
-    autoTable(doc, {
-      startY: 32,
-      body,
-      columnStyles: { 0: { fontStyle: "bold", cellWidth: 90 }, 1: { halign: "right" } },
-      bodyStyles:   { fontSize: 9 },
-      styles:       { cellPadding: 4 },
-      theme:        "striped",
-    });
-
-    doc.save(`payslip-${p.month}-${p.year}.pdf`);
   };
 
   const handleFilterChange = (f) => {
@@ -185,78 +158,66 @@ const Salary = () => {
 
   const fmt = (n) => format(n, { decimals: 0 });
 
-  // ── Bulk export PDF (selected rows, or all if none selected) ──────────────
-  const handleExportPDF = () => {
-    const toExport = selectedRows.length
-      ? tableData.filter((r) => selectedRows.includes(r.id))
-      : tableData;
-    if (!toExport.length) return;
+  
+const handleExportPDF = async () => {
+  const toExport = selectedRows.length
+    ? tableData.filter((r) => selectedRows.includes(r.id))
+    : tableData;
+  if (!toExport.length) return;
 
-    const doc = new jsPDF();
-
-    doc.setFontSize(16);
-    doc.setTextColor(170, 36, 147);
-    doc.text(`Salary Summary — ${selectedYear}`, 14, 18);
-
-    doc.setFontSize(10);
-    doc.setTextColor(120);
-    doc.text(
-      `Generated: ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
-      14, 26
-    );
-
-    autoTable(doc, {
-      startY: 32,
-      head: [["Month", "Base Salary", "Bonus", "Overtime", "Deductions", "Net Pay", "Status"]],
-      body: toExport.map((r) => [
-        r.month,
-        formatCurrencyForPdf(r.baseSalary  || 0, { decimals: 0 }),
-        formatCurrencyForPdf(r.bonus       || 0, { decimals: 0 }),
-        formatCurrencyForPdf(r.extraAmount || 0, { decimals: 0 }),
-        formatCurrencyForPdf(r.deductions  || 0, { decimals: 0 }),
-        formatCurrencyForPdf(r.netPay      || 0, { decimals: 0 }),
-        r.status || "—",
-      ]),
-      headStyles:         { fillColor: [170, 36, 147], textColor: 255, fontStyle: "bold", fontSize: 9 },
-      bodyStyles:         { fontSize: 8 },
-      alternateRowStyles: { fillColor: [250, 245, 255] },
-      styles:             { cellPadding: 3 },
-    });
-
-    const finalY = doc.lastAutoTable.finalY + 6;
-    doc.setFontSize(10);
-    doc.setTextColor(170, 36, 147);
-    doc.text(
-      `Total Net Pay: ${formatCurrencyForPdf(toExport.reduce((s, r) => s + (r.netPay || 0), 0), { decimals: 0 })}`,
-      14, finalY
-    );
-
-    doc.save(`salary-${selectedYear}.pdf`);
-    setExportSuccess(true);
+  const branding = {
+    logoUrl:     company?.logoUrl     || "",
+    companyName: company?.companyName || "",
   };
+
+  const doc = await createReportDoc(
+    "Salary Summary Report",
+    String(selectedYear),          // period label → shows "· 2026" in the header
+    branding
+  );
+
+  const finalY = addReportTable(doc, {
+    head: ["Month", "Base Salary", "Bonus", "Overtime", "Deductions", "Net Pay", "Status"],
+    body: toExport.map((r) => [
+      r.month,
+      formatCurrencyForPdf(r.baseSalary  || 0, { decimals: 0 }),
+      formatCurrencyForPdf(r.bonus       || 0, { decimals: 0 }),
+      formatCurrencyForPdf(r.extraAmount || 0, { decimals: 0 }),
+      formatCurrencyForPdf(r.deductions  || 0, { decimals: 0 }),
+      formatCurrencyForPdf(r.netPay      || 0, { decimals: 0 }),
+      r.status || "—",
+    ]),
+    startY: 44,
+    companyName: branding.companyName,
+  });
+
+  // Total net pay line under the table (brand pink), matching your old export
+  doc.setFontSize(10);
+  doc.setTextColor(170, 36, 147);
+  doc.text(
+    `Total Net Pay: ${formatCurrencyForPdf(
+      toExport.reduce((s, r) => s + (r.netPay || 0), 0),
+      { decimals: 0 }
+    )}`,
+    14, finalY + 8
+  );
+
+  savePdf(doc, `salary-${selectedYear}.pdf`);
+  setExportSuccess(true);
+};
 
   return (
     <>
-      {/* ── Header ────────────────────────────────────────────────────────── */}
       <Grid container spacing={2} mb={3} alignItems="center">
         <Grid size={{ xs: 12, md: 8 }}>
-          <HeaderText
-            title="My Salary"
-            subtitle="View your payslips and salary history"
-          />
+          <HeaderText title="My Salary" subtitle="View your payslips and salary history" />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <Box display="flex" justifyContent="flex-end">
             <CustomButton
-              btnLabel={
-                selectedRows.length > 0
-                  ? `Export (${selectedRows.length})`
-                  : "Export PDF"
-              }
+              btnLabel={selectedRows.length > 0 ? `Export (${selectedRows.length})` : "Export PDF"}
               variant="gradient"
-              startIcon={
-                <img src={ExportIcon} alt="export" style={{ width: 15, height: 15 }} />
-              }
+              startIcon={<img src={ExportIcon} alt="export" style={{ width: 15, height: 15 }} />}
               handlePressBtn={handleExportPDF}
               isDisabled={!payslips.length || loading}
             />
@@ -264,35 +225,28 @@ const Salary = () => {
         </Grid>
       </Grid>
 
-      {/* ── Year filter ───────────────────────────────────────────────────── */}
       <Filter
         mode="salary_history"
         onFilterChange={handleFilterChange}
         defaultValues={{ year: new Date(selectedYear, 0, 1) }}
       />
 
-      {/* ── Error ─────────────────────────────────────────────────────────── */}
       {error && (
         <Box mt={2} px={2} py={1.5}
-          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
-        >
+          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}>
           <Typography fontSize={13} color="error">{error}</Typography>
         </Box>
       )}
 
-      {/* ── Loading ───────────────────────────────────────────────────────── */}
       {loading && (
         <Box display="flex" justifyContent="center" py={8}>
           <CircularProgress size={32} sx={{ color: "#AA2493" }} />
         </Box>
       )}
 
-      {/* ── Empty ─────────────────────────────────────────────────────────── */}
       {!loading && !error && payslips.length === 0 && (
-        <Box
-          display="flex" flexDirection="column" alignItems="center"
-          justifyContent="center" mt={2} py={10} bgcolor="#fff" borderRadius="25px"
-        >
+        <Box display="flex" flexDirection="column" alignItems="center"
+          justifyContent="center" mt={2} py={10} bgcolor="#fff" borderRadius="25px">
           <Typography fontSize="32px" mb={1}>💰</Typography>
           <Typography fontSize="15px" fontWeight={600} color="text.primary" mb={0.5}>
             No payroll data for {selectedYear}
@@ -303,10 +257,8 @@ const Salary = () => {
         </Box>
       )}
 
-      {/* ── Content ───────────────────────────────────────────────────────── */}
       {!loading && payslips.length > 0 && (
         <>
-          {/* Stat cards */}
           <Grid container spacing={2} mt={1} mb={2}>
             {[
               {
@@ -316,11 +268,7 @@ const Salary = () => {
                 accent: "#AA2493",
                 bg:     "#FDF4FF",
               },
-              {
-                label:  "Base Salary",
-                value:  fmt(latestSlip?.baseSalary),
-                sub:    "Monthly gross",
-              },
+              { label: "Base Salary", value: fmt(latestSlip?.baseSalary), sub: "Monthly gross" },
               {
                 label:  "Bonus",
                 value:  fmt(latestSlip?.bonus),
@@ -338,9 +286,7 @@ const Salary = () => {
               {
                 label:  "Deductions",
                 value:  fmt(latestSlip?.deductions),
-                sub:    latestSlip?.deductions > 0
-                  ? `${latestSlip?.shortfallHours}h shortfall`
-                  : "No deductions",
+                sub:    latestSlip?.deductions > 0 ? `${latestSlip?.shortfallHours}h shortfall` : "No deductions",
                 accent: latestSlip?.deductions > 0 ? "#FF3B30" : "text.secondary",
               },
               {
@@ -356,7 +302,6 @@ const Salary = () => {
             ))}
           </Grid>
 
-          {/* Table */}
           <Box bgcolor="#fff" borderRadius="25px" p={1}>
             <PaginatedTable
               tableHeader={tableHeader}
@@ -379,6 +324,7 @@ const Salary = () => {
         open={viewOpen}
         onClose={() => { setViewOpen(false); setSelectedSlip(null); }}
         payslip={selectedSlip}
+        company={company}
       />
 
       <SuccessPopup
@@ -392,6 +338,21 @@ const Salary = () => {
         autoClose
         autoCloseDelay={2000}
       />
+
+      {/* Hidden branded template for per-row download */}
+      {rowToCapture && (
+        <Box sx={{ position: "fixed", top: "-9999px", left: "-9999px", zIndex: -1 }}>
+          <Box ref={rowTemplateRef}>
+            <PayslipTemplate
+              payroll={rowToCapture}
+              month={MONTH_INDEX[rowToCapture.month] ?? 0}
+              year={rowToCapture.year}
+              logoDataUrl={logoDataUrl}
+              companyName={companyName}
+            />
+          </Box>
+        </Box>
+      )}
     </>
   );
 };

@@ -31,6 +31,14 @@ const ROLE_ROUTE_MAP = {
   PROJECT_MANAGER: { routes: PM_ROUTES,   label: "Project Manager Portal"  },
   EMPLOYEE:        { routes: EMP_ROUTES,  label: "Employee Portal"         },
 };
+
+// Each role's dashboard landing path — where the logo click should go.
+const ROLE_HOME = {
+  ADMIN:           "/",
+  HR:              "/hr-dashboard",
+  PROJECT_MANAGER: "/dashboard",
+  EMPLOYEE:        "/employee-dashboard",
+};
 const ALL_ROUTES = [
   ...ADMIN_ROUTES,
   ...HR_ROUTES,
@@ -43,6 +51,7 @@ export default function Drawer({ drawerOpen, handleNavigation, toggleDrawer }) {
   const location  = useLocation();
   const { user }  = useUserStore();
   const theme     = useTheme();
+  const homePath = ROLE_HOME[user?.role] || "/";
   const isMobileOrTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   const [openSubmenu, setOpenSubmenu] = React.useState({});
@@ -51,8 +60,10 @@ export default function Drawer({ drawerOpen, handleNavigation, toggleDrawer }) {
     setOpenSubmenu((prev) => ({ ...prev, [routeId]: !prev[routeId] }));
   };
 
-  const isRouteActive = (path) => location.pathname === path;
-
+  const isRouteActive = (path) => {
+  if (path === "/") return location.pathname === "/";
+  return location.pathname === path || location.pathname.startsWith(path + "/");
+};
 const isAdmin = false;
 
   // ── Build the set of allowed paths from user.rolePages ──────────────────
@@ -250,7 +261,12 @@ const visibleRoutes = React.useMemo(() => {
         }}>
           <img
             src={logo} alt="logo"
-            style={{ width: drawerOpen ? "120px" : "40px", transition: "0.3s" }}
+            onClick={() => handleNavigation(homePath)}
+            style={{
+              width: drawerOpen ? "120px" : "40px",
+              transition: "0.3s",
+              cursor: "pointer",
+            }}
           />
           {isMobileOrTablet && (
             <IconButton onClick={toggleDrawer}><CloseIcon /></IconButton>

@@ -327,13 +327,23 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
                   <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
                     <Box display="flex" alignItems="center" gap={1}>
                       <Avatar src={c.authorAvatar || c.author?.avatar || ""}
-                        sx={{ width: 32, height: 32, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600 }}
+                        sx={{ width: 32, height: 32, fontSize: "13px", fontWeight: 600 }}
                       >
                         {(c.authorName || c.author?.name || "?").charAt(0).toUpperCase()}
                       </Avatar>
-                      <Typography fontSize="13px" fontWeight={600} color="text.primary">
+                     <Typography fontSize="13px" fontWeight={600} color="text.primary">
                         {c.authorName || c.author?.name || c.author}
                       </Typography>
+                      {(c.authorRole || c.author?.role) && (
+                        <Typography
+                          component="span"
+                          fontSize="11px"
+                          fontWeight={600}
+                          sx={{ backgroundColor: "#F0E8FA", color: "#AA2493", px: 1, py: 0.25, borderRadius: "8px", lineHeight: 1.6 }}
+                        >
+                          {c.authorRole || c.author?.role}
+                        </Typography>
+                      )}
                     </Box>
                     <Typography fontSize="11px" color="text.secondary">
                       {c.createdAt ? new Date(c.createdAt).toLocaleString() : c.date}

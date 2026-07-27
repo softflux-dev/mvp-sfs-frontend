@@ -1,5 +1,5 @@
 // app/auth/login/otpDialog.jsx — 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box, Typography, Dialog, DialogContent,
   Link, CircularProgress, IconButton,
@@ -7,8 +7,29 @@ import {
 import { X } from "lucide-react";
 import CustomButton from "../../../components/customButton";
 
+// OTP lifetime in seconds — keep this in sync with the backend
+// (generateAndSendOTP: Date.now() + 2 * 60 * 1000).
+const OTP_TTL_SECONDS = 2 * 60;
+
 const OtpDialog = ({ open, onClose, onVerify, apiError = "", loading = false, onResend }) => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [secondsLeft, setSecondsLeft] = useState(OTP_TTL_SECONDS);
+
+  // ── Countdown timer ───────────────────────────────────────────────────────
+  // Restart the countdown whenever the dialog opens. While open, tick down
+  // once a second and stop at 0.
+  useEffect(() => {
+    if (!open) return;
+    setSecondsLeft(OTP_TTL_SECONDS);
+    const id = setInterval(() => {
+      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [open]);
+
+  const isExpired = secondsLeft <= 0;
+  const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+  const ss = String(secondsLeft % 60).padStart(2, "0");
 
   const handleChange = (index, value) => {
     if (!/^\d?$/.test(value)) return;
@@ -33,6 +54,12 @@ const OtpDialog = ({ open, onClose, onVerify, apiError = "", loading = false, on
 
   const handleVerify = () => {
     onVerify(otp.join(""));
+  };
+
+  const handleResend = () => {
+    setOtp(["", "", "", "", "", ""]);
+    setSecondsLeft(OTP_TTL_SECONDS);  // restart the countdown on resend
+    onResend?.();
   };
 
   const handleClose = () => {
@@ -94,6 +121,26 @@ const OtpDialog = ({ open, onClose, onVerify, apiError = "", loading = false, on
           ))}
         </Box>
 
+        {/* ── Countdown timer ─────────────────────────────────────────────── */}
+        <Box textAlign="center" mb={2}>
+          {isExpired ? (
+            <Typography fontSize={13} color="error" fontWeight={500}
+              sx={{ fontFamily: '"Poppins", sans-serif' }}
+            >
+              Code expired — please resend.
+            </Typography>
+          ) : (
+            <Typography fontSize={13} color="text.secondary"
+              sx={{ fontFamily: '"Poppins", sans-serif' }}
+            >
+              Code expires in{" "}
+              <Box component="span" sx={{ color: "#AA2493", fontWeight: 600 }}>
+                {mm}:{ss}
+              </Box>
+            </Typography>
+          )}
+        </Box>
+
         {/* API error */}
         {apiError && (
           <Box mb={2} px={2} py={1}
@@ -105,7 +152,7 @@ const OtpDialog = ({ open, onClose, onVerify, apiError = "", loading = false, on
 
         <Box textAlign="center" mb={3}>
           <Link component="button" fontSize="13px" color="text.secondary"
-            underline="hover" onClick={onResend}
+            underline="hover" onClick={handleResend}
             sx={{ fontFamily: '"Poppins", sans-serif' }}
           >
             Resend Code

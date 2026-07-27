@@ -13,18 +13,24 @@ export const usePayroll = () => {
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [error,         setError]         = useState("");
+
   const [generatedMonths, setGeneratedMonths] = useState(new Set()); // "YYYY-M" keys
+  const [attendanceImported, setAttendanceImported] = useState(null); // null = unknown
 
   // ── Fetch payroll for a specific month/year ────────────────────────────────
-  const fetchPayroll = useCallback(async (month, year) => {
+const fetchPayroll = useCallback(async (month, year) => {
     if (month === undefined || month === null || !year) return;
     setLoading(true);
     setError("");
+    setAttendanceImported(null); // clear previous month's value while we load
     try {
       const response = await getPayrollApi({ month, year });
       if (response?.status === 200 || response?.status === 201) {
         const data = response.data.data.payrolls || [];
         setPayrolls(data);
+        // Whole-month signal — true even before payroll is generated, since
+        // the backend derives it from the Attendance collection directly.
+        setAttendanceImported(!!response.data.data.attendanceImported);
         if (data.length > 0) {
           setGeneratedMonths((prev) => new Set([...prev, `${year}-${month}`]));
         }
@@ -122,16 +128,17 @@ const updatePayroll = useCallback(async (id, payload) => {
   }
 }, []);
 
-  return {
+ return {
     payrolls,
     loading,
     actionLoading,
     error,
     generatedMonths,
+    attendanceImported,
     fetchPayroll,
     generatePayroll,
     isMonthGenerated,
     sendPayslipEmails,
-    updatePayroll, 
+    updatePayroll,
   };
 };

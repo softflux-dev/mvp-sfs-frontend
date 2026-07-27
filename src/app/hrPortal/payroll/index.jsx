@@ -64,7 +64,7 @@ const menuOptions = [
 ];
 
 const PayrollManagement = () => {
-  const { payrolls, loading, actionLoading, error, fetchPayroll, generatePayroll,updatePayroll } = usePayroll();
+ const { payrolls, loading, actionLoading, error, attendanceImported, fetchPayroll, generatePayroll, updatePayroll } = usePayroll();
   const { profile: companyProfile } = useCompanyProfile();
 
   const [selectedDate,    setSelectedDate]    = useState(new Date());
@@ -163,7 +163,7 @@ const PayrollManagement = () => {
     if (result?.data?.length > 0) setHasGenerated(true);
   };
 
-  const handleGenerate = async () => {
+ const runGenerate = async () => {
     setApiError("");
     const result = await generatePayroll(currentMonth, currentYear);
     if (result.success) {
@@ -173,6 +173,28 @@ const PayrollManagement = () => {
     } else {
       setApiError(result.message);
     }
+  };
+
+  const handleGenerate = () => {
+    setApiError("");
+    // Month-wide gate: nothing has been imported for this month at all — the
+    // "everyone is unverified" case. This is warn-and-confirm, NOT a block, so
+    // the intentional "pay in full and flag" path still works; it just becomes
+    // a conscious choice instead of an accidental full-pay month.
+    if (attendanceImported === false) {
+      confirmRef.current?.open({
+        title: "No attendance imported for this month",
+        description:
+          `No attendance records exist for ${MONTH_NAMES[currentMonth]} ${currentYear}. ` +
+          `If you generate now, every employee is paid in full with no deductions and flagged as unverified. ` +
+          `Import the attendance sheet first for accurate figures. Generate anyway?`,
+        confirmText: "Generate Anyway",
+        cancelText:  "Import First",
+        onConfirm:   () => runGenerate(),
+      });
+      return;
+    }
+    runGenerate();
   };
 
   const handleSelectRow = (id) =>
@@ -336,10 +358,25 @@ const PayrollManagement = () => {
           </Box>
         )}
 
+        {/* ── Month-level gate: nothing imported for this month at all.
+            Shows before generation as a "you probably forgot to import"
+            nudge. Distinct from the per-row banner below, which covers the
+            partial case where SOME employees are missing. ──────────────── */}
+        {!loading && attendanceImported === false && (
+          <Box mb={2} px={2.5} py={1.75} sx={{
+            backgroundColor: "#FFF7E6", borderRadius: "12px", border: "1px solid #FFE0A3",
+          }}>
+            <Typography fontSize="13px" color="#B45309" fontWeight={500}>
+              No attendance sheet has been imported for {MONTH_NAMES[currentMonth]} {currentYear}.
+              Generating payroll now will pay everyone in full with no deductions. Import attendance first for accurate figures.
+            </Typography>
+          </Box>
+        )}
+
         {/* ── Unverified rows — no attendance imported for these employees.
             They are paid in full rather than deducted a whole month, so HR
             must know the figure is unchecked. ──────────────────────────── */}
-        {hasGenerated && !loading && unverified.length > 0 && (
+        {hasGenerated && !loading && attendanceImported !== false && unverified.length > 0 && (
           <Box mb={2} px={2.5} py={1.75} sx={{
             backgroundColor: "#FFF7E6", borderRadius: "12px", border: "1px solid #FFE0A3",
           }}>

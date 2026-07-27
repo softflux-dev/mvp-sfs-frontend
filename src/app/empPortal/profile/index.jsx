@@ -65,12 +65,10 @@ const Profile = () => {
     });
   };
 
-  const handleAvatarChange = async (file) => {
-    const fd = new FormData();
-    fd.append("avatar", file);
-    const result = await updateProfile(fd);
-    if (result?.success) syncUserStore(result.profile);
-  };
+const handleAvatarChange = async (file) => {
+  const result = await updateProfile({ avatarFile: file });  
+  if (result?.success) syncUserStore(result.profile);
+};
 
   const handlePersonalSave = async (formData) => {
     const result = await updateProfile(formData);

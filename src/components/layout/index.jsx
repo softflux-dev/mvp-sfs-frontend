@@ -6,7 +6,7 @@ import {
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AppBar from "./appBar";
 import Drawer, { drawerWidth, collapsedWidth } from "./drawer";
 import { useSessionTimeout } from "../../hooks/useSessionTimeout";  // ← adjust path if your hooks folder is elsewhere relative to this file
