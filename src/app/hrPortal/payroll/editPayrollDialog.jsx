@@ -1,4 +1,11 @@
-// src/app/hrPortal/payroll/editPayrollDialog.jsx —
+// src/app/hrPortal/payroll/editPayrollDialog.jsx — Phase 4 fix (Leave Management Enhancement)
+// FIX: the Net Pay preview formula was missing `- unpaidLeaveDeduction`,
+// which the backend's updatePayroll DOES subtract (netSalary = monthlySalary
+// + bonusAmount + extraAmount - deductionAmount - unpaidLeaveDeduction).
+// Whenever an employee had unpaid leave that month, this dialog's preview
+// showed a HIGHER number than what actually got saved. Also surfaced the
+// unpaid leave deduction as read-only info, same treatment as Overtime Pay.
+
 import { useState, useEffect } from "react";
 import { Box, Typography } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
@@ -26,13 +33,16 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, month, year, onSave })
     }
   }, [open, payroll]);
 
-  // Must mirror the backend's netSalary formula exactly, or the preview shown
-  // here disagrees with what actually saves.
+  // Must mirror the backend's netSalary formula EXACTLY, or the preview shown
+  // here disagrees with what actually saves. This was missing the unpaid
+  // leave deduction term — the backend subtracts it, this preview didn't.
+  const unpaidLeaveDeduction = payroll.unpaidLeaveDeduction || 0;
   const netPay =
     (payroll.baseSalary  ?? 0) +
     (payroll.extraAmount ?? 0) +
     (Number(formData.bonus) || 0) -
-    (Number(formData.deductions) || 0);
+    (Number(formData.deductions) || 0) -
+    unpaidLeaveDeduction;
 
   const monthLabel = month !== undefined && year
     ? `${MONTH_NAMES[month] || ""} ${year}`
@@ -102,6 +112,24 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, month, year, onSave })
             </Box>
           )}
 
+          {/* NEW — same treatment as Overtime Pay above: calculated, not
+              editable here (HR can only edit the shortfall "Deductions"
+              field below), but it feeds Net Pay so it must be visible or
+              the math looks wrong. */}
+          {unpaidLeaveDeduction > 0 && (
+            <Box mb={3}>
+              <Typography fontSize="13px" fontWeight={700} color="text.primary">
+                Unpaid Leave Deduction
+              </Typography>
+              <Typography fontSize="13px" color="#DC2626">
+                - {format(unpaidLeaveDeduction, { decimals: 0 })}
+                <Typography component="span" fontSize="11px" color="text.secondary" ml={1}>
+                  {payroll.unpaidLeaveDays || 0} day(s) unpaid leave
+                </Typography>
+              </Typography>
+            </Box>
+          )}
+
           {/* ── Editable fields ──────────────────────────────────────────── */}
           <Box
             sx={{
@@ -129,7 +157,7 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, month, year, onSave })
 
             {/* Deductions */}
             <Box>
-              <CustomInputLabel label="Deductions" />
+              <CustomInputLabel label="Shortfall Deduction" />
               <TextInput
                 placeholder="0"
                 value={formData.deductions}
@@ -139,6 +167,12 @@ const EditPayrollDialog = ({ open, onClose, payroll = {}, month, year, onSave })
                 type="number"
                 inputProps={{ min: 0 }}
               />
+              {unpaidLeaveDeduction > 0 && (
+                <Typography fontSize="11px" color="text.secondary" mt={0.5}>
+                  This is the shortfall-hours deduction only. The unpaid leave
+                  deduction above is applied separately and isn't editable here.
+                </Typography>
+              )}
             </Box>
 
             {/* Reason */}

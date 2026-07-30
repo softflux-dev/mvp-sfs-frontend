@@ -1,4 +1,12 @@
-// src/app/hrPortal/payroll/index.jsx — 
+// src/app/hrPortal/payroll/index.jsx — Phase 4 fix (Leave Management Enhancement)
+// FIX: tableData now passes through unpaidLeaveDays/unpaidLeaveDeduction so
+// ViewPayslipDialog (which reads `row` directly) can show the itemized
+// deduction. Deliberately NOT combined into `deductions` here — that field
+// feeds editPayrollDialog's editable input, and saving a combined value back
+// through updatePayroll would overwrite deductionAmount with a figure that
+// already includes unpaidLeaveDeduction, silently double-counting it on the
+// next payroll view. Combining is only safe on the read-only employee side.
+//
 // Email PDF: renders PayslipTemplate in hidden div, html2canvas captures it.
 // Same template, same UI. One render per employee, then instant capture.
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -98,8 +106,6 @@ const PayrollManagement = () => {
     })();
   }, []);
 
-  // ── Load company logo whenever the company profile's logoUrl changes
-  // (e.g. right after an admin uploads a new one in Settings). ─────────────
   useEffect(() => {
     if (companyProfile?.logoUrl) {
       getLogo(companyProfile.logoUrl).then(setLogoDataUrl);
@@ -121,7 +127,15 @@ const PayrollManagement = () => {
     deductions:      p.deductionAmount,
     netPay:          p.netSalary,
 
-    // ── Derivation, so the payslip can explain every number ──────────────
+    // NEW — additive only. Do NOT fold these into `deductions` above: that
+    // field is what editPayrollDialog pre-fills and saves back verbatim via
+    // updatePayroll(deductionAmount). Combining here would mean saving the
+    // combined figure back as deductionAmount, silently double-counting
+    // unpaidLeaveDeduction (which the backend still applies separately) on
+    // every future view. ViewPayslipDialog reads these as separate fields.
+    unpaidLeaveDays:      p.unpaidLeaveDays      || 0,
+    unpaidLeaveDeduction: p.unpaidLeaveDeduction || 0,
+
     totalCalendarDays: p.totalCalendarDays,
     baseWorkingDays:   p.baseWorkingDays,
     baseWorkingHours:  p.baseWorkingHours,
@@ -177,10 +191,6 @@ const PayrollManagement = () => {
 
   const handleGenerate = () => {
     setApiError("");
-    // Month-wide gate: nothing has been imported for this month at all — the
-    // "everyone is unverified" case. This is warn-and-confirm, NOT a block, so
-    // the intentional "pay in full and flag" path still works; it just becomes
-    // a conscious choice instead of an accidental full-pay month.
     if (attendanceImported === false) {
       confirmRef.current?.open({
         title: "No attendance imported for this month",
@@ -202,7 +212,6 @@ const PayrollManagement = () => {
   const handleSelectAll = () =>
     setSelectedRows((prev) => prev.length === tableData.length ? [] : tableData.map((r) => r.id));
 
-  // ── Send: mount hidden templates → wait for paint → capture → send ─────────
   const sendPayslips = async (rows) => {
     setSending(true);
     setApiError("");
@@ -210,15 +219,12 @@ const PayrollManagement = () => {
       const logo = logoDataUrl || (companyProfile?.logoUrl ? await getLogo(companyProfile.logoUrl) : "");
       setLogoDataUrl(logo);
 
-      // 1. Mount hidden PayslipTemplate for each employee
       setSendProgress(`Rendering ${rows.length} payslip${rows.length > 1 ? "s" : ""}...`);
       captureRefs.current = {};
       setCaptureQueue(rows);
 
-      // 2. Wait for React to paint all templates (one tick is enough after setState)
       await new Promise((r) => setTimeout(r, 500));
 
-      // 3. Capture each rendered template via html2canvas
       setSendProgress(`Capturing PDFs...`);
       const payslips = [];
       for (const row of rows) {
@@ -234,12 +240,10 @@ const PayrollManagement = () => {
         }
       }
 
-      // 4. Unmount hidden templates
       setCaptureQueue([]);
 
       if (!payslips.length) { setApiError("Failed to capture any PDFs."); return; }
 
-      // 5. Send all in one API call — backend responds immediately, emails in background
       setSendProgress(`Sending ${payslips.length} email${payslips.length > 1 ? "s" : ""}...`);
       const res = await sendPayslipWithPdfApi({
         payslips,
@@ -358,10 +362,6 @@ const PayrollManagement = () => {
           </Box>
         )}
 
-        {/* ── Month-level gate: nothing imported for this month at all.
-            Shows before generation as a "you probably forgot to import"
-            nudge. Distinct from the per-row banner below, which covers the
-            partial case where SOME employees are missing. ──────────────── */}
         {!loading && attendanceImported === false && (
           <Box mb={2} px={2.5} py={1.75} sx={{
             backgroundColor: "#FFF7E6", borderRadius: "12px", border: "1px solid #FFE0A3",
@@ -373,9 +373,6 @@ const PayrollManagement = () => {
           </Box>
         )}
 
-        {/* ── Unverified rows — no attendance imported for these employees.
-            They are paid in full rather than deducted a whole month, so HR
-            must know the figure is unchecked. ──────────────────────────── */}
         {hasGenerated && !loading && attendanceImported !== false && unverified.length > 0 && (
           <Box mb={2} px={2.5} py={1.75} sx={{
             backgroundColor: "#FFF7E6", borderRadius: "12px", border: "1px solid #FFE0A3",
@@ -413,7 +410,6 @@ const PayrollManagement = () => {
           </Box>
         )}
 
-        {/* ── Hidden PayslipTemplates for email capture ─────────────────── */}
         {captureQueue.map((row) => (
           <HiddenPayslipCapture
             key={row.id}

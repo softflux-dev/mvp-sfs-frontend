@@ -2,6 +2,7 @@
 import Dashboard from "../app/admin/dashboard";
 import Projects from "../app/admin/projects";
 import ProjectDetail from "../app/admin/projects/projectDetail";
+import ModuleDetail from "../app/admin/projects/projectDetailTabs/moduleDetail";
 import Employees from "../app/admin/employees";
 import EmployeeDetail from "../app/admin/employees/employeeDetail";
 import Performance from "../app/admin/performance";
@@ -11,6 +12,8 @@ import Documents from "../app/admin/documents";
 import Reports from "../app/admin/reports";
 import Integrations from "../app/admin/integration";
 import IntegrationDetail from "../app/admin/integration/integrationDetail";
+import EscalatedLeaves from "../app/admin/leaves";
+
 
 import Settings from "../app/admin/settings";
 
@@ -316,6 +319,28 @@ const ADMIN_ROUTES = [
   path: "/projects/tasks/:id",
   isHideMenu: true,
 },
+{
+  id: 15,
+  nameKey: "Module Detail",
+  component: <ModuleDetail />,
+  exact: "exact",
+  path: "/projects/:projectId/modules/:moduleId",
+  isHideMenu: true,
+},
+{
+  id: 16,
+  nameKey: "Escalated Leaves",
+  component: <EscalatedLeaves />,
+  exact: "exact",
+  path: "/leaves/escalated",
+  activeIcon: (
+    <img src={LeavesActiveIcon} alt="Escalated Leaves" style={{ width: 20, height: 20 }} />
+  ),
+  inActiveIcon: (
+    <img src={LeavesInactiveIcon} alt="Escalated Leaves" style={{ width: 20, height: 20 }} />
+  ),
+  isHideMenu: false,
+},
   
 ]; 
 
@@ -545,7 +570,15 @@ const PM_ROUTES = [
   exact: "exact",
   path: "/pm-projects/:id",
   isHideMenu: true,
-}
+},
+{
+  id: 9,
+  nameKey: "Module Detail",
+  component: <ModuleDetail />,
+  exact: "exact",
+  path: "/pm-projects/:projectId/modules/:moduleId",
+  isHideMenu: true,
+},
 ];
 
 const EMP_ROUTES = [  

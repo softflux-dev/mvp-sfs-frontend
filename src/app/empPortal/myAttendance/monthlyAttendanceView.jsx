@@ -1,14 +1,22 @@
-// src/app/empPortal/myAttendance/monthlyAttendanceView.jsx — 
+// src/app/empPortal/myAttendance/monthlyAttendanceView.jsx — Phase 4 (Leave Management Enhancement)
+// Added: "Leave-Unpaid" status color + legend entry, distinct from paid "Leave".
+
 import { Box, Typography, Chip, CircularProgress } from "@mui/material";
 import { useMonthlyCalendar } from "../../../hooks/employeeAttendance";
 
 const DAY_STATUS_CONFIG = {
-  Present:   { bg: "#04C3731A", color: "#04C373" },
-  Absent:    { bg: "#FF00001A", color: "#FF0000" },
-  Late:      { bg: "#F973161A", color: "#F97316" },
-  Leave:     { bg: "#2B6EFF1A", color: "#2B6EFF" },
-  Holiday:   { bg: "#AA24931A", color: "#AA2493" },
-  "Off Day": { bg: "#F5F5F5",   color: "#9CA3AF" },
+  Present:      { bg: "#04C3731A", color: "#04C373" },
+  Absent:       { bg: "#FF00001A", color: "#FF0000" },
+  Late:         { bg: "#F973161A", color: "#F97316" },
+  Leave:        { bg: "#2B6EFF1A", color: "#2B6EFF" },
+  "Leave-Unpaid": { bg: "#F59E0B1A", color: "#F59E0B" },   // NEW — amber, distinct from paid leave's blue
+  Holiday:      { bg: "#AA24931A", color: "#AA2493" },
+  "Off Day":    { bg: "#F5F5F5",   color: "#9CA3AF" },
+};
+
+// Friendlier chip label for the unpaid variant — the raw enum value reads oddly.
+const DAY_STATUS_LABEL = {
+  "Leave-Unpaid": "Unpaid Leave",
 };
 
 const LegendDot = ({ color, label }) => (
@@ -21,9 +29,6 @@ const LegendDot = ({ color, label }) => (
 const WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
 const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
-  // offDays comes from Settings → Working Days via the backend, so the grid
-  // no longer assumes Sat/Sun. A day with a real record always wins over the
-  // off-day label — that's how weekend work stays visible.
   const { dayMap, offDays = [], loading } = useMonthlyCalendar(selectedMonth, selectedYear);
 
   const year      = selectedYear;
@@ -51,24 +56,17 @@ const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
         </Box>
       ) : (
         <>
-          {/* Weekday headers */}
           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", mb: 1 }}>
             {WEEKDAYS.map((d) => (
-              <Typography key={d} fontSize="11px" fontWeight={600} color="text.secondary" textAlign="center" sx={{ py: 0.5 }}>
-                {d}
-              </Typography>
+              <Typography key={d} fontSize="11px" fontWeight={600} color="text.secondary" textAlign="center" sx={{ py: 0.5 }}>{d}</Typography>
             ))}
           </Box>
 
-          {/* Calendar grid */}
           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", border: "1px solid #F0F0F0", borderRadius: "12px", overflow: "hidden" }}>
             {cells.map((day, idx) => {
-              // Real record first, off-day label only as a fallback — so a
-              // Saturday that was actually worked shows "Present", not "Off Day".
-              const status = day
-                ? (dayMap[day] || (offDays.includes(day) ? "Off Day" : null))
-                : null;
+              const status = day ? (dayMap[day] || (offDays.includes(day) ? "Off Day" : null)) : null;
               const cfg = status ? DAY_STATUS_CONFIG[status] : null;
+              const label = status ? (DAY_STATUS_LABEL[status] || status) : "";
               return (
                 <Box key={idx} sx={{
                   minHeight: { xs: "70px", md: "90px" }, p: 1,
@@ -83,7 +81,7 @@ const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
                       </Typography>
                       {cfg && (
                         <Box sx={{ mt: "28px" }}>
-                          <Chip label={status} size="small" sx={{ height: "20px", fontSize: "10px", fontWeight: 500, borderRadius: "8px", backgroundColor: cfg.bg, color: cfg.color, "& .MuiChip-label": { px: 1 } }} />
+                          <Chip label={label} size="small" sx={{ height: "20px", fontSize: "10px", fontWeight: 500, borderRadius: "8px", backgroundColor: cfg.bg, color: cfg.color, "& .MuiChip-label": { px: 1 } }} />
                         </Box>
                       )}
                     </>
@@ -93,12 +91,12 @@ const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
             })}
           </Box>
 
-          {/* Legend */}
           <Box display="flex" flexWrap="wrap" gap={2} mt={2}>
             <LegendDot color="#04C373" label="Present" />
             <LegendDot color="#FF0000" label="Absent"  />
             <LegendDot color="#F97316" label="Late"    />
-            <LegendDot color="#2B6EFF" label="Leave"   />
+            <LegendDot color="#2B6EFF" label="Leave (Paid)" />
+            <LegendDot color="#F59E0B" label="Leave (Unpaid)" />
             <LegendDot color="#AA2493" label="Holiday" />
             <LegendDot color="#9CA3AF" label="Off Day" />
           </Box>

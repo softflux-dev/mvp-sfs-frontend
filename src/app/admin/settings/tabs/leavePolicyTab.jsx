@@ -1,4 +1,9 @@
-// tabs/leavePolicyTab.jsx — 
+// src/app/admin/settings/tabs/leavePolicyTab.jsx — Phase 0 (Leave Management Enhancement)
+//
+// Added: "Leave Approval Threshold" field (spec §6 / §11). Requests longer than
+// this escalate to Admin before HR can act. 0 disables escalation. Everything
+// else is unchanged from the current tab.
+
 import { useState, useEffect } from "react";
 import { Box, Typography, Grid, CircularProgress } from "@mui/material";
 
@@ -10,17 +15,18 @@ import CustomSwitch     from "../../../../components/switch";
 import { useLeavePolicy } from "../../../../hooks/leavePolicy";
 
 const INITIAL_FORM = {
-  annualLeaveDays:    "12",
-  sickLeaveDays:      "10",
-  casualLeaveDays:    "8",
-  emergencyLeaveDays: "5",
-  maternityLeaveDays:  "90",
-  shortLeavesPerMonth: "2",
-  autoApprove:        false,
-  autoApproveDays:    "1",
+  annualLeaveDays:        "12",
+  sickLeaveDays:          "10",
+  casualLeaveDays:        "8",
+  emergencyLeaveDays:     "5",
+  maternityLeaveDays:     "90",
+  shortLeavesPerMonth:    "2",
+  leaveApprovalThreshold: "10",   // ← NEW
+  autoApprove:            false,
+  autoApproveDays:        "1",
 };
 
-// Whole-number-only validator for day/count fields (0–365 range, sane upper bound)
+// Whole-number-only validator for day/count fields
 const validateWholeNumberField = (value, label, { min = 0, max = 365 } = {}) => {
   if (value === "" || value === null || value === undefined) {
     return `${label} is required.`;
@@ -34,10 +40,6 @@ const validateWholeNumberField = (value, label, { min = 0, max = 365 } = {}) => 
 };
 
 // ── Keystroke guard ────────────────────────────────────────────────────────
-// Blocks the sign/exponent/decimal characters outright, and stops ArrowDown
-// (and the spinner's down-arrow, which fires the same key event) from
-// decrementing past the field's minimum. `min` differs per field — 0 for the
-// allowance counts, 1 for the auto-approve threshold.
 const blockInvalidNumericKeys = (min = 0) => (e) => {
   if (["-", "+", "e", "E", "."].includes(e.key)) {
     e.preventDefault();
@@ -51,8 +53,6 @@ const blockInvalidNumericKeys = (min = 0) => (e) => {
   }
 };
 
-// Pasting is the other way a negative slips in — the keydown guard never
-// fires for it.
 const blockInvalidPaste = (e) => {
   const pasted = (e.clipboardData || window.clipboardData).getData("text");
   if (!/^\d+$/.test(String(pasted).trim())) e.preventDefault();
@@ -66,29 +66,21 @@ const LeavePolicyTab = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-  if (policy) {
-    setFormData({
-      annualLeaveDays:     policy.annualLeaveDays    != null ? String(policy.annualLeaveDays)    : "0",
-      sickLeaveDays:       policy.sickLeaveDays       != null ? String(policy.sickLeaveDays)      : "0",
-      casualLeaveDays:     policy.casualLeaveDays     != null ? String(policy.casualLeaveDays)    : "0",
-      emergencyLeaveDays:  policy.emergencyLeaveDays  != null ? String(policy.emergencyLeaveDays) : "0",
-      maternityLeaveDays:  policy.maternityLeaveDays  != null ? String(policy.maternityLeaveDays) : "0", 
-      shortLeavesPerMonth: policy.shortLeavesPerMonth != null ? String(policy.shortLeavesPerMonth): "0",
-      autoApprove:         policy.autoApprove         || false,
-      autoApproveDays:     policy.autoApproveDays     != null ? String(policy.autoApproveDays)    : "1",
-    });
-  }
-}, [policy]);
+    if (policy) {
+      setFormData({
+        annualLeaveDays:        policy.annualLeaveDays        != null ? String(policy.annualLeaveDays)        : "0",
+        sickLeaveDays:          policy.sickLeaveDays          != null ? String(policy.sickLeaveDays)          : "0",
+        casualLeaveDays:        policy.casualLeaveDays        != null ? String(policy.casualLeaveDays)        : "0",
+        emergencyLeaveDays:     policy.emergencyLeaveDays     != null ? String(policy.emergencyLeaveDays)     : "0",
+        maternityLeaveDays:     policy.maternityLeaveDays     != null ? String(policy.maternityLeaveDays)     : "0",
+        shortLeavesPerMonth:    policy.shortLeavesPerMonth    != null ? String(policy.shortLeavesPerMonth)    : "0",
+        leaveApprovalThreshold: policy.leaveApprovalThreshold != null ? String(policy.leaveApprovalThreshold) : "10", // ← NEW
+        autoApprove:            policy.autoApprove            || false,
+        autoApproveDays:        policy.autoApproveDays        != null ? String(policy.autoApproveDays)        : "1",
+      });
+    }
+  }, [policy]);
 
-  const handleChange = (field) => (e) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
-  };
-
-  // ── Numeric change handler ───────────────────────────────────────────────
-  // Last line of defence: even if a negative or non-integer reaches the input
-  // by some route the keydown/paste guards miss, it never lands in state.
-  // Empty is allowed so the field can be cleared while retyping.
   const handleNumericChange = (field) => (e) => {
     const raw = e.target.value;
     if (raw !== "" && !/^\d+$/.test(raw)) return;
@@ -114,10 +106,12 @@ const LeavePolicyTab = () => {
     const maternityErr = validateWholeNumberField(formData.maternityLeaveDays, "Maternity leave days", { min: 0, max: 365 });
     if (maternityErr) e.maternityLeaveDays = maternityErr;
 
-    // Short leave — monthly count, separate scale (0–31, since it can't
-    // realistically exceed the days in a month)
     const shortErr = validateWholeNumberField(formData.shortLeavesPerMonth, "Short leaves per month", { min: 0, max: 31 });
     if (shortErr) e.shortLeavesPerMonth = shortErr;
+
+    // ── NEW: threshold (0 allowed = escalation disabled) ────────────────────
+    const thresholdErr = validateWholeNumberField(formData.leaveApprovalThreshold, "Leave approval threshold", { min: 0, max: 365 });
+    if (thresholdErr) e.leaveApprovalThreshold = thresholdErr;
 
     if (formData.autoApprove) {
       const autoErr = validateWholeNumberField(formData.autoApproveDays, "Auto-approve threshold", { min: 1, max: 365 });
@@ -134,16 +128,17 @@ const LeavePolicyTab = () => {
       return;
     }
 
-  const result = await savePolicy({
-  annualLeaveDays:     Number(formData.annualLeaveDays),
-  sickLeaveDays:       Number(formData.sickLeaveDays),
-  casualLeaveDays:     Number(formData.casualLeaveDays),
-  emergencyLeaveDays:  Number(formData.emergencyLeaveDays),
-  maternityLeaveDays:  Number(formData.maternityLeaveDays),   
-  shortLeavesPerMonth: Number(formData.shortLeavesPerMonth),
-  autoApprove:         formData.autoApprove,
-  autoApproveDays:     formData.autoApprove ? Number(formData.autoApproveDays) : 0,
-});
+    const result = await savePolicy({
+      annualLeaveDays:        Number(formData.annualLeaveDays),
+      sickLeaveDays:          Number(formData.sickLeaveDays),
+      casualLeaveDays:        Number(formData.casualLeaveDays),
+      emergencyLeaveDays:     Number(formData.emergencyLeaveDays),
+      maternityLeaveDays:     Number(formData.maternityLeaveDays),
+      shortLeavesPerMonth:    Number(formData.shortLeavesPerMonth),
+      leaveApprovalThreshold: Number(formData.leaveApprovalThreshold),   // ← NEW
+      autoApprove:            formData.autoApprove,
+      autoApproveDays:        formData.autoApprove ? Number(formData.autoApproveDays) : 0,
+    });
     if (result.success) {
       setSaveSuccess(true);
       setErrors({});
@@ -211,7 +206,8 @@ const LeavePolicyTab = () => {
             helperText={errors.sickLeaveDays}
           />
         </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
+
+        <Grid size={{ xs: 12, md: 6 }}>
           <CustomInputLabel label="Emergency Leave Days *" />
           <TextInput
             placeholder="e.g. 5"
@@ -227,6 +223,7 @@ const LeavePolicyTab = () => {
             helperText={errors.emergencyLeaveDays}
           />
         </Grid>
+
         <Grid size={{ xs: 12, md: 6 }}>
           <CustomInputLabel label="Maternity Leave Days *" />
           <TextInput
@@ -261,7 +258,7 @@ const LeavePolicyTab = () => {
           />
         </Grid>
 
-        {/* Short Leave — sits directly below Casual Leave, separate monthly scale */}
+        {/* Short Leave — separate monthly scale */}
         <Grid size={{ xs: 12, md: 6 }}>
           <CustomInputLabel label="Short Leaves Allowed (per month) *" />
           <TextInput
@@ -279,8 +276,33 @@ const LeavePolicyTab = () => {
           />
         </Grid>
 
-    
+      </Grid>
 
+      {/* ── Approval Workflow (NEW) ──────────────────────────────────────── */}
+      <Typography fontSize="13px" fontWeight={600} color="text.secondary" mt={3} mb={1.5}>
+        Approval Workflow
+      </Typography>
+
+      <Grid container spacing={2} mb={1}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <CustomInputLabel label="Leave Approval Threshold (days) *" />
+          <TextInput
+            placeholder="e.g. 10"
+            value={formData.leaveApprovalThreshold}
+            onChange={handleNumericChange("leaveApprovalThreshold")}
+            onKeyDown={blockInvalidNumericKeys(0)}
+            onPaste={blockInvalidPaste}
+            inputBgColor="#F5F5F5"
+            fullWidth
+            type="number"
+            inputProps={{ min: 0, max: 365, step: 1 }}
+            error={!!errors.leaveApprovalThreshold}
+            helperText={
+              errors.leaveApprovalThreshold ||
+              "Requests longer than this need Admin approval before HR can act. Set 0 to let HR approve any length."
+            }
+          />
+        </Grid>
       </Grid>
 
       {/* ── Auto-approve toggle ──────────────────────────────────────────── */}

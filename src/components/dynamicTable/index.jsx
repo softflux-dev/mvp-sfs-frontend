@@ -2549,7 +2549,153 @@ case "tl_type": {
     </TableCell>
   );
 }
+  
+// ── Leave Balance — employee avatar + name + ID ───────────────────────────
+case "lb_employee":
+  return (
+    <TableCell key={val}>
+      <Stack direction="row" alignItems="center" gap={1}>
+        <Avatar
+          src={resolveAvatarUrl(row.avatar)}
+          sx={{ width: 36, height: 36, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "13px", fontWeight: 600 }}
+        >
+          {row.name?.charAt(0)}
+        </Avatar>
+        <Box>
+          <Typography fontSize="13px" fontWeight={600} color="text.primary">{row.name}</Typography>
+          <Typography fontSize="11px" color="text.secondary">{row.empId}</Typography>
+        </Box>
+      </Stack>
+    </TableCell>
+  );
  
+// ── Leave Balance — department (plain text) ───────────────────────────────
+case "lb_department":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.department || "—"}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — role (plain text) ─────────────────────────────────────
+case "lb_role":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.role || "—"}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Annual Allocation (total days entitled) ──────────────
+case "lb_annual_allocation":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="text.black">{row.annualTotal ?? "-"}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Paid Leave Used ───────────────────────────────────────
+case "lb_paid_used":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="text.black">{row.annualUsed ?? "-"}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Remaining Paid Leave (color-coded chip) ──────────────
+case "lb_remaining_paid": {
+  const LB_COLOR = {
+    green: { bg: "#04C3731A", color: "#04C373" },
+    amber: { bg: "#F59E0B1A", color: "#F59E0B" },
+    red:   { bg: "#FF00001A", color: "#FF0000" },
+  };
+  const cfg = LB_COLOR[row.annualColor] || LB_COLOR.green;
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={`${row.annualRemaining ?? 0} / ${row.annualTotal ?? 0}`}
+        sx={{ height: "24px", fontSize: "12px", fontWeight: 700, px: 1, borderRadius: "10px", backgroundColor: cfg.bg, color: cfg.color }}
+      />
+    </TableCell>
+  );
+}
+ 
+// ── Leave Balance — Unpaid Leave Taken (does not reduce balance) ─────────
+case "lb_unpaid_taken":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color={row.unpaidTaken > 0 ? "#B45309" : "text.secondary"}>
+        {row.unpaidTaken ?? 0}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Sick Leave Balance (remaining / total) ───────────────
+case "lb_sick":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.sickRemaining ?? 0} / {row.sickTotal ?? 0}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Casual Leave Balance (remaining / total) ─────────────
+case "lb_casual":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.casualRemaining ?? 0} / {row.casualTotal ?? 0}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Emergency Leave (remaining / total) ──────────────────
+case "lb_emergency":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.emergencyRemaining ?? 0} / {row.emergencyTotal ?? 0}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Maternity Leave (remaining / total) ──────────────────
+case "lb_maternity":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.maternityRemaining ?? 0} / {row.maternityTotal ?? 0}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Short Leaves (current month, remaining / total) ──────
+case "lb_short":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" color="text.black">{row.shortRemaining ?? 0} / {row.shortTotal ?? 0}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Pending Leave (days in unactioned requests) ──────────
+case "lb_pending":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color={row.pendingDays > 0 ? "#FF972F" : "text.secondary"}>
+        {row.pendingDays ?? 0}
+      </Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Approved Leave (paid + unpaid, all types) ────────────
+case "lb_approved":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color="#04C373">{row.approvedDays ?? 0}</Typography>
+    </TableCell>
+  );
+ 
+// ── Leave Balance — Rejected Leave (all types) ────────────────────────────
+case "lb_rejected":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={600} color={row.rejectedDays > 0 ? "#FF0000" : "text.secondary"}>
+        {row.rejectedDays ?? 0}
+      </Typography>
+    </TableCell>
+  );
 // ── Time Log — note (plain text, secondary color) ─────────────────────────
 case "tl_note":
   return (

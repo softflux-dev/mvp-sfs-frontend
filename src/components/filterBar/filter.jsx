@@ -207,6 +207,35 @@ const Filter = ({
   },
 ],
 
+leave_balance: ({ departments = [], roles = [] }) => [
+  {
+    type: "search",
+    key: "search",
+    placeholder: "Search by employee name or ID...",
+    grid: { xs: 12, md: 6 },
+  },
+  {
+    type: "select",
+    key: "department",
+    placeholder: "All Departments",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "", l: "All Departments" },
+      ...departments.map((d) => ({ v: d._id, l: d.name })),
+    ],
+  },
+  {
+    type: "select",
+    key: "role",
+    placeholder: "All Roles",
+    grid: { xs: 12, md: 3 },
+    options: [
+      { v: "", l: "All Roles" },
+      ...roles.map((r) => ({ v: r._id, l: r.roleName })),
+    ],
+  },
+],
+
      // ── Team ──────────────────────────────────────────────────────────────
 
 team: ({ employees = [] }) => [

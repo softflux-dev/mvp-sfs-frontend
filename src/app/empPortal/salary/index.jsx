@@ -1,4 +1,11 @@
-// src/app/employeePortal/salary/index.jsx —
+// src/app/employeePortal/salary/index.jsx — Phase 4 fix (Leave Management Enhancement)
+// FIX: "Deductions" (table column, stat card, PDF export) only ever reflected
+// the shortfall-hours deduction — unpaidLeaveDeduction was silently excluded,
+// so summing Base+Bonus+Overtime−Deductions never matched Net Pay. Combined
+// here for the summary views. Safe to combine (unlike HR's payroll table)
+// because employees have no edit-payroll path that could double-count it —
+// the itemized ViewPayslipDialog still shows both lines separately.
+
 import { useState, useRef, useEffect } from "react";
 import { Box, Grid, Typography, CircularProgress } from "@mui/material";
 import jsPDF     from "jspdf";
@@ -88,12 +95,16 @@ const Salary = () => {
     ? [...payslips].sort((a, b) => b.monthIndex - a.monthIndex)[0]
     : null;
 
+  // NEW — combined deduction figure (shortfall + unpaid leave) so it
+  // reconciles with Net Pay everywhere below.
+  const latestSlipDeductions = (latestSlip?.deductions || 0) + (latestSlip?.unpaidLeaveDeduction || 0);
+
   const totals = payslips.reduce(
     (acc, p) => ({
       base:       acc.base       + (p.baseSalary  || 0),
       bonus:      acc.bonus      + (p.bonus       || 0),
       overtime:   acc.overtime   + (p.extraAmount || 0),
-      deductions: acc.deductions + (p.deductions  || 0),
+      deductions: acc.deductions + (p.deductions  || 0) + (p.unpaidLeaveDeduction || 0),
       net:        acc.net        + (p.netPay      || 0),
     }),
     { base: 0, bonus: 0, overtime: 0, deductions: 0, net: 0 }
@@ -106,7 +117,10 @@ const Salary = () => {
       month:        `${p.month} ${p.year}`,
       baseSalary:   p.baseSalary,
       bonus:        p.bonus,
-      deductions:   p.deductions,
+      // Combined so the table column and PDF export match Net Pay. The
+      // itemized ViewPayslipDialog still breaks this into its two real
+      // components (Shortfall Deduction / Unpaid Leave Deduction).
+      deductions:   (p.deductions || 0) + (p.unpaidLeaveDeduction || 0),
       netPay:       p.netPay,
       extraHours:   p.extraHours,
       extraAmount:  p.extraAmount,
@@ -285,9 +299,14 @@ const handleExportPDF = async () => {
               },
               {
                 label:  "Deductions",
-                value:  fmt(latestSlip?.deductions),
-                sub:    latestSlip?.deductions > 0 ? `${latestSlip?.shortfallHours}h shortfall` : "No deductions",
-                accent: latestSlip?.deductions > 0 ? "#FF3B30" : "text.secondary",
+                value:  fmt(latestSlipDeductions),
+                // Combines both possible reasons so the sub-text is honest
+                // about what actually made up the number above.
+                sub: [
+                  (latestSlip?.deductions || 0) > 0 ? `${latestSlip?.shortfallHours}h shortfall` : null,
+                  (latestSlip?.unpaidLeaveDeduction || 0) > 0 ? `${latestSlip?.unpaidLeaveDays}d unpaid leave` : null,
+                ].filter(Boolean).join(" · ") || "No deductions",
+                accent: latestSlipDeductions > 0 ? "#FF3B30" : "text.secondary",
               },
               {
                 label:  `${selectedYear} Net Total`,

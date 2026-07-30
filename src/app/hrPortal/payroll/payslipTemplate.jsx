@@ -1,4 +1,10 @@
-// src/app/hrPortal/payroll/payslipTemplate.jsx —
+// src/app/hrPortal/payroll/payslipTemplate.jsx — Phase 4 fix (Leave Management Enhancement)
+// FIX: netSalary on the backend already subtracts unpaidLeaveDeduction, but
+// this template never displayed it — so "Total Deductions" and the Net Pay
+// caption ("Gross − Deductions") silently didn't add up to the Net Pay shown.
+// Added a conditional "Unpaid Leave Deduction" row (only when > 0), and the
+// total/caption now include it so the math always reconciles.
+
 import { Box, Typography } from "@mui/material";
 import { useFormatCurrency } from "../../../utils/formatCurrency";
 
@@ -78,6 +84,13 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyN
 
   const grossEarnings = (payroll.baseSalary || 0) + (payroll.bonus || 0) + (payroll.extraAmount || 0);
 
+  // NEW — the deduction that was missing from every payslip view. Total
+  // deductions and the Net Pay caption below both use this combined figure
+  // so they always reconcile with the actual Net Pay (which already
+  // subtracts both on the backend).
+  const unpaidLeaveDeduction = payroll.unpaidLeaveDeduction || 0;
+  const totalDeductions = (payroll.deductions || 0) + unpaidLeaveDeduction;
+
   const empType =
     payroll.employmentType === "full_time" ? "Full-time"  :
     payroll.employmentType === "part_time" ? "Part-time"  :
@@ -149,6 +162,14 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyN
           />
         </Box>
 
+        {/* NEW — only shown when there are unpaid leave days this month, so
+            the Deductions section below isn't a mystery. */}
+        {(payroll.unpaidLeaveDays || 0) > 0 && (
+          <Box sx={{ border: "1px solid #ebebeb", borderRadius: "8px", overflow: "hidden", mt: 1.5 }}>
+            <DetailCell label="Unpaid Leave Days" value={`${payroll.unpaidLeaveDays} days`} />
+          </Box>
+        )}
+
         <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, mt: 2 }}>
 
           {/* Earnings */}
@@ -194,12 +215,22 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyN
                     : "No shortfall this month"
                 }
               />
+              {/* NEW — was silently missing from every payslip view even
+                  though it's already subtracted from Net Pay on the backend. */}
+              {unpaidLeaveDeduction > 0 && (
+                <TblRow
+                  label="Unpaid Leave Deduction"
+                  value={fmt(unpaidLeaveDeduction)}
+                  color="#DC2626"
+                  sub={`${payroll.unpaidLeaveDays || 0} day(s) unpaid leave`}
+                />
+              )}
               <TblRow label="Provident Fund"   value={fmt(0)} color="#bbb" />
               <TblRow label="Other Deductions" value={fmt(0)} color="#bbb" />
               <TblFoot
                 label="Total Deductions"
-                value={fmt(payroll.deductions)}
-                color={(payroll.deductions || 0) > 0 ? "#DC2626" : "#022179"}
+                value={fmt(totalDeductions)}
+                color={totalDeductions > 0 ? "#DC2626" : "#022179"}
               />
             </Box>
 
@@ -233,7 +264,7 @@ const PayslipTemplate = ({ payroll = {}, month, year, logoDataUrl = "", companyN
           <Box textAlign="right">
             <Typography sx={{ fontSize: "24px", fontWeight: 700, color: "#fff" }}>{currency.code} {fmt(payroll.netPay)}</Typography>
             <Typography sx={{ fontSize: "11px", color: "rgba(255,255,255,0.65)", mt: "2px" }}>
-              Gross {symbol} {fmt(grossEarnings)} − Deductions {symbol} {fmt(payroll.deductions)}
+              Gross {symbol} {fmt(grossEarnings)} − Deductions {symbol} {fmt(totalDeductions)}
             </Typography>
           </Box>
         </Box>

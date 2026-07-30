@@ -7,6 +7,7 @@ export const adminPages = [
   { id: "admin-employees",    title: "Employees",    path: "/employees"      },
   { id: "admin-performance",  title: "Performance",  path: "/performance"    },
   { id: "admin-roles",        title: "Roles",        path: "/roles"          },
+  { id: "admin-leaves-escalated",  title: "Escalated Leaves",  path: "/leaves/escalated" },
   { id: "admin-messages",     title: "Messages",     path: "/messages"       },
   { id: "admin-documents",    title: "Documents",    path: "/documents"      },
   { id: "admin-reports",      title: "Reports",      path: "/reports"        },

@@ -1,3 +1,8 @@
+// src/api/endpoints.js — Phases 3/5 (Leave Management Enhancement)
+// Added keys only: adminGetEscalatedLeaves, adminReviewEscalation, hrGetAllBalances.
+// Everything else is unchanged from the current file — merge these three keys
+// into your existing endpoints.js under the "Leave Management" section.
+
 const ENDPOINTS = {
 
   // Auth
@@ -55,7 +60,6 @@ const ENDPOINTS = {
   getProjectManagers: "admin/projects",
   updateProjectStages: "admin/projects",
   empGetProjectById: "employee/projects",
-  
 
   // Modules
   getModules:   "admin/projects",
@@ -69,21 +73,17 @@ const ENDPOINTS = {
   updateTask:                   "admin/projects",
   deleteTask:                   "admin/projects",
   getEmployeesByDepartmentTask: "admin/projects",
-  // Task attachments
   uploadTaskAttachment:         "admin/projects",
   deleteTaskAttachment:         "admin/projects",
   downloadTaskAttachment:       "admin/projects",
 
-  // Employee tasks (admin view)
   getEmployeeTasks: "admin/employees",
 
-  // Project Documents
   getProjectDocuments:     "admin/projects",
   uploadProjectDocument:   "admin/projects",
   deleteProjectDocument:   "admin/projects",
   downloadProjectDocument: "admin/projects",
 
-  // ── Shared Task Detail (/api/tasks/:taskId/...) ──────────────────────────
   getTaskDetail:       "tasks",
   addComment:          "tasks",
   updateTaskStatus:    "tasks",
@@ -91,7 +91,6 @@ const ENDPOINTS = {
   getSubmissions:      "tasks",
   downloadSubmission:  "tasks",
 
-  // ── PM Portal (/api/pm/...) ───────────────────────────────────────────────
   pmGetTasks:           "pm/tasks",
   pmGetProjectTasks:    "pm/projects",
   pmCreateTask:         "pm/projects",
@@ -100,28 +99,23 @@ const ENDPOINTS = {
   pmGetProjects: "pm/projects",
   pmUpdateProjectStages: "pm/projects",
 
-  // ── Employee Portal (/api/employee/...) ──────────────────────────────────
   empGetMyTasks:   "employee/tasks",
   empGetTaskById:  "employee/tasks",
 
- // Bug Reports (/api/tasks/:taskId/bugs)
-  getBugReports:    "tasks",  
-  createBugReport:  "tasks",  
-  updateBugReport:  "tasks",  
-  deleteBugReport:  "tasks", 
-  
-  // ── Employee Profile (/api/employee/profile) ──────────────────────────────
+  getBugReports:    "tasks",
+  createBugReport:  "tasks",
+  updateBugReport:  "tasks",
+  deleteBugReport:  "tasks",
+
   getProfile:      "employee/profile",
   updateProfile:   "employee/profile",
   changePassword:  "employee/profile/change-password",
 
-  // ── Shared Documents (/api/documents) ────────────────────────────────────
   getSharedDocuments:    "documents",
   uploadSharedDocument:  "documents",
   deleteSharedDocument:  "documents",
   downloadSharedDocument:"documents",
 
-  // Notification Preferences
   getNotificationPreferences:    "admin/settings/notifications",
   updateNotificationPreferences: "admin/settings/notifications",
 
@@ -129,70 +123,69 @@ const ENDPOINTS = {
   markNotificationRead:     "notifications",
   markAllNotificationsRead: "notifications",
 
-   // ── Leave Management ──────────────────────────────────────────────────────
-  empGetMyLeaves:     "employee/leaves",   // GET / POST / DELETE /:id
-  hrGetLeaves:        "hr/leaves",         // GET /
-  hrReviewLeave:      "hr/leaves",         // PATCH /:id
+  // ── Leave Management ──────────────────────────────────────────────────────
+  empGetMyLeaves:     "employee/leaves",
+  hrGetLeaves:        "hr/leaves",
+  hrReviewLeave:      "hr/leaves",
+
+  // NEW — Admin escalation queue (Phase 3)
+  adminGetEscalatedLeaves: "admin/leaves/escalated",
+  adminReviewEscalation:   "admin/leaves",   // used as `${adminReviewEscalation}/${id}/escalation`
+
+  // NEW — HR company-wide leave balance dashboard (Phase 5)
+  hrGetAllBalances: "hr/leaves/balances",
 
   // ── Attendance (HR) ───────────────────────────────────────────────────────
-getAttendanceSummary:   "hr/attendance/summary",
-getAttendanceDetail:    "hr/attendance/detail",
-updateAttendanceRecord: "hr/attendance",
-importAttendance:       "hr/attendance/import",
-getAttendanceImports:   "hr/attendance/imports",
-getAttendancePartial:   "hr/attendance/partial",
+  getAttendanceSummary:   "hr/attendance/summary",
+  getAttendanceDetail:    "hr/attendance/detail",
+  updateAttendanceRecord: "hr/attendance",
+  importAttendance:       "hr/attendance/import",
+  getAttendanceImports:   "hr/attendance/imports",
+  getAttendancePartial:   "hr/attendance/partial",
 
-// ── Attendance (Employee) ─────────────────
-empAttendanceDefaultMonth: "employee/attendance/default-month",
-empAttendanceStats:        "employee/attendance/stats",
-empAttendanceMonthly:      "employee/attendance/monthly",
-empAttendanceWeek:         "employee/attendance/week",
-empAttendanceAnnual:       "employee/attendance/annual",
+  empAttendanceDefaultMonth: "employee/attendance/default-month",
+  empAttendanceStats:        "employee/attendance/stats",
+  empAttendanceMonthly:      "employee/attendance/monthly",
+  empAttendanceWeek:         "employee/attendance/week",
+  empAttendanceAnnual:       "employee/attendance/annual",
 
-getHolidays: "hr/holidays",
+  getHolidays: "hr/holidays",
 
-getCompanyProfile:    "admin/settings/company",
-updateCompanyProfile: "admin/settings/company",
-// ── Currency ──────────────────────────────────────────────────────────────
-getCurrencies:     "admin/settings/company/currencies", // admin only — full list for the select
-getActiveCurrency: "settings/currency", 
-getWorkingHours:    "admin/settings/working-hours",
-updateWorkingHours: "admin/settings/working-hours",
-// ── Phone / countries ─────────────────────────────────────────────────────
-getCountries:   "admin/settings/company/countries",
-getPhoneConfig: "settings/phone-config",            
+  getCompanyProfile:    "admin/settings/company",
+  updateCompanyProfile: "admin/settings/company",
+  getCurrencies:     "admin/settings/company/currencies",
+  getActiveCurrency: "settings/currency",
+  getWorkingHours:    "admin/settings/working-hours",
+  updateWorkingHours: "admin/settings/working-hours",
+  getCountries:   "admin/settings/company/countries",
+  getPhoneConfig: "settings/phone-config",
 
-getLeavePolicy:    "admin/settings/leave-policy",
-updateLeavePolicy: "admin/settings/leave-policy",
+  getLeavePolicy:    "admin/settings/leave-policy",
+  updateLeavePolicy: "admin/settings/leave-policy",
 
-getSecuritySettings:    "admin/settings/security",
-updateSecuritySettings: "admin/settings/security",
-changeAdminPassword:    "admin/settings/security/password",
+  getSecuritySettings:    "admin/settings/security",
+  updateSecuritySettings: "admin/settings/security",
+  changeAdminPassword:    "admin/settings/security/password",
 
- 
-// ── Bonus ─────────────────────────────────────────────────────────────────────
-addBonus:    "hr/bonus",
-getBonuses:  "hr/bonus",
-updateBonus: "hr/bonus",     // used as `${updateBonus}/${id}`
-deleteBonus: "hr/bonus",     // used as `${deleteBonus}/${id}`
- 
-// ── Increment ─────────────────────────────────────────────────────────────────
-addIncrement:    "hr/increment",
-getIncrements:   "hr/increment",
-deleteIncrement: "hr/increment",  // used as `${deleteIncrement}/${id}`
+  addBonus:    "hr/bonus",
+  getBonuses:  "hr/bonus",
+  updateBonus: "hr/bonus",
+  deleteBonus: "hr/bonus",
 
-generatePayroll:  "hr/payroll/generate",
-getPayroll:       "hr/payroll",
-finalizePayroll:  "hr/payroll",
-sendPayslipEmail: "hr/payroll/send-payslip",
-updatePayroll: "hr/payroll",
-getEmployeePayrollHistory: "hr/payroll/employee",
-empGetMySalary: "employee/salary",
+  addIncrement:    "hr/increment",
+  getIncrements:   "hr/increment",
+  deleteIncrement: "hr/increment",
 
-getPerformanceOverview: "admin/performance",
+  generatePayroll:  "hr/payroll/generate",
+  getPayroll:       "hr/payroll",
+  finalizePayroll:  "hr/payroll",
+  sendPayslipEmail: "hr/payroll/send-payslip",
+  updatePayroll: "hr/payroll",
+  getEmployeePayrollHistory: "hr/payroll/employee",
+  empGetMySalary: "employee/salary",
 
+  getPerformanceOverview: "admin/performance",
 
 };
-
 
 export default ENDPOINTS;

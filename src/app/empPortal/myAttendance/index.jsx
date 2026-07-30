@@ -1,4 +1,7 @@
-// src/app/empPortal/myAttendance/index.jsx — 
+// src/app/empPortal/myAttendance/index.jsx — Phase 1 (Leave Management Enhancement)
+// Added: useMyLeaveBalance shared instance, passed to MyLeaveRequests (popup)
+// and ApplyLeaveDialog (toggle/inline). Balance refetches after a submit.
+
 import { useState, useEffect } from "react";
 import { Box, Grid, IconButton, Typography, CircularProgress } from "@mui/material";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -12,7 +15,7 @@ import MonthlyAttendanceView from "./monthlyAttendanceView";
 import AnnualAttendanceView  from "./annualAttendanceView";
 import MyLeaveRequests       from "./myLeaveRequests";
 import ApplyLeaveDialog      from "./applyLeaveDialog";
-import { useMyLeaves }       from "../../../hooks/leave";
+import { useMyLeaves, useMyLeaveBalance } from "../../../hooks/leave";
 import {
   useDefaultPeriod,
   useMonthStats,
@@ -28,7 +31,6 @@ import percentIcon  from "../../../assets/icons/attendance-icon.svg";
 import WeeklyIcon   from "../../../assets/icons/kanban-active.svg";
 import MonthlyIcon  from "../../../assets/icons/tasks-inactive.svg";
 import AnnualIcon   from "../../../assets/icons/report-inactive.svg";
-import calendarIcon from "../../../assets/icons/tasks.svg";
 
 const MAIN_TABS = [
   { id: 1, label: "Attendance" },
@@ -40,7 +42,6 @@ const EmpAttendance = () => {
   const [attendanceView,  setAttendanceView]  = useState("monthly");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
 
-  // ── Resolve default month/year from backend on first load ─────────────────
   const { period, loading: periodLoading } = useDefaultPeriod();
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedYear,  setSelectedYear]  = useState(null);
@@ -53,14 +54,19 @@ const EmpAttendance = () => {
   }, [period]);
 
   const { leaves, loading: leavesLoading, actionLoading, createLeave, cancelLeave } = useMyLeaves();
-  const handleLeaveSubmit = async (payload) => await createLeave(payload);
+  const { balance, loading: balanceLoading, fetchBalance } = useMyLeaveBalance();
 
-  // ── Stats sources — one per tab, only the active tab's hook actually drives display ──
+  const handleLeaveSubmit = async (payload) => {
+    const result = await createLeave(payload);
+    // Refresh balance so pending days reflect the new request immediately.
+    if (result?.success) fetchBalance();
+    return result;
+  };
+
   const { stats: monthStats }  = useMonthStats(selectedMonth, selectedYear);
   const weekly                 = useWeeklyAttendance(selectedMonth, selectedYear);
   const { totals: yearTotals } = useAnnualAttendance(selectedYear);
 
-  // ── Pick which stats to show based on active view tab ─────────────────────
   let displayStats;
   if (attendanceView === "weekly") {
     const ws = weekly.weekStats;
@@ -99,11 +105,8 @@ const EmpAttendance = () => {
 
       <CustomTabs tabs={MAIN_TABS} activeTab={mainTab} onTabChange={setMainTab} />
 
-      {/* ── Attendance tab ─────────────────────────────────────────────── */}
       {mainTab === 1 && (
         <Box bgcolor="#fff" borderRadius="25px" p={2} mt={2}>
-
-          {/* ── Month / Year navigator — right aligned ─────────────────── */}
           <Box display="flex" justifyContent="flex-end" mb={1.5}>
             <Box display="flex" alignItems="center" gap={1.5}>
               <IconButton
@@ -136,7 +139,6 @@ const EmpAttendance = () => {
             </Box>
           </Box>
 
-          {/* ── View toggle buttons — right aligned, separate row ──────── */}
           <Box display="flex" justifyContent="flex-end" gap={1.5} mb={2.5}>
             {["weekly", "monthly", "annual"].map((view) => (
               <CustomButton
@@ -156,7 +158,6 @@ const EmpAttendance = () => {
             ))}
           </Box>
 
-          {/* ── Stats cards — reflect the active tab's scope ───────────── */}
           <Grid container spacing={2} mb={2.5}>
             {summaryStats.map((stat) => (
               <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2.4 }} key={stat.id}>
@@ -165,41 +166,38 @@ const EmpAttendance = () => {
             ))}
           </Grid>
 
-          {/* ── View content ────────────────────────────────────────────── */}
-          {attendanceView === "weekly" && (
-            <WeeklyAttendanceView weekly={weekly} />
-          )}
+          {attendanceView === "weekly" && <WeeklyAttendanceView weekly={weekly} />}
           {attendanceView === "monthly" && (
             <MonthlyAttendanceView selectedMonth={selectedMonth} selectedYear={selectedYear} />
           )}
           {attendanceView === "annual" && (
-            <AnnualAttendanceView
-              selectedYear={selectedYear}
-              onYearChange={(y) => setSelectedYear(y)}
-            />
+            <AnnualAttendanceView selectedYear={selectedYear} onYearChange={(y) => setSelectedYear(y)} />
           )}
         </Box>
       )}
 
-      {/* ── My Leaves tab ──────────────────────────────────────────────── */}
       {mainTab === 2 && (
-          <Box mt={2}>
-            <MyLeaveRequests
-              leaves={leaves}
-              loading={leavesLoading}
-              cancelLeave={cancelLeave}
-              actionLoading={actionLoading}
-              onRequestLeave={() => setLeaveDialogOpen(true)}
-            />
-          </Box>
-        )}
-
-          <ApplyLeaveDialog
-            open={leaveDialogOpen}
-            onClose={() => setLeaveDialogOpen(false)}
-            onSubmit={handleLeaveSubmit}
-            loading={actionLoading}
+        <Box mt={2}>
+          <MyLeaveRequests
+            leaves={leaves}
+            loading={leavesLoading}
+            cancelLeave={cancelLeave}
+            actionLoading={actionLoading}
+            onRequestLeave={() => setLeaveDialogOpen(true)}
+            balance={balance}
+            balanceLoading={balanceLoading}
           />
+        </Box>
+      )}
+
+      <ApplyLeaveDialog
+        open={leaveDialogOpen}
+        onClose={() => setLeaveDialogOpen(false)}
+        onSubmit={handleLeaveSubmit}
+        loading={actionLoading}
+        balance={balance}
+        balanceLoading={balanceLoading}
+      />
     </>
   );
 };

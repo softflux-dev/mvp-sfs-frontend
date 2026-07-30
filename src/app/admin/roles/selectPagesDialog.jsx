@@ -1,4 +1,12 @@
 // app/admin/roles/selectPagesDialog.jsx
+// FIX: removed the hardcoded "emp-profile is always selected and can never be
+// unchecked" special case. It was scoped only to Employee's page ("emp-profile"),
+// so it locked/force-injected Profile for HR, PM, and Employee roles but had no
+// equivalent for Admin roles (adminPages has no "-profile" entry at all) — that
+// mismatch was the reported bug. Profile is now a normal checkbox: selectable,
+// deselectable, and only saved if the person actually checks it, same as every
+// other page in every group.
+
 import { useState, useEffect } from "react";
 import { Box, Typography, Checkbox } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
@@ -16,7 +24,7 @@ const SelectPagesDialog = ({
   loading       = false,
 }) => {
   const [search,   setSearch]   = useState("");
-  const [selected, setSelected] = useState([]); 
+  const [selected, setSelected] = useState([]);
 
   // Pre-populate when editing
   useEffect(() => {
@@ -34,8 +42,8 @@ const SelectPagesDialog = ({
     setSearch("");
   }, [open, editingRole]);
 
-const toggle = (page) => {
-    if (page.id === "emp-profile") return;   
+  // Every page — including Profile — toggles the same way now.
+  const toggle = (page) => {
     setSelected((prev) =>
       prev.some((p) => p.id === page.id)
         ? prev.filter((p) => p.id !== page.id)
@@ -43,13 +51,10 @@ const toggle = (page) => {
     );
   };
 
- const isSelected = (page) =>
-    page.id === "emp-profile" || selected.some((p) => p.id === page.id);
+  const isSelected = (page) => selected.some((p) => p.id === page.id);
 
- const handleSave = () => {
-    const PROFILE_PAGE = { id: "emp-profile", title: "Profile", path: "/profile" };
-    const withoutProfile = selected.filter((p) => p.id !== "emp-profile");
-    const pages = [PROFILE_PAGE, ...withoutProfile].map((p) => ({
+  const handleSave = () => {
+    const pages = selected.map((p) => ({
       id:    p.id,
       title: p.title,
       path:  p.path,
@@ -112,57 +117,45 @@ const toggle = (page) => {
                 </Typography>
 
                 <Box display="flex" flexDirection="column" gap={0.5}>
-                {filtered.map((page) => {
-                    const locked = page.id === "emp-profile";
-                    return (
-                      <Box
-                        key={page.id}
-                        onClick={() => toggle(page)}
+                  {filtered.map((page) => (
+                    <Box
+                      key={page.id}
+                      onClick={() => toggle(page)}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        backgroundColor: isSelected(page) ? "#F0E8FA" : "#fff",
+                        borderRadius: "10px",
+                        px: 2,
+                        py: 1,
+                        cursor: "pointer",
+                        border: isSelected(page)
+                          ? "1px solid #AA2493"
+                          : "1px solid transparent",
+                        transition: "all 0.15s ease",
+                        "&:hover": { backgroundColor: "#F0E8FA" },
+                      }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={isSelected(page)}
+                        onChange={() => toggle(page)}
+                        disableRipple
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 1,
-                          backgroundColor: isSelected(page) ? "#F0E8FA" : "#fff",
-                          borderRadius: "10px",
-                          px: 2,
-                          py: 1,
-                          cursor: locked ? "default" : "pointer",
-                          border: isSelected(page)
-                            ? "1px solid #AA2493"
-                            : "1px solid transparent",
-                          transition: "all 0.15s ease",
-                          "&:hover": { backgroundColor: locked ? "#F0E8FA" : "#F0E8FA" },
+                          p: 0,
+                          color: "#D1D5DB",
+                          "&.Mui-checked": { color: "#AA2493" },
                         }}
-                      >
-                        <Checkbox
-                          size="small"
-                          checked={isSelected(page)}
-                          disabled={locked}
-                          onChange={() => toggle(page)}
-                          disableRipple
-                          sx={{
-                            p: 0,
-                            color: "#D1D5DB",
-                            "&.Mui-checked": { color: "#AA2493" },
-                            "&.Mui-disabled.Mui-checked": { color: "#AA2493" },
-                          }}
-                        />
-                        <Typography fontSize="13px" fontWeight={500} color="text.primary">
-                          {page.title}
-                        </Typography>
-                        {locked && (
-                          <Typography fontSize="10px" fontWeight={600} color="#AA2493"
-                            sx={{ backgroundColor: "#F0E8FA", px: 1, py: 0.2, borderRadius: "6px" }}
-                          >
-                            Always included
-                          </Typography>
-                        )}
-                        <Typography fontSize="11px" color="text.secondary" ml="auto">
-                          {page.path}
-                        </Typography>
-                      </Box>
-                    );
-                  })}
+                      />
+                      <Typography fontSize="13px" fontWeight={500} color="text.primary">
+                        {page.title}
+                      </Typography>
+                      <Typography fontSize="11px" color="text.secondary" ml="auto">
+                        {page.path}
+                      </Typography>
+                    </Box>
+                  ))}
                 </Box>
               </Box>
             );

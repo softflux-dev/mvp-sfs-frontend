@@ -1,4 +1,9 @@
-// src/app/hrPortal/payroll/viewPayslipDialog.jsx — 
+// src/app/hrPortal/payroll/viewPayslipDialog.jsx — Phase 4 fix (Leave Management Enhancement)
+// FIX: added a conditional "Unpaid Leave Deduction" row (only shown when > 0),
+// matching the existing "Overtime Pay" conditional pattern. Net Pay was
+// always correct (netSalary already subtracts it on the backend) — this was
+// purely a missing display line that made the itemized list not add up.
+
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { Box, Divider, Typography, CircularProgress } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
@@ -74,9 +79,9 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
   const [downloading, setDownloading] = useState(false);
   const [logoDataUrl, setLogoDataUrl] = useState("");
   const monthLabel = `${MONTH_NAMES[month] || ""} ${year || ""}`;
-  const { format } = useFormatCurrency();         
+  const { format } = useFormatCurrency();
 
-  const { profile: companyProfile } = useCompanyProfile(); 
+  const { profile: companyProfile } = useCompanyProfile();
   const companyName = companyProfile?.companyName?.trim() || "Sprintexa";
 
   useEffect(() => {
@@ -134,7 +139,15 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
              { label: "Base Salary", value: format(payroll.baseSalary || 0, { decimals: 0 }) },
              { label: "Bonus",       value: `+ ${format(payroll.bonus || 0, { decimals: 0 })}`, color: "#04C373" },
             ...(payroll.extraAmount > 0 ? [{ label: "Overtime Pay", value: `+ ${format(payroll.extraAmount || 0, { decimals: 0 })}`, color: "#04C373" }] : []),
-            { label: "Deductions",  value: `- ${format(payroll.deductions || 0, { decimals: 0 })}`, color: "#FF3B30" },
+            { label: "Shortfall Deduction",  value: `- ${format(payroll.deductions || 0, { decimals: 0 })}`, color: "#FF3B30" },
+            // NEW — was missing entirely, even though netSalary already
+            // subtracts it. Without this row the visible breakdown never
+            // added up to the Net Pay shown below.
+            ...(payroll.unpaidLeaveDeduction > 0 ? [{
+              label: "Unpaid Leave Deduction",
+              value: `- ${format(payroll.unpaidLeaveDeduction || 0, { decimals: 0 })}`,
+              color: "#FF3B30",
+            }] : []),
             ].map((r) => (
               <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
                 <Typography fontSize="13px" color="text.secondary">{r.label}</Typography>

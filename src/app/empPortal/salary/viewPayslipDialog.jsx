@@ -1,4 +1,8 @@
-// src/app/employeePortal/salary/viewPayslipDialog.jsx —
+// src/app/employeePortal/salary/viewPayslipDialog.jsx — Phase 4 fix (Leave Management Enhancement)
+// FIX: added a conditional "Unpaid Leave Deduction" row (only shown when > 0)
+// so the itemized breakdown actually adds up to Net Pay — netSalary already
+// subtracts it on the backend, this dialog just never displayed it.
+
 import { useRef, useState, useEffect } from "react";
 import { Box, Divider, Typography, CircularProgress } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
@@ -51,6 +55,7 @@ const ViewPayslipDialog = ({ open, onClose, payslip, company = { companyName: ""
   const title = `${payslip.month} ${payslip.year}`;
   const monthIdx = MONTH_INDEX[payslip.month] ?? 0;
   const hasOvertime = (payslip.extraHours || 0) > 0 || (payslip.extraAmount || 0) > 0;
+  const hasUnpaidLeave = (payslip.unpaidLeaveDeduction || 0) > 0;
 
   const handleDownload = async () => {
     if (!templateRef.current) return;
@@ -88,6 +93,9 @@ const ViewPayslipDialog = ({ open, onClose, payslip, company = { companyName: ""
             <Row label="Present Days"          value={payslip.presentDays ?? "—"} />
             <Row label="Absent Days"           value={payslip.absentDays ?? "—"} />
             <Row label="Leave Days"            value={payslip.leaveDays ?? "—"} />
+            {(payslip.unpaidLeaveDays || 0) > 0 && (
+              <Row label="Unpaid Leave Days" value={payslip.unpaidLeaveDays} color="#B45309" />
+            )}
 
             <SectionLabel>Hours</SectionLabel>
             <Row label="Required Hours"      value={`${payslip.requiredHours ?? 0} hrs`} />
@@ -110,7 +118,13 @@ const ViewPayslipDialog = ({ open, onClose, payslip, company = { companyName: ""
                 sub={`${payslip.extraHours}h × ${format(payslip.hourlyRate || 0)} × ${payslip.otMultiplier ?? 1}x`}
                 color="#04C373" />
             )}
-            <Row label="Deductions" value={`- ${fmt(payslip.deductions)}`} color="#FF3B30" />
+            <Row label="Shortfall Deduction" value={`- ${fmt(payslip.deductions)}`} color="#FF3B30" />
+            {/* NEW — was missing entirely; Net Pay already reflected it, the
+                breakdown just didn't show where the money went. */}
+            {hasUnpaidLeave && (
+              <Row label="Unpaid Leave Deduction" value={`- ${fmt(payslip.unpaidLeaveDeduction)}`}
+                sub={`${payslip.unpaidLeaveDays || 0} day(s) unpaid leave`} color="#FF3B30" />
+            )}
 
             <Divider sx={{ my: 1.5, borderColor: "#E5E7EB" }} />
             <Box display="flex" justifyContent="space-between" alignItems="center" py={1}>

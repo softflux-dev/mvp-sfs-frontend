@@ -1,4 +1,6 @@
-// src/app/empPortal/myAttendance/myLeaveRequests.jsx
+// src/app/empPortal/myAttendance/myLeaveRequests.jsx — Phase 1 (Leave Management Enhancement)
+// Added: "Leave Balance" button + popup (spec §2.1). Table unchanged.
+
 import { useRef, useState, useMemo } from "react";
 import { Box, Typography }           from "@mui/material";
 
@@ -6,11 +8,10 @@ import Filter              from "../../../components/filterBar/filter";
 import PaginatedTable      from "../../../components/dynamicTable";
 import ConfirmationDialog  from "../../../components/popups/confirmation";
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
-import CustomButton  from "../../../components/customButton";
-import calendarIcon  from "../../../assets/icons/tasks.svg";
+import CustomButton        from "../../../components/customButton";
+import LeaveBalancePopup   from "./leaveBalancePopup";
+import calendarIcon        from "../../../assets/icons/tasks.svg";
 
-// Keys must match the enum in models/employee/leave.js. "half_day" was never
-// a valid value — rows using it rendered the raw key instead of a label.
 const LEAVE_TYPE_LABELS = {
   sick:      "Sick Leave",
   casual:    "Casual Leave",
@@ -19,7 +20,7 @@ const LEAVE_TYPE_LABELS = {
   emergency: "Emergency Leave",
   short:     "Short Leave",
   full_day:  "Full Day Leave",
-  unpaid:    "Unpaid Leave",   // legacy rows only — no longer selectable
+  unpaid:    "Unpaid Leave",   // legacy rows only
 };
 
 const tableHeader = [
@@ -44,20 +45,28 @@ const displayRows = [
   "leave_cancel",
 ];
 
-const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, cancelLeave, onRequestLeave }) => {
+const MyLeaveRequests = ({
+  leaves = [],
+  loading = false,
+  actionLoading = false,
+  cancelLeave,
+  onRequestLeave,
+  balance = null,
+  balanceLoading = false,
+}) => {
   const confirmRef = useRef();
   const [successMsg,  setSuccessMsg]  = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMsg,    setErrorMsg]    = useState("");
+  const [balanceOpen, setBalanceOpen] = useState(false);
 
-  // ── Month/Year filter — defaults to current month ──────────────────────────
   const now = new Date();
   const [filters, setFilters] = useState({ monthYear: now });
 
   const handleCancel = (row) => {
     confirmRef.current?.open({
       title:       "Cancel Leave Request?",
-      description: "This will permanently remove your leave request.",
+      description: "This will cancel your pending leave request.",
       confirmText: "Yes, Cancel",
       cancelText:  "Keep It",
       onConfirm: async () => {
@@ -73,16 +82,12 @@ const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, 
     });
   };
 
-  // ── Filter leaves to the selected month/year — match if the leave's date
-  // range overlaps the selected month at all ──────────────────────────────
   const filteredLeaves = useMemo(() => {
     if (!filters.monthYear) return leaves;
-
     const selMonth = filters.monthYear.getMonth();
     const selYear  = filters.monthYear.getFullYear();
     const monthStart = new Date(selYear, selMonth, 1);
     const monthEnd   = new Date(selYear, selMonth + 1, 0, 23, 59, 59);
-
     return leaves.filter((l) => {
       if (!l.fromDate) return false;
       const from = new Date(l.fromDate);
@@ -94,49 +99,43 @@ const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, 
   const tableData = filteredLeaves.map((l) => ({
     id:          l._id,
     leaveType:   LEAVE_TYPE_LABELS[l.leaveType] || l.leaveType || "—",
-    fromDate:    l.fromDate
-      ? new Date(l.fromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-      : "—",
-    toDate:      l.toDate
-      ? new Date(l.toDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-      : "—",
+    fromDate:    l.fromDate ? new Date(l.fromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+    toDate:      l.toDate   ? new Date(l.toDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })   : "—",
     totalDays:   l.totalDays ?? 1,
-    reason:      l.reason
-      ? l.reason.length > 40 ? l.reason.slice(0, 40) + "..." : l.reason
-      : "—",
+    reason:      l.reason ? (l.reason.length > 40 ? l.reason.slice(0, 40) + "..." : l.reason) : "—",
     status:      l.status || "pending",
-    submittedOn: l.createdAt
-      ? new Date(l.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-      : "—",
+    submittedOn: l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
   }));
 
   return (
     <Box>
       {errorMsg && (
-        <Box mb={2} px={2} py={1.5}
-          sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}
-        >
+        <Box mb={2} px={2} py={1.5} sx={{ backgroundColor: "#FFF0F0", borderRadius: "10px", border: "1px solid #FFCCCC" }}>
           <Typography fontSize={13} color="error">{errorMsg}</Typography>
         </Box>
       )}
 
-      {/* ── Filter + Request Leave button on one line ──────────────────── */}
+      {/* Filter + action buttons */}
       <Box display="flex" justifyContent="space-between" alignItems="center" gap={2} mb={2}>
         <Box flex={1}>
-          <Filter
-            mode="emp_leave_requests"
-            defaultValues={{ monthYear: now }}
-            onFilterChange={setFilters}
-          />
+          <Filter mode="emp_leave_requests" defaultValues={{ monthYear: now }} onFilterChange={setFilters} />
         </Box>
 
-        <CustomButton
-          btnLabel="Request Leave"
-          variant="gradient"
-          handlePressBtn={onRequestLeave}
-          startIcon={<img src={calendarIcon} alt="" style={{ width: 16, height: 16, filter: "brightness(0) invert(1)" }} />}
-          sx={{ minWidth: "150px", height: "40px", fontSize: "14px", flexShrink: 0 }}
-        />
+        <Box display="flex" gap={1.5} flexShrink={0}>
+          <CustomButton
+            btnLabel="Leave Balance"
+            variant="grayOutlined"
+            handlePressBtn={() => setBalanceOpen(true)}
+            sx={{ minWidth: "140px", height: "40px", fontSize: "14px" }}
+          />
+          <CustomButton
+            btnLabel="Request Leave"
+            variant="gradient"
+            handlePressBtn={onRequestLeave}
+            startIcon={<img src={calendarIcon} alt="" style={{ width: 16, height: 16, filter: "brightness(0) invert(1)" }} />}
+            sx={{ minWidth: "150px", height: "40px", fontSize: "14px" }}
+          />
+        </Box>
       </Box>
 
       <Box bgcolor="#fff" borderRadius="25px" p={1}>
@@ -149,6 +148,13 @@ const MyLeaveRequests = ({ leaves = [], loading = false, actionLoading = false, 
           actionLoading={actionLoading}
         />
       </Box>
+
+      <LeaveBalancePopup
+        open={balanceOpen}
+        onClose={() => setBalanceOpen(false)}
+        balance={balance}
+        loading={balanceLoading}
+      />
 
       <ConfirmationDialog ref={confirmRef} />
 
