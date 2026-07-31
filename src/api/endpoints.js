@@ -44,6 +44,10 @@ const ENDPOINTS = {
   uploadEmployeeDocument:  "admin/employees",
   deleteEmployeeDocument:  "admin/employees",
   downloadEmployeeDocument:"admin/employees",
+  getDeactivationImpact:      "admin/employees",
+  getReassignmentCandidates:  "admin/employees/reassignment-candidates",
+  reassignAndDeactivate:      "admin/employees",
+  reactivateEmployee:         "admin/employees",
 
   // Project Types
   getProjectTypes:   "admin/project-types",

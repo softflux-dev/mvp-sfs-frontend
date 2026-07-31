@@ -1,3 +1,11 @@
+// employees/index.jsx — Employee Deactivation/Reactivation feature
+// CHANGED: the existing "Deactivate"/"Activate" menu action no longer calls
+// toggleEmployeeStatus directly. "Deactivate" now opens DeactivationImpactDialog
+// (mandatory reassignment of everything owned by that employee). "Activate"
+// now opens ReactivationDialog (optional role/department change + new
+// credentials emailed). toggleEmployeeStatus is left in useEmployee for
+// backward compatibility but is no longer called from here.
+
 import { useState, useRef, useEffect } from "react";
 import { Box, Grid, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +17,8 @@ import PaginatedTable     from "../../../components/dynamicTable";
 import ConfirmationDialog from "../../../components/popups/confirmation";
 import SuccessPopup       from "../../../components/popups/confirmationDialog";
 import AddEmployee        from "./addEmployee";
+import DeactivationImpactDialog from "./deactivationImpactDialog";
+import ReactivationDialog       from "./reactivationDialog";
 import { useEmployee }    from "../../../hooks/employee";       
 import { useDepartment } from "../../../hooks/department";
 import { useRole }       from "../../../hooks/role";
@@ -52,7 +62,7 @@ const Employees = () => {
     createEmployee,
     updateEmployee,
     deleteEmployee,
-    toggleEmployeeStatus,
+    fetchEmployees,
     handlePageChange,
     handleRowsPerPageChange,
     handleFilterChange,
@@ -63,6 +73,10 @@ const Employees = () => {
   const [successMsg,  setSuccessMsg]  = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [apiError,    setApiError]    = useState("");
+
+  // ── Deactivation / Reactivation dialog state (NEW) ─────────────────────────
+  const [deactivateTarget, setDeactivateTarget] = useState(null); // { id, name }
+  const [reactivateTarget, setReactivateTarget] = useState(null); // { id, name, roleId, departmentId }
 
   const confirmDialogRef = useRef();
 
@@ -121,14 +135,16 @@ const Employees = () => {
       setOpenModal(true);
     }
 
-    if (action === "activate" || action === "deactivate") {
-      const result = await toggleEmployeeStatus(row.id);
-      if (result.success) {
-        setSuccessMsg(result.message);
-        setShowSuccess(true);
-      } else {
-        setApiError(result.message);
-      }
+    // ── Deactivate — opens the impact-scan/reassignment dialog. Nothing is
+    //    deactivated until every owned project/task has a new owner. ───────
+    if (action === "deactivate") {
+      setDeactivateTarget({ id: row.id, name: row.name });
+    }
+
+    // ── Activate (reactivate) — opens the reactivation dialog, which issues
+    //    brand-new credentials rather than silently flipping isActive. ─────
+    if (action === "activate") {
+      setReactivateTarget({ id: row.id, name: row.name, roleId: row.roleId, departmentId: row.departmentId });
     }
 
     if (action === "delete") {
@@ -257,6 +273,23 @@ const Employees = () => {
         existingMachineIds={employees
     .map((e) => e.machineId)
     .filter((id) => id && id !== editingEmp?.machineId)}
+      />
+
+      {/* Deactivation impact/reassignment dialog (NEW) */}
+      <DeactivationImpactDialog
+        open={!!deactivateTarget}
+        onClose={() => setDeactivateTarget(null)}
+        employeeId={deactivateTarget?.id}
+        employeeName={deactivateTarget?.name}
+        onDeactivated={() => fetchEmployees()}
+      />
+
+      {/* Reactivation dialog (NEW) */}
+      <ReactivationDialog
+        open={!!reactivateTarget}
+        onClose={() => setReactivateTarget(null)}
+        employee={reactivateTarget}
+        onReactivated={() => fetchEmployees()}
       />
 
       {/* Confirm delete */}

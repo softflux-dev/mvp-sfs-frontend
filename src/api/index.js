@@ -1,7 +1,6 @@
 // src/api/index.js
 import axios from "axios";
 export const baseUrl = "https://api.sprintexa.com/api/";
-
 //export const baseUrl = "https://gknmkz56-5000.inc1.devtunnels.ms/api/";
 //export const baseUrl = "https://ctp7cjsl-5000.inc1.devtunnels.ms/api/";
 
