@@ -38,6 +38,17 @@ const STATUS_CONFIG = {
 
 const TRACKED_TYPES = { annual: "Annual Leave", sick: "Sick Leave", casual: "Casual Leave", emergency: "Emergency Leave", maternity: "Maternity Leave" };
 
+// ── Real, independently-consumable types only — used for the balance panel
+// loop below. Annual is no longer its own bucket (it's the sum of these four
+// — see backend fix), so it's shown once as a separate summary row instead
+// of a redundant 5th equal-weight row next to Sick/Casual/Emergency/Maternity.
+const REAL_TRACKED_TYPES = { sick: "Sick Leave", casual: "Casual Leave", emergency: "Emergency Leave", maternity: "Maternity Leave" };
+
+const PAYMENT_PREF_CONFIG = {
+  paid:   { label: "Paid",   bg: "#04C3731A", color: "#04C373" },
+  unpaid: { label: "Unpaid", bg: "#FFF7E6",   color: "#B45309" },
+};
+
 const DECISION_OPTIONS = [
   { value: "approve_all",    label: "Approve All"          },
   { value: "approve_custom", label: "Approve Custom Range" },
@@ -372,6 +383,18 @@ const LeaveRequestDetailDialog = ({ open, onClose, leave = {}, onApprove, onReje
             <Box sx={{ border: "1px solid #F0F0F0", borderRadius: "14px", backgroundColor: "#fff", px: 2.5, py: 2 }}>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 6 }}><Typography fontSize="11px" color="text.secondary" mb={0.4}>Leave Type</Typography><Typography fontSize="14px" fontWeight={700}>{leave.leaveType || "—"}</Typography></Grid>
+                <Grid size={{ xs: 6 }}>
+                  <Typography fontSize="11px" color="text.secondary" mb={0.4}>Requested As</Typography>
+                  <Chip
+                    label={PAYMENT_PREF_CONFIG[leave.paymentPreference]?.label || "Paid"}
+                    size="small"
+                    sx={{
+                      height: "22px", fontSize: "12px", fontWeight: 700, px: 0.5, borderRadius: "8px",
+                      backgroundColor: (PAYMENT_PREF_CONFIG[leave.paymentPreference] || PAYMENT_PREF_CONFIG.paid).bg,
+                      color: (PAYMENT_PREF_CONFIG[leave.paymentPreference] || PAYMENT_PREF_CONFIG.paid).color,
+                    }}
+                  />
+                </Grid>
                 <Grid size={{ xs: 6 }}><Typography fontSize="11px" color="text.secondary" mb={0.4}>Total Days Requested</Typography><Typography fontSize="14px" fontWeight={700}>{leave.days ?? "—"}</Typography></Grid>
                 <Grid size={{ xs: 6 }}><Typography fontSize="11px" color="text.secondary" mb={0.4}>From Date</Typography><Typography fontSize="14px" fontWeight={700}>{leave.fromDate || "—"}</Typography></Grid>
                 <Grid size={{ xs: 6 }}><Typography fontSize="11px" color="text.secondary" mb={0.4}>To Date</Typography><Typography fontSize="14px" fontWeight={700}>{leave.toDate || "—"}</Typography></Grid>
@@ -394,7 +417,14 @@ const LeaveRequestDetailDialog = ({ open, onClose, leave = {}, onApprove, onReje
                 {!balanceLoading && balanceError && <Typography fontSize="12px" color="text.secondary">{balanceError}</Typography>}
                 {!balanceLoading && balance && (
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
-                    {Object.entries(TRACKED_TYPES).map(([key, label]) => balance[key] ? (
+                    {/* Annual — one summary row, not its own bucket (it's the
+                        sum of Sick+Casual+Emergency+Maternity below). Only
+                        highlighted for legacy "annual"-typed requests, which
+                        can no longer be newly submitted. */}
+                    {balance.annual && (
+                      <BalanceRow label="Annual (Sick+Casual+Emergency+Maternity)" total={balance.annual.total} used={balance.annual.used} remaining={balance.annual.remaining} highlight={leaveTypeKey === "annual"} />
+                    )}
+                    {Object.entries(REAL_TRACKED_TYPES).map(([key, label]) => balance[key] ? (
                       <BalanceRow key={key} label={label} total={balance[key].total} used={balance[key].used} remaining={balance[key].remaining} highlight={key === leaveTypeKey} />
                     ) : null)}
                   </Box>
@@ -450,6 +480,10 @@ const LeaveRequestDetailDialog = ({ open, onClose, leave = {}, onApprove, onReje
                     <CustomSelect value={override} onChange={(e) => setOverride(e.target.value)} fullWidth height="45px" inputBgColor="#F5F5F5">
                       {OVERRIDE_OPTIONS.map((o) => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
                     </CustomSelect>
+                    <Typography fontSize="10px" color="text.secondary" mt={0.5}>
+                      {leave.name || "Employee"} requested this as{" "}
+                      <strong>{PAYMENT_PREF_CONFIG[leave.paymentPreference]?.label || "Paid"}</strong>. Choose Force Paid/Unpaid above to change it, or System Default to auto-split against their remaining balance instead.
+                    </Typography>
                   </Box>
                 )}
 

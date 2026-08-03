@@ -81,6 +81,9 @@ const LeaveRequestsTab = () => {
     status: l.status ? l.status.charAt(0).toUpperCase() + l.status.slice(1) : "Pending",
     hrNotes: l.hrNotes || "",
     rejectionReason: l.rejectionReason || "",
+    // NEW — what the employee picked when applying (paid/unpaid), so HR/Admin
+    // can see it before deciding on the Leave Type Override below.
+    paymentPreference: l.paymentPreference || "paid",
     escalationRequired: !!l.escalation?.required,
     escalationHrLocked: !!l.escalation?.hrLocked,
     escalationAdminStatus: l.escalation?.adminStatus || "none",
