@@ -1,23 +1,27 @@
 import { useState, useCallback } from "react";
 import {
   getModuleDetailApi,
-  generatePlanApi,
-  savePlanApi,
+  generateUseCasesApi,
+  saveUseCasesApi,
   detailUseCaseApi,
+  generateFlowchartApi,
+  saveFlowchartApi,
   generatePlanTasksApi,
   commitPlanTasksApi,
 } from "../../api/modules/plan";
 
-const EMPTY_PLAN = { status: "none", flowchart: [], useCases: [] };
+const EMPTY_PLAN = { status: "none", useCases: [], flowchart: { nodes: [], edges: [] } };
 
 export const usePlan = (projectId, moduleId) => {
-  const [module,     setModule]     = useState(null);
-  const [plan,       setPlan]       = useState(EMPTY_PLAN);
-  const [taskCount,  setTaskCount]  = useState(0);
-  const [loading,    setLoading]    = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [savingPlan, setSavingPlan] = useState(false);
-  const [error,      setError]      = useState("");
+  const [module,        setModule]        = useState(null);
+  const [plan,          setPlan]          = useState(EMPTY_PLAN);
+  const [taskCount,     setTaskCount]     = useState(0);
+  const [loading,       setLoading]       = useState(false);
+  const [generatingUC,  setGeneratingUC]  = useState(false);
+  const [savingUC,      setSavingUC]      = useState(false);
+  const [generatingFC,  setGeneratingFC]  = useState(false);
+  const [savingFC,      setSavingFC]      = useState(false);
+  const [error,         setError]         = useState("");
 
   // ── Fetch module + plan ────────────────────────────────────────────────────
   const fetchDetail = useCallback(async () => {
@@ -43,17 +47,17 @@ export const usePlan = (projectId, moduleId) => {
     }
   }, [projectId, moduleId]);
 
-  // ── One-time plan generation ───────────────────────────────────────────────
-  const generate = useCallback(async () => {
-    setGenerating(true);
+  // ── Stage 1 — generate use cases only ──────────────────────────────────────
+  const generateUseCases = useCallback(async () => {
+    setGeneratingUC(true);
     setError("");
     try {
-      const res = await generatePlanApi(projectId, moduleId);
+      const res = await generateUseCasesApi(projectId, moduleId);
       if (res?.status === 200 || res?.status === 201) {
         setPlan(res.data.data.plan);
         return { success: true };
       }
-      const msg = res?.data?.message || "Failed to generate plan.";
+      const msg = res?.data?.message || "Failed to generate use cases.";
       setError(msg);
       return { success: false, message: msg };
     } catch (e) {
@@ -61,35 +65,35 @@ export const usePlan = (projectId, moduleId) => {
       setError(msg);
       return { success: false, message: msg };
     } finally {
-      setGenerating(false);
+      setGeneratingUC(false);
     }
   }, [projectId, moduleId]);
 
-  // ── Save edited flowchart + use cases ──────────────────────────────────────
-  const savePlan = useCallback(async (flowchart, useCases) => {
-    setSavingPlan(true);
+  // ── Save edited / checked use cases ────────────────────────────────────────
+  const saveUseCases = useCallback(async (useCases) => {
+    setSavingUC(true);
     setError("");
     try {
-      const res = await savePlanApi(projectId, moduleId, { flowchart, useCases });
+      const res = await saveUseCasesApi(projectId, moduleId, useCases);
       if (res?.status === 200 || res?.status === 201) {
         setPlan(res.data.data.plan);
-        return { success: true, message: "Plan saved." };
+        return { success: true, message: "Use cases saved." };
       }
-      const msg = res?.data?.message || "Failed to save plan.";
+      const msg = res?.data?.message || "Failed to save use cases.";
       setError(msg);
       return { success: false, message: msg };
     } catch {
       setError("Something went wrong.");
       return { success: false, message: "Something went wrong." };
     } finally {
-      setSavingPlan(false);
+      setSavingUC(false);
     }
   }, [projectId, moduleId]);
 
-  // ── AI implementation detail for one use case ──────────────────────────────
-  const detailUseCase = useCallback(async (title, description) => {
+  // ── AI implementation detail for one use case (instructions optional) ──────
+  const detailUseCase = useCallback(async (title, description, instructions) => {
     try {
-      const res = await detailUseCaseApi(projectId, moduleId, { title, description });
+      const res = await detailUseCaseApi(projectId, moduleId, { title, description, instructions });
       if (res?.status === 200 || res?.status === 201) {
         return { success: true, details: res.data.data.details || "" };
       }
@@ -99,7 +103,50 @@ export const usePlan = (projectId, moduleId) => {
     }
   }, [projectId, moduleId]);
 
-  // ── Generate task proposals (returns list, not persisted) ──────────────────
+  // ── Stage 2 — generate flowchart from the finalized (checked) use cases ────
+  const generateFlowchart = useCallback(async () => {
+    setGeneratingFC(true);
+    setError("");
+    try {
+      const res = await generateFlowchartApi(projectId, moduleId);
+      if (res?.status === 200 || res?.status === 201) {
+        setPlan(res.data.data.plan);
+        return { success: true };
+      }
+      const msg = res?.data?.message || "Failed to generate flowchart.";
+      setError(msg);
+      return { success: false, message: msg };
+    } catch (e) {
+      const msg = e?.response?.data?.message || "AI generation failed.";
+      setError(msg);
+      return { success: false, message: msg };
+    } finally {
+      setGeneratingFC(false);
+    }
+  }, [projectId, moduleId]);
+
+  // ── Save the edited / dragged flowchart graph ───────────────────────────────
+  const saveFlowchart = useCallback(async (flowchart) => {
+    setSavingFC(true);
+    setError("");
+    try {
+      const res = await saveFlowchartApi(projectId, moduleId, flowchart);
+      if (res?.status === 200 || res?.status === 201) {
+        setPlan(res.data.data.plan);
+        return { success: true, message: "Flowchart saved." };
+      }
+      const msg = res?.data?.message || "Failed to save flowchart.";
+      setError(msg);
+      return { success: false, message: msg };
+    } catch {
+      setError("Something went wrong.");
+      return { success: false, message: "Something went wrong." };
+    } finally {
+      setSavingFC(false);
+    }
+  }, [projectId, moduleId]);
+
+  // ── Stage 3 — generate task proposals (returns list, not persisted) ────────
   const generateTasks = useCallback(async () => {
     try {
       const res = await generatePlanTasksApi(projectId, moduleId);
@@ -128,7 +175,10 @@ export const usePlan = (projectId, moduleId) => {
 
   return {
     module, plan, taskCount,
-    loading, generating, savingPlan, error,
-    fetchDetail, generate, savePlan, detailUseCase, generateTasks, commitTasks,
+    loading, generatingUC, savingUC, generatingFC, savingFC, error,
+    fetchDetail,
+    generateUseCases, saveUseCases, detailUseCase,
+    generateFlowchart, saveFlowchart,
+    generateTasks, commitTasks,
   };
 };

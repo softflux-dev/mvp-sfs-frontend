@@ -1,6 +1,8 @@
 // projectDetailTabs/moduleDetail.jsx
-// Module detail page. The plan is edited + finalized in the viewer GUI
-// (drag/edit flowchart boxes, edit/drag/check use cases + AI detail, Finalize → tasks).
+// Module detail page. Plan lifecycle, in order:
+//   1) Generate use cases → user checks/edits/finalizes them
+//   2) Generate flowchart FROM the finalized use cases → drag/edit boxes
+//   3) Finalize & generate tasks → review → commit to module (unassigned)
 import { useState, useEffect, useRef } from "react";
 import { Box, Typography, Chip, IconButton, CircularProgress } from "@mui/material";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
@@ -13,6 +15,7 @@ import SuccessPopup       from "../../../../components/popups/confirmationDialog
 import ConfirmationDialog from "../../../../components/popups/confirmation";
 import { usePlan }        from "../../../../hooks/plan";
 import PlanFlowchartEditor from "./planFlowchartEditor";
+import PlanUseCasesChecklist from "./planUseCasesChecklist";
 import PlanViewerDialog   from "./planViewerDialog";
 import PlanTaskReviewDialog from "./planTaskReviewDialog";
 import backIcon from "../../../../assets/icons/downlaod-back-btn.svg";
@@ -28,9 +31,10 @@ const MODULE_STATUS_CFG = {
 };
 
 const PLAN_LABEL = {
-  none:            { text: "No plan yet",     color: "#9CA3AF" },
-  draft:           { text: "Plan in draft",   color: "#D97706" },
-  tasks_generated: { text: "Tasks generated", color: "#059669" },
+  none:            { text: "No plan yet",       color: "#9CA3AF" },
+  usecases_draft:  { text: "Use cases drafted", color: "#D97706" },
+  flowchart_ready: { text: "Flowchart ready",   color: "#2563EB" },
+  tasks_generated: { text: "Tasks generated",   color: "#059669" },
 };
 
 const Step = ({ done, active, label, last }) => (
@@ -58,59 +62,64 @@ const ModuleDetail = () => {
   const role = location.state?.role || "admin";
 
   const {
-    module, plan, taskCount, loading, generating, savingPlan, error,
-    fetchDetail, generate, savePlan, detailUseCase, generateTasks, commitTasks,
+    module, plan, taskCount, loading, error,
+    generatingUC, savingUC, generatingFC, savingFC,
+    fetchDetail,
+    generateUseCases, saveUseCases, detailUseCase,
+    generateFlowchart, saveFlowchart,
+    generateTasks, commitTasks,
   } = usePlan(projectId, moduleId);
 
   // Local editable copies (seeded from the saved plan)
-  const [flowchart, setFlowchart] = useState(EMPTY_FLOW);
   const [useCases,  setUseCases]  = useState([]);
+  const [flowchart, setFlowchart] = useState(EMPTY_FLOW);
 
-  const [viewerOpen,    setViewerOpen]    = useState(false);
-  const [reviewOpen,    setReviewOpen]    = useState(false);
-  const [proposedTasks, setProposedTasks] = useState([]);
-  const [finalizing,    setFinalizing]    = useState(false);
-  const [committing,    setCommitting]    = useState(false);
-  const [successMsg,    setSuccessMsg]    = useState("");
-  const [showSuccess,   setShowSuccess]   = useState(false);
-  const [localError,    setLocalError]    = useState("");
+  const [viewerOpen,     setViewerOpen]     = useState(false);
+  const [reviewOpen,     setReviewOpen]     = useState(false);
+  const [proposedTasks,  setProposedTasks]  = useState([]);
+  const [generatingTasks, setGeneratingTasks] = useState(false);
+  const [committing,     setCommitting]     = useState(false);
+  const [successMsg,     setSuccessMsg]     = useState("");
+  const [showSuccess,    setShowSuccess]    = useState(false);
+  const [localError,     setLocalError]     = useState("");
 
   const confirmRef = useRef();
 
   useEffect(() => { fetchDetail(); }, [fetchDetail]);
 
   useEffect(() => {
+    setUseCases((plan.useCases || []).map((u) => ({ ...u, checked: u.checked !== false })));
     const fc = plan.flowchart && Array.isArray(plan.flowchart.nodes) ? plan.flowchart : EMPTY_FLOW;
     setFlowchart(fc);
-    setUseCases((plan.useCases || []).map((u) => ({ ...u, checked: u.checked !== false })));
   }, [plan]);
 
-  const hasPlan   = plan.status && plan.status !== "none";
-  const committed = plan.status === "tasks_generated";
-  const planCfg   = PLAN_LABEL[plan.status] || PLAN_LABEL.none;
-  const statusCfg = MODULE_STATUS_CFG[module?.status] || { bg: "#F5F5F5", color: "#757575" };
+  const hasUseCases  = plan.status && plan.status !== "none";
+  const hasFlowchart = plan.status === "flowchart_ready" || plan.status === "tasks_generated";
+  const committed    = plan.status === "tasks_generated";
+  const planCfg       = PLAN_LABEL[plan.status] || PLAN_LABEL.none;
+  const statusCfg      = MODULE_STATUS_CFG[module?.status] || { bg: "#F5F5F5", color: "#757575" };
   const selectedCount = useCases.filter((u) => u.checked !== false).length;
 
   const tasksBase = role === "pm" ? `/pm-projects/${projectId}` : `/projects/${projectId}`;
 
-  // ── Actions ────────────────────────────────────────────────────────────────
-  const handleGenerate = async () => {
+  // ── Stage 1 — generate use cases ────────────────────────────────────────────
+  const handleGenerateUseCases = async () => {
     setLocalError("");
-    const res = await generate();
-    if (res.success) setViewerOpen(true);          // jump straight into the GUI
-    else setLocalError(res.message || "Failed to generate plan.");
+    const res = await generateUseCases();
+    if (res.success) setViewerOpen(true);
+    else setLocalError(res.message || "Failed to generate use cases.");
   };
 
-  const handleSave = async () => {
+  const handleSaveUseCases = async () => {
     setLocalError("");
-    const res = await savePlan(flowchart, useCases);
-    if (res.success) { setSuccessMsg("Plan saved."); setShowSuccess(true); }
-    else setLocalError(res.message || "Failed to save plan.");
+    const res = await saveUseCases(useCases);
+    if (res.success) { setSuccessMsg("Use cases saved."); setShowSuccess(true); }
+    else setLocalError(res.message || "Failed to save use cases.");
   };
 
-  // Ask AI for a detailed implementation of one use case; store it on that use case.
-  const handleDetail = async (uc) => {
-    const res = await detailUseCase(uc.title, uc.description);
+  // instructions is optional — the user's own steering prompt for this use case
+  const handleDetail = async (uc, instructions) => {
+    const res = await detailUseCase(uc.title, uc.description, instructions);
     if (res.success) {
       setUseCases((prev) => prev.map((u) => (u.id === uc.id ? { ...u, details: res.details } : u)));
     } else {
@@ -119,13 +128,30 @@ const ModuleDetail = () => {
     return res;
   };
 
-  const handleFinalize = async () => {
+  // ── Stage 2 — generate flowchart FROM the finalized (checked) use cases ────
+  const handleGenerateFlowchart = async () => {
     setLocalError("");
-    setFinalizing(true);
-    const saved = await savePlan(flowchart, useCases);   // persist edits + checks
-    if (!saved.success) { setFinalizing(false); setLocalError(saved.message); return; }
-    const res = await generateTasks();                   // uses checked use cases
-    setFinalizing(false);
+    const saved = await saveUseCases(useCases);       // persist checks/edits first
+    if (!saved.success) { setLocalError(saved.message); return; }
+    const res = await generateFlowchart();            // backend uses checked use cases
+    if (!res.success) setLocalError(res.message || "Failed to generate flowchart.");
+  };
+
+  const handleSaveFlowchart = async () => {
+    setLocalError("");
+    const res = await saveFlowchart(flowchart);
+    if (res.success) { setSuccessMsg("Flowchart saved."); setShowSuccess(true); }
+    else setLocalError(res.message || "Failed to save flowchart.");
+  };
+
+  // ── Stage 3 — generate tasks from flowchart + finalized use cases ─────────
+  const handleGenerateTasks = async () => {
+    setLocalError("");
+    setGeneratingTasks(true);
+    const savedFc = await saveFlowchart(flowchart);   // persist any drag/edits first
+    if (!savedFc.success) { setGeneratingTasks(false); setLocalError(savedFc.message); return; }
+    const res = await generateTasks();
+    setGeneratingTasks(false);
     if (res.success) {
       setProposedTasks(res.tasks);
       setViewerOpen(false);
@@ -199,9 +225,10 @@ const ModuleDetail = () => {
       {/* Lifecycle stepper */}
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexWrap: "wrap",
                  backgroundColor: "#F5F5F5", borderRadius: "10px", px: 2, py: 1.25, mb: 2 }}>
-        <Step done={hasPlan} active={!hasPlan} label="Generate plan" />
-        <Step done={committed} active={hasPlan && !committed} label="Edit, check & finalize" />
-        <Step done={committed} active={hasPlan && !committed} label="Generate tasks" />
+        <Step done={hasUseCases} active={!hasUseCases} label="Generate use cases" />
+        <Step done={hasFlowchart} active={hasUseCases && !hasFlowchart} label="Finalize use cases" />
+        <Step done={hasFlowchart} active={hasUseCases && !hasFlowchart} label="Generate flowchart" />
+        <Step done={committed} active={hasFlowchart && !committed} label="Generate tasks" />
         <Step done={false} active={committed} label="Assign to employees (PM)" last />
       </Box>
 
@@ -214,42 +241,60 @@ const ModuleDetail = () => {
       )}
 
       {/* No plan → empty state */}
-      {!hasPlan ? (
+      {!hasUseCases ? (
         <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 6, textAlign: "center" }}>
-          <Typography fontSize={16} fontWeight={600} mb={0.5}>Generate a plan for this module</Typography>
+          <Typography fontSize={16} fontWeight={600} mb={0.5}>Generate use cases for this module</Typography>
           <Typography fontSize={13} color="text.secondary" mb={2.5}>
-            AI creates a workflow flowchart and use cases. You then edit, check the ones you want,
-            and finalize to turn them into tasks.
+            AI drafts the use cases first. Check the ones you want and finalize them —
+            only then is the flowchart generated, built specifically from what you kept.
           </Typography>
           <CustomButton
-            btnLabel={generating ? "Generating..." : "Generate plan"}
+            btnLabel={generatingUC ? "Generating..." : "Generate use cases"}
             variant="gradient"
-            handlePressBtn={handleGenerate}
-            disabled={generating}
+            handlePressBtn={handleGenerateUseCases}
+            disabled={generatingUC}
           />
         </Box>
       ) : (
         <>
-          {/* Plan summary card */}
+          {/* Header row + open-viewer button */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: "20px 24px", mb: 2 }}>
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5} flexWrap="wrap" gap={1}>
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5} flexWrap="wrap" gap={1}>
               <Typography fontSize={16} fontWeight={600}>Plan</Typography>
               <CustomButton
-                btnLabel={committed ? "Open viewer" : "Open viewer — edit & finalize"}
+                btnLabel={
+                  committed ? "Open viewer"
+                    : hasFlowchart ? "Open viewer — generate tasks"
+                    : "Open viewer — finalize use cases"
+                }
                 variant="gradient"
                 handlePressBtn={() => setViewerOpen(true)}
               />
             </Box>
-
-            {/* Read-only mini flowchart */}
-            <Typography fontSize={12} color="text.secondary" mb={0.75}>Workflow</Typography>
-            <PlanFlowchartEditor value={flowchart} editable={false} height={240} />
-
-            {/* Use case summary */}
-            <Typography fontSize={13} color="text.secondary" mt={2}>
-              {useCases.length} use case{useCases.length === 1 ? "" : "s"} · {selectedCount} selected for tasks
+            <Typography fontSize={13} color="text.secondary">
+              {useCases.length} use case{useCases.length === 1 ? "" : "s"} · {selectedCount} finalized
+              {hasFlowchart ? " · flowchart generated" : " · flowchart not generated yet"}
             </Typography>
           </Box>
+
+          {/* Saved use cases — read-only view of what's on this module */}
+          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: "20px 24px", mb: 2 }}>
+            <Typography fontSize={16} fontWeight={600} mb={1.5}>Use cases</Typography>
+            <PlanUseCasesChecklist
+              useCases={useCases}
+              onChange={setUseCases}
+              editable={false}
+              onDetail={handleDetail}
+            />
+          </Box>
+
+          {/* Workflow flowchart — read-only preview, full toolbar (fit/download) */}
+          {hasFlowchart && (
+            <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: "20px 24px", mb: 2 }}>
+              <Typography fontSize={16} fontWeight={600} mb={1.5}>Workflow flowchart</Typography>
+              <PlanFlowchartEditor value={flowchart} editable={false} height={320} />
+            </Box>
+          )}
 
           {/* Generated tasks card */}
           {committed && (
@@ -274,16 +319,20 @@ const ModuleDetail = () => {
         open={viewerOpen}
         onClose={() => setViewerOpen(false)}
         moduleTitle={module?.title}
-        flowchart={flowchart}
+        planStatus={plan.status}
         useCases={useCases}
-        onFlowchartChange={setFlowchart}
         onUseCasesChange={setUseCases}
         onDetail={handleDetail}
-        onSave={handleSave}
-        saving={savingPlan}
-        onFinalize={handleFinalize}
-        finalizing={finalizing}
-        editable={!committed}
+        onSaveUseCases={handleSaveUseCases}
+        savingUseCases={savingUC}
+        onGenerateFlowchart={handleGenerateFlowchart}
+        generatingFlowchart={generatingFC}
+        flowchart={flowchart}
+        onFlowchartChange={setFlowchart}
+        onSaveFlowchart={handleSaveFlowchart}
+        savingFlowchart={savingFC}
+        onGenerateTasks={handleGenerateTasks}
+        generatingTasks={generatingTasks}
       />
       <PlanTaskReviewDialog
         open={reviewOpen}

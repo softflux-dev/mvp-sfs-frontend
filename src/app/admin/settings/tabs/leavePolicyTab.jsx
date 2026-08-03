@@ -1,8 +1,17 @@
-// src/app/admin/settings/tabs/leavePolicyTab.jsx — Phase 0 (Leave Management Enhancement)
+// src/app/admin/settings/tabs/leavePolicyTab.jsx — Phase 0 fix (Leave Management Enhancement)
 //
-// Added: "Leave Approval Threshold" field (spec §6 / §11). Requests longer than
-// this escalate to Admin before HR can act. 0 disables escalation. Everything
-// else is unchanged from the current tab.
+// FIX: "Annual Leave Days" was a free-typed number that could silently
+// disagree with Sick + Casual + Emergency + Maternity. It's no longer a
+// separate editable value — it's now always derived live from those four
+// fields and shown read-only. Short Leaves is deliberately EXCLUDED from the
+// sum: it's tracked per-month, not per-year, so adding it into an annual-days
+// total would mix incompatible units (e.g. "2 per month" isn't "2 days/year").
+//
+// The computed total is still sent to the backend as `annualLeaveDays` on
+// save, so nothing downstream (balance calc, leaveTab.jsx, leaveBalanceTab.jsx,
+// applyLeaveDialog.jsx) needs to change — they all just read whatever value
+// annualLeaveDays resolves to, and now that's guaranteed to be internally
+// consistent instead of independently typed.
 
 import { useState, useEffect } from "react";
 import { Box, Typography, Grid, CircularProgress } from "@mui/material";
@@ -15,13 +24,12 @@ import CustomSwitch     from "../../../../components/switch";
 import { useLeavePolicy } from "../../../../hooks/leavePolicy";
 
 const INITIAL_FORM = {
-  annualLeaveDays:        "12",
   sickLeaveDays:          "10",
   casualLeaveDays:        "8",
   emergencyLeaveDays:     "5",
   maternityLeaveDays:     "90",
   shortLeavesPerMonth:    "2",
-  leaveApprovalThreshold: "10",   // ← NEW
+  leaveApprovalThreshold: "10",
   autoApprove:            false,
   autoApproveDays:        "1",
 };
@@ -68,18 +76,26 @@ const LeavePolicyTab = () => {
   useEffect(() => {
     if (policy) {
       setFormData({
-        annualLeaveDays:        policy.annualLeaveDays        != null ? String(policy.annualLeaveDays)        : "0",
         sickLeaveDays:          policy.sickLeaveDays          != null ? String(policy.sickLeaveDays)          : "0",
         casualLeaveDays:        policy.casualLeaveDays        != null ? String(policy.casualLeaveDays)        : "0",
         emergencyLeaveDays:     policy.emergencyLeaveDays     != null ? String(policy.emergencyLeaveDays)     : "0",
         maternityLeaveDays:     policy.maternityLeaveDays     != null ? String(policy.maternityLeaveDays)     : "0",
         shortLeavesPerMonth:    policy.shortLeavesPerMonth    != null ? String(policy.shortLeavesPerMonth)    : "0",
-        leaveApprovalThreshold: policy.leaveApprovalThreshold != null ? String(policy.leaveApprovalThreshold) : "10", // ← NEW
+        leaveApprovalThreshold: policy.leaveApprovalThreshold != null ? String(policy.leaveApprovalThreshold) : "10",
         autoApprove:            policy.autoApprove            || false,
         autoApproveDays:        policy.autoApproveDays        != null ? String(policy.autoApproveDays)        : "1",
       });
     }
   }, [policy]);
+
+  // ── Annual Leave Days — always derived, never typed. Sick + Casual +
+  // Emergency + Maternity only; Short Leaves stays out (per-month, not
+  // per-year — different unit entirely). ─────────────────────────────────
+  const computedAnnualLeaveDays =
+    (Number(formData.sickLeaveDays)      || 0) +
+    (Number(formData.casualLeaveDays)    || 0) +
+    (Number(formData.emergencyLeaveDays) || 0) +
+    (Number(formData.maternityLeaveDays) || 0);
 
   const handleNumericChange = (field) => (e) => {
     const raw = e.target.value;
@@ -90,9 +106,6 @@ const LeavePolicyTab = () => {
 
   const validate = () => {
     const e = {};
-
-    const annualErr = validateWholeNumberField(formData.annualLeaveDays, "Annual leave days", { min: 0, max: 365 });
-    if (annualErr) e.annualLeaveDays = annualErr;
 
     const sickErr = validateWholeNumberField(formData.sickLeaveDays, "Sick leave days", { min: 0, max: 365 });
     if (sickErr) e.sickLeaveDays = sickErr;
@@ -109,7 +122,6 @@ const LeavePolicyTab = () => {
     const shortErr = validateWholeNumberField(formData.shortLeavesPerMonth, "Short leaves per month", { min: 0, max: 31 });
     if (shortErr) e.shortLeavesPerMonth = shortErr;
 
-    // ── NEW: threshold (0 allowed = escalation disabled) ────────────────────
     const thresholdErr = validateWholeNumberField(formData.leaveApprovalThreshold, "Leave approval threshold", { min: 0, max: 365 });
     if (thresholdErr) e.leaveApprovalThreshold = thresholdErr;
 
@@ -129,13 +141,13 @@ const LeavePolicyTab = () => {
     }
 
     const result = await savePolicy({
-      annualLeaveDays:        Number(formData.annualLeaveDays),
+      annualLeaveDays:        computedAnnualLeaveDays,   // derived, not typed
       sickLeaveDays:          Number(formData.sickLeaveDays),
       casualLeaveDays:        Number(formData.casualLeaveDays),
       emergencyLeaveDays:     Number(formData.emergencyLeaveDays),
       maternityLeaveDays:     Number(formData.maternityLeaveDays),
       shortLeavesPerMonth:    Number(formData.shortLeavesPerMonth),
-      leaveApprovalThreshold: Number(formData.leaveApprovalThreshold),   // ← NEW
+      leaveApprovalThreshold: Number(formData.leaveApprovalThreshold),
       autoApprove:            formData.autoApprove,
       autoApproveDays:        formData.autoApprove ? Number(formData.autoApproveDays) : 0,
     });
@@ -166,7 +178,7 @@ const LeavePolicyTab = () => {
         </Box>
       )}
 
-      {/* ── Annual-basis leave types ─────────────────────────────────────── */}
+      {/* ── Annual Leave — auto-calculated, read-only ───────────────────── */}
       <Typography fontSize="13px" fontWeight={600} color="text.secondary" mb={1.5}>
         Annual Allowances (days per year)
       </Typography>
@@ -174,20 +186,18 @@ const LeavePolicyTab = () => {
       <Grid container spacing={2} mb={1}>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <CustomInputLabel label="Annual Leave Days *" />
-          <TextInput
-            placeholder="e.g. 12"
-            value={formData.annualLeaveDays}
-            onChange={handleNumericChange("annualLeaveDays")}
-            onKeyDown={blockInvalidNumericKeys(0)}
-            onPaste={blockInvalidPaste}
-            inputBgColor="#F5F5F5"
-            fullWidth
-            type="number"
-            inputProps={{ min: 0, max: 365, step: 1 }}
-            error={!!errors.annualLeaveDays}
-            helperText={errors.annualLeaveDays}
-          />
+          <CustomInputLabel label="Annual Leave Allocation" />
+          <Box sx={{
+            height: "45px", display: "flex", alignItems: "center", px: 2,
+            backgroundColor: "#F5F5F5", borderRadius: "10px",
+          }}>
+            <Typography fontSize="14px" fontWeight={600} color="text.primary">
+              {computedAnnualLeaveDays} days/year
+            </Typography>
+            <Typography fontSize="11px" color="text.secondary" ml={1.5}>
+              (Auto-calculated: Sick + Casual + Emergency + Maternity)
+            </Typography>
+          </Box>
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
@@ -258,7 +268,7 @@ const LeavePolicyTab = () => {
           />
         </Grid>
 
-        {/* Short Leave — separate monthly scale */}
+        {/* Short Leave — separate monthly scale, deliberately not part of the annual sum */}
         <Grid size={{ xs: 12, md: 6 }}>
           <CustomInputLabel label="Short Leaves Allowed (per month) *" />
           <TextInput
@@ -278,7 +288,7 @@ const LeavePolicyTab = () => {
 
       </Grid>
 
-      {/* ── Approval Workflow (NEW) ──────────────────────────────────────── */}
+      {/* ── Approval Workflow ────────────────────────────────────────────── */}
       <Typography fontSize="13px" fontWeight={600} color="text.secondary" mt={3} mb={1.5}>
         Approval Workflow
       </Typography>

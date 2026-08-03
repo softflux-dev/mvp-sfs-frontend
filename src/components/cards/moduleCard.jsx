@@ -16,9 +16,10 @@ const STATUS_CONFIG = {
 
 // ── Plan status map ────────────────────────────────────────────────────────
 const PLAN_CONFIG = {
-  none:            { bg: "#F5F5F5",   color: "#9CA3AF", label: "No plan yet"     },
-  draft:           { bg: "#FEF3C7",   color: "#D97706", label: "Plan in draft"   },
-  tasks_generated: { bg: "#04C3731A", color: "#04C373", label: "Tasks generated" },
+  none:            { bg: "#F5F5F5",   color: "#9CA3AF", label: "No plan yet"       },
+  usecases_draft:  { bg: "#FEF3C7",   color: "#D97706", label: "Use cases drafted" },
+  flowchart_ready: { bg: "#DBEAFE",   color: "#2563EB", label: "Flowchart ready"   },
+  tasks_generated: { bg: "#04C3731A", color: "#04C373", label: "Tasks generated"   },
 };
 
 const ModuleCard = ({

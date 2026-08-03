@@ -28,9 +28,11 @@ const tableHeader = [
   { id: "employee",       label: "Employee"                  },
   { id: "department",     label: "Department"                },
   { id: "role",           label: "Role"                      },
-  // ── Annual — grouped together, explicitly labeled ──────────────────────
-  { id: "annualAlloc",    label: "Annual Allocation"          },
-  { id: "paidUsed",       label: "Paid Leave Used (Annual)"   },
+  // ── Annual — now a SINGLE summary chip, not 3 columns. Allocation and
+  // Used would just duplicate the Sick+Casual+Emergency+Maternity Total/Used
+  // already shown below in the same row (Annual = their sum). Only Remaining
+  // earns its place: a genuine at-a-glance "how much yearly allowance is left
+  // overall" figure HR would otherwise have to mentally add up 4 numbers for.
   { id: "remainingPaid",  label: "Remaining Paid Leave (Annual)" },
   // ── Per-type balances — their own block ─────────────────────────────────
   { id: "sick",           label: "Sick Leave Balance"         },
@@ -49,8 +51,6 @@ const displayRows = [
   "lb_employee",
   "lb_department",
   "lb_role",
-  "lb_annual_allocation",
-  "lb_paid_used",
   "lb_remaining_paid",
   "lb_sick",
   "lb_casual",

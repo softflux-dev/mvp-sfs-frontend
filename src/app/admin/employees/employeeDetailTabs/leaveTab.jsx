@@ -98,27 +98,20 @@ const LeaveTab = ({ employee }) => {
   const unpaidTaken = balanceData?.unpaidTaken ?? 0;
 
   // ── Balance cards — spec §7.1, built entirely from StatsCard ─────────────
-  // Each card's subtitle carries the "/ total" context, colored to match the
-  // same green/amber/red logic used elsewhere in leave management.
+  // FIX: "Annual Leave Allocation" and "Paid Leave Used" removed — Annual is
+  // now derived as Sick+Casual+Emergency+Maternity (see backend fix), so
+  // those two numbers were pure duplicates of totals/used already shown as
+  // their own cards below. Only the highlighted "Remaining" card stays: it's
+  // the one genuine at-a-glance summary (otherwise you'd have to mentally
+  // add up 4 separate cards to know overall standing). Label matches
+  // leaveBalanceTab.jsx's "(Annual)" naming for consistency across the app.
   const cards = balance ? [
     {
-      title: "Annual Leave Allocation",
-      value: balance.annual.total,
-      icon: calendarIcon,
-      subtitle: "days entitled this year",
-    },
-    {
-      title: "Current Leave Balance",
+      title: "Remaining Paid Leave (Annual)",
       value: balance.annual.remaining,
       icon: presentIcon,
       isHighlighted: true,
-      subtitle: `of ${balance.annual.total} total`,
-    },
-    {
-      title: "Paid Leave Used",
-      value: balance.annual.used,
-      icon: presentIcon,
-      subtitle: "days consumed this year",
+      subtitle: `of ${balance.annual.total} total this year`,
     },
     {
       title: "Unpaid Leave Taken",

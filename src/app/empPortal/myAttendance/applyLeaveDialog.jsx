@@ -27,21 +27,28 @@ import GlobalStyle         from "../../../style/style";
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
 
 // Must match the enum in models/employee/leave.js.
+// FIX: "Annual Leave" removed as a selectable type. Annual is no longer an
+// independently-consumable bucket — it's now derived as Sick+Casual+Emergency
+// +Maternity (see backend fix in getEmployeeLeaveBalance/getAllEmployeeBalances).
+// A NEW request submitted with leaveType:"annual" would be approved fine by
+// HR, but its usage wouldn't reduce anything visible in any balance view —
+// it'd silently vanish from tracking. Employees now pick the real type
+// directly (Sick/Casual/Emergency/Maternity/Short/Full Day).
 const LEAVE_TYPE_OPTIONS = [
   { value: "sick",      label: "Sick Leave"      },
   { value: "casual",    label: "Casual Leave"    },
-  { value: "annual",    label: "Annual Leave"    },
   { value: "maternity", label: "Maternity Leave" },
   { value: "emergency", label: "Emergency Leave" },
   { value: "short",     label: "Short Leave"     },
-  { value: "full_day",  label: "Full Day Leave"  },
+ 
 ];
 
 // Types locked to a single day (no date range) — spec §2.2.1.
 const SINGLE_DATE_TYPES = ["short"];
 
 // Types with an annual allocation bucket in the balance response.
-const ANNUAL_BALANCE_TYPES = ["annual", "sick", "casual", "emergency", "maternity"];
+// "annual" removed — no longer selectable above, so never reached here.
+const ANNUAL_BALANCE_TYPES = ["sick", "casual", "emergency", "maternity"];
 
 // Resolve the remaining PAID allowance for a given type from the balance object.
 // Returns null when the type has no tracked bucket (e.g. full_day).

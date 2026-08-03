@@ -4,8 +4,10 @@
 import { Box, Typography, CircularProgress, Divider } from "@mui/material";
 import { DialogContainer, DialogHeader, DialogBody } from "../../../components";
 
+// ── Real, independently-consumable types only. "Annual" is shown separately
+// below as a single highlighted summary row (it's the sum of these four, not
+// its own bucket) — see the FIX note in the component. ──────────────────────
 const TYPE_LABELS = {
-  annual:    "Annual Leave",
   sick:      "Sick Leave",
   casual:    "Casual Leave",
   emergency: "Emergency Leave",
@@ -13,14 +15,18 @@ const TYPE_LABELS = {
 };
 
 // ── Single balance row with a usage bar ─────────────────────────────────────
-const BalanceRow = ({ label, total, used, remaining, pending, suffix = "days" }) => {
+const BalanceRow = ({ label, total, used, remaining, pending, suffix = "days", highlight = false }) => {
   const pct      = total > 0 ? Math.min(Math.round((used / total) * 100), 100) : 0;
   const depleted = remaining <= 0 && total > 0;
 
   return (
-    <Box sx={{ p: 1.5, borderRadius: "10px", border: "1px solid #F0F0F0" }}>
+    <Box sx={{
+      p: 1.5, borderRadius: "10px",
+      border: highlight ? "1.5px solid #AA2493" : "1px solid #F0F0F0",
+      backgroundColor: highlight ? "#FAF0FF" : "transparent",
+    }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.75}>
-        <Typography fontSize="12px" fontWeight={600} color="text.primary">{label}</Typography>
+        <Typography fontSize="12px" fontWeight={highlight ? 700 : 600} color="text.primary">{label}</Typography>
         <Typography fontSize="12px" fontWeight={700} color={depleted ? "#DC2626" : "#04C373"}>
           {remaining} / {total} {suffix} left
         </Typography>
@@ -56,6 +62,21 @@ const LeaveBalancePopup = ({ open, onClose, balance, loading }) => {
 
         {!loading && balance && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.25 }}>
+            {/* ── Annual — ONE highlighted summary row, not its own bucket.
+                It's the sum of Sick+Casual+Emergency+Maternity below. ──────── */}
+            {balance.balance?.annual && (
+              <BalanceRow
+                label="Remaining Paid Leave (Annual)"
+                total={balance.balance.annual.total}
+                used={balance.balance.annual.used}
+                remaining={balance.balance.annual.remaining}
+                pending={balance.balance.annual.pending}
+                highlight
+              />
+            )}
+
+            {balance.balance?.annual && <Divider sx={{ my: 0.25 }} />}
+
             {Object.entries(TYPE_LABELS).map(([key, label]) => {
               const b = balance.balance?.[key];
               if (!b) return null;
