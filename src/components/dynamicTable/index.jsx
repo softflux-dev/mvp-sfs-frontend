@@ -2870,6 +2870,21 @@ case "dept_description":
     </TableCell>
   );
 
+  // ── Attendance Records (monthly summary) — required days (holidays + leave excluded) ──
+case "att_summary_required_days":
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={row.requiredDays ?? 0}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 600,
+          px: 1, borderRadius: "8px",
+          backgroundColor: "#2B6EFF1A", color: "#2B6EFF",
+        }}
+      />
+    </TableCell>
+  );
+
 // ── Department employee count ─────────────────────────────────────────────
 case "dept_employees":
   return (
