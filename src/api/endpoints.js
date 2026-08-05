@@ -48,6 +48,7 @@ const ENDPOINTS = {
   getReassignmentCandidates:  "admin/employees/reassignment-candidates",
   reassignAndDeactivate:      "admin/employees",
   reactivateEmployee:         "admin/employees",
+  getAccountHistory:          "admin/employees",
 
   // Project Types
   getProjectTypes:   "admin/project-types",

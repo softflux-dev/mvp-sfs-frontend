@@ -1,5 +1,8 @@
 // src/app/empPortal/myAttendance/myLeaveRequests.jsx — Phase 1 (Leave Management Enhancement)
 // Added: "Leave Balance" button + popup (spec §2.1). Table unchanged.
+// NEW: View icon on every row (Pending/Approved/Rejected) opening a
+// read-only detail dialog; Cancel button remains pending-only, now sharing
+// the same Action cell via the "leave_view_actions" dynamicTable case.
 
 import { useRef, useState, useMemo } from "react";
 import { Box, Typography }           from "@mui/material";
@@ -10,7 +13,9 @@ import ConfirmationDialog  from "../../../components/popups/confirmation";
 import SuccessPopup        from "../../../components/popups/confirmationDialog";
 import CustomButton        from "../../../components/customButton";
 import LeaveBalancePopup   from "./leaveBalancePopup";
+import MyLeaveRequestDetailDialog from "./myLeaveRequestDetailDialog";
 import calendarIcon        from "../../../assets/icons/tasks.svg";
+import viewIcon             from "../../../assets/icons/view.svg";
 
 const LEAVE_TYPE_LABELS = {
   sick:      "Sick Leave",
@@ -42,7 +47,7 @@ const displayRows = [
   "reason",
   "leave_status",
   "submittedOn",
-  "leave_cancel",
+  "leave_view_actions",
 ];
 
 const MyLeaveRequests = ({
@@ -59,6 +64,8 @@ const MyLeaveRequests = ({
   const [showSuccess, setShowSuccess] = useState(false);
   const [errorMsg,    setErrorMsg]    = useState("");
   const [balanceOpen, setBalanceOpen] = useState(false);
+  const [viewOpen,    setViewOpen]    = useState(false);
+  const [selectedLeave, setSelectedLeave] = useState(null);
 
   const now = new Date();
   const [filters, setFilters] = useState({ monthYear: now });
@@ -99,12 +106,16 @@ const MyLeaveRequests = ({
   const tableData = filteredLeaves.map((l) => ({
     id:          l._id,
     leaveType:   LEAVE_TYPE_LABELS[l.leaveType] || l.leaveType || "—",
+    leaveTypeRaw: l.leaveType,
     fromDate:    l.fromDate ? new Date(l.fromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
     toDate:      l.toDate   ? new Date(l.toDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })   : "—",
     totalDays:   l.totalDays ?? 1,
     reason:      l.reason ? (l.reason.length > 40 ? l.reason.slice(0, 40) + "..." : l.reason) : "—",
+    reasonFull:  l.reason || "",
     status:      l.status || "pending",
     submittedOn: l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+    hrNotes:     l.hrNotes || "",
+    paymentPreference: l.paymentPreference || "paid",
   }));
 
   return (
@@ -145,6 +156,8 @@ const MyLeaveRequests = ({
           displayRows={displayRows}
           isLoading={loading}
           onCancelClick={handleCancel}
+          viewIcon={viewIcon}
+          onViewClick={(row) => { setSelectedLeave(row); setViewOpen(true); }}
           actionLoading={actionLoading}
         />
       </Box>
@@ -154,6 +167,14 @@ const MyLeaveRequests = ({
         onClose={() => setBalanceOpen(false)}
         balance={balance}
         loading={balanceLoading}
+      />
+
+      <MyLeaveRequestDetailDialog
+        open={viewOpen}
+        onClose={() => { setViewOpen(false); setSelectedLeave(null); }}
+        leave={selectedLeave || {}}
+        balance={balance}
+        balanceLoading={balanceLoading}
       />
 
       <ConfirmationDialog ref={confirmRef} />

@@ -13,6 +13,7 @@ import TasksTab             from "./employeeDetailTabs/tasksTab";
 import DocumentsTab         from "./employeeDetailTabs/documentsTab";
 import LeaveTab from "./employeeDetailTabs/leaveTab";
 import AssignedProjectsTab from "./employeeDetailTabs/assignedProjectsTab";
+import AccountHistoryTab   from "./employeeDetailTabs/accountHistoryTab";
 import backIcon from "../../../assets/icons/downlaod-back-btn.svg";
 import { useEmployee } from "../../../hooks/employee";
 import { getEmployeeByIdApi } from "../../../api/modules/employee";
@@ -77,6 +78,7 @@ const EmployeeDetail = () => {
   baseTabs.push({ id: 4, label: "Tasks" });
   baseTabs.push({ id: 5, label: "Documents" });
    baseTabs.push({ id: 6, label: "Leave" });
+   baseTabs.push({ id: 7, label: "Account History" });
 
 
   useEffect(() => {
@@ -196,6 +198,7 @@ if (loading) {
       {activeTab === 4 && <TasksTab employee={employee} />}
       {activeTab === 5 && <DocumentsTab employee={employee} />}
       {activeTab === 6 && <LeaveTab employee={employee} />}
+      {activeTab === 7 && <AccountHistoryTab employee={employee} />}
 
       {/* ── Edit Employee dialog ──────────────────────────────────────────── */}
       <AddEmployee

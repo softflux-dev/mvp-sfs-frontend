@@ -68,13 +68,13 @@ const TeamTab = ({ project = {}, onTeamChange }) => {
     }
   };
 
-  useEffect(() => {
-    getEmployeesApi({ limit: 1000 }).then((res) => {
-      if (res?.status === 200 || res?.status === 201) {
-        setAllEmployees(res.data.data.employees || []);
-      }
-    });
-  }, []);
+useEffect(() => {
+  getEmployeesApi({ limit: 1000, status: "active" }).then((res) => {
+    if (res?.status === 200 || res?.status === 201) {
+      setAllEmployees(res.data.data.employees || []);
+    }
+  });
+}, []);
 
   useEffect(() => { fetchTeam(); }, [project.id]);
 

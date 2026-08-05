@@ -3304,6 +3304,39 @@ case "payroll_extra_hours":
     </TableCell>
   );
 
+  // leave_view_actions — employee's own leave table: View icon always shown,
+// Cancel button only for pending rows. Separate from "leave_cancel" so
+// existing usages of that case elsewhere are untouched.
+case "leave_view_actions":
+  return (
+    <TableCell key={val}>
+      <Box display="flex" alignItems="center" gap={0.75}>
+        <IconButton
+          size="small"
+          onClick={() => onViewClick?.(row)}
+          sx={{ color: "#666", "&:hover": { backgroundColor: "#f5f5f5" } }}
+        >
+          <img src={viewIcon} alt="view" style={{ width: 18, height: 18 }} />
+        </IconButton>
+        {row.status === "pending" && (
+          <Button
+            size="small"
+            onClick={() => onCancelClick?.(row)}
+            disabled={actionLoading}
+            sx={{
+              fontSize: "12px", px: 2, py: 0.5, borderRadius: "8px",
+              backgroundColor: "#FF00001A", color: "#FF0000",
+              "&:hover": { backgroundColor: "#FF00002A" },
+              textTransform: "none", fontWeight: 500,
+            }}
+          >
+            Cancel
+          </Button>
+        )}
+      </Box>
+    </TableCell>
+  );
+
 // ── Payroll — shortfall hours ─────────────────────────────────────────────
 case "payroll_shortfall":
   return (

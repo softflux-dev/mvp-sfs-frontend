@@ -37,3 +37,7 @@ export const reassignAndDeactivateApi = (employeeId, payload) =>
 // payload: { role?, department? }
 export const reactivateEmployeeApi = (employeeId, payload) =>
   api(`${ENDPOINTS.reactivateEmployee}/${employeeId}/reactivate`, payload, "post");
+
+// GET /api/admin/employees/:id/account-history
+export const getEmployeeAccountHistoryApi = (employeeId) =>
+  api(`${ENDPOINTS.getAccountHistory}/${employeeId}/account-history`, null, "get");
