@@ -552,14 +552,17 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
 
             {/* 9. Start + End Date */}
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-             <Box ref={fieldRefs.startDate}>
+            <Box ref={fieldRefs.startDate}>
                 <CustomInputLabel label="Start Date *" />
                 <DatePicker
                   value={formData.startDate}
                   onChange={(v) => setFormData((prev) => ({ ...prev, startDate: v }))}
                   minDate={activeProjectStart ? new Date(activeProjectStart) : undefined}
                   maxDate={activeProjectEnd ? new Date(activeProjectEnd) : undefined}
-                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.startDate } }}
+                 slotProps={{
+                    textField: { size: "small", fullWidth: true, error: !!errors.startDate },
+                    popper: { sx: GlobalStyle.datePickerPopperSx },
+                  }}
                   sx={GlobalStyle.datePickerStyle}
                 />
                 {errors.startDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.startDate}</Typography>}
@@ -571,7 +574,10 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
                   onChange={(v) => setFormData((prev) => ({ ...prev, endDate: v }))}
                   minDate={formData.startDate ? new Date(formData.startDate) : new Date()}
                   maxDate={activeProjectEnd ? new Date(activeProjectEnd) : undefined}
-                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.endDate } }}
+                  slotProps={{
+                    textField: { size: "small", fullWidth: true, error: !!errors.startDate },
+                    popper: { sx: GlobalStyle.datePickerPopperSx },
+                  }}
                   sx={GlobalStyle.datePickerStyle}
                 />
                 {errors.endDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.endDate}</Typography>}

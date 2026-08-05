@@ -62,6 +62,26 @@ const GlobalStyle = {
       },
     },
   },
+
+  // ── Pass this via slotProps={{ popper: { sx: GlobalStyle.datePickerPopperSx } }}
+  // on every DatePicker. Targets the year/day popper directly — it's portaled
+  // to document.body, so plain sx on the DatePicker root never reaches it.
+  datePickerPopperSx: {
+    "& .MuiPickersYear-yearButton.Mui-selected": {
+      backgroundColor: "#AA2493 !important",
+      color: "#ffffff !important",
+    },
+    "& .MuiPickersYear-yearButton.Mui-selected:hover, & .MuiPickersYear-yearButton.Mui-selected:focus": {
+      backgroundColor: "#AA2493 !important",
+      color: "#ffffff !important",
+    },
+  },
+  datePickerPopperSx: {
+    "& [role='radio'][aria-checked='true']": {
+      background: "linear-gradient(90deg, #AA2493 0%, #022179 100%) !important",
+      color: "#ffffff !important",
+    },
+  },
 };
 
 export default GlobalStyle;

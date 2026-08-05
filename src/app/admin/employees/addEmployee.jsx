@@ -511,6 +511,7 @@ const handleDepartmentChange = (e) => {
                       placeholder: "dd/mm/yyyy",
                       error: !!errors.joiningDate,
                     },
+                    popper: { sx: GlobalStyle.datePickerPopperSx },
                   }}
                   sx={GlobalStyle.datePickerStyle}
                 />

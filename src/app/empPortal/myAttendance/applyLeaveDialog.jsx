@@ -208,7 +208,10 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
                   <DatePicker
                     value={formData.fromDate}
                     onChange={handleFromDateChange}
-                    slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.fromDate } }}
+                    slotProps={{
+                      textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
+                      popper: { sx: GlobalStyle.datePickerPopperSx },
+                    }}
                     sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
                   />
                   {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.fromDate}</Typography>}
@@ -217,10 +220,13 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
                 <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
                   <Box>
                     <CustomInputLabel label="From Date *" />
-                    <DatePicker
+                   <DatePicker
                       value={formData.fromDate}
                       onChange={handleFromDateChange}
-                      slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.fromDate } }}
+                      slotProps={{
+                        textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
+                        popper: { sx: GlobalStyle.datePickerPopperSx },
+                      }}
                       sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
                     />
                     {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.fromDate}</Typography>}
@@ -228,12 +234,15 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
                   <Box>
                     <CustomInputLabel label="To Date *" />
                     <DatePicker
-                      value={formData.toDate}
-                      minDate={formData.fromDate || undefined}
-                      onChange={(v) => { setFormData((p) => ({ ...p, toDate: v })); if (errors.toDate) setErrors((p) => ({ ...p, toDate: "" })); }}
-                      slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.toDate } }}
-                      sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
-                    />
+                  value={formData.toDate}
+                  minDate={formData.fromDate || undefined}
+                  onChange={(v) => { setFormData((p) => ({ ...p, toDate: v })); if (errors.toDate) setErrors((p) => ({ ...p, toDate: "" })); }}
+                  slotProps={{
+                    textField: { size: "small", fullWidth: true, error: !!errors.toDate },
+                    popper: { sx: GlobalStyle.datePickerPopperSx },
+                  }}
+                  sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
+                />
                     {errors.toDate && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.toDate}</Typography>}
                   </Box>
                 </Box>

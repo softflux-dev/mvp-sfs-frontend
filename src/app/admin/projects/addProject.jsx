@@ -264,7 +264,10 @@ const handleSave = () => {
               <Box ref={fieldRefs.startDate}>
                 <CustomInputLabel label="Start Date *" />
                 <DatePicker value={formData.startDate} onChange={handleDateChange("startDate") } 
-                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.startDate } }}
+                  slotProps={{
+                    textField: { size: "small", fullWidth: true, error: !!errors.startDate },
+                    popper: { sx: GlobalStyle.datePickerPopperSx },
+                  }}
                   sx={GlobalStyle.datePickerStyle}
                 />
                 {errors.startDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.startDate}</Typography>}
@@ -273,7 +276,10 @@ const handleSave = () => {
                 <CustomInputLabel label="End Date *" />
                 <DatePicker value={formData.endDate} onChange={handleDateChange("endDate")} 
                 minDate={formData.startDate ? new Date(formData.startDate) : undefined}
-                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.endDate } }}
+                  slotProps={{
+                    textField: { size: "small", fullWidth: true, error: !!errors.endDate },
+                    popper: { sx: GlobalStyle.datePickerPopperSx },
+                  }}
                   sx={GlobalStyle.datePickerStyle}
                 />
                 {errors.endDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.endDate}</Typography>}

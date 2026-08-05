@@ -309,17 +309,23 @@ const LeaveRequestDetailDialog = ({ open, onClose, leave = {}, onApprove, onReje
                       {adminDecision === "approve_custom" && (
                         <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 1.5, width: "100%", "& > *": { flex: 1, minWidth: 0 } }}>
                           <Box sx={{ minWidth: 0 }}>
-                            <CustomInputLabel label="Approve From" />
-                            <DatePicker value={adminCustomFrom} minDate={leave._rawFromDate} maxDate={leave._rawToDate} onChange={setAdminCustomFrom}
-                              slotProps={{ textField: { size: "small", fullWidth: true } }}
-                              sx={{ ...GlobalStyle.datePickerStyle, width: "100%", minWidth: 0, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "10px" } }} />
-                          </Box>
-                          <Box sx={{ minWidth: 0 }}>
-                            <CustomInputLabel label="Approve To" />
-                            <DatePicker value={adminCustomTo} minDate={adminCustomFrom || leave._rawFromDate} maxDate={leave._rawToDate} onChange={setAdminCustomTo}
-                              slotProps={{ textField: { size: "small", fullWidth: true } }}
-                              sx={{ ...GlobalStyle.datePickerStyle, width: "100%", minWidth: 0, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "10px" } }} />
-                          </Box>
+                          <CustomInputLabel label="Approve From" />
+                          <DatePicker value={adminCustomFrom} minDate={leave._rawFromDate} maxDate={leave._rawToDate} onChange={setAdminCustomFrom}
+                            slotProps={{
+                              textField: { size: "small", fullWidth: true },
+                              popper: { sx: GlobalStyle.datePickerPopperSx },
+                            }}
+                            sx={{ ...GlobalStyle.datePickerStyle, width: "100%", minWidth: 0, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "10px" } }} />
+                        </Box>
+                        <Box sx={{ minWidth: 0 }}>
+                          <CustomInputLabel label="Approve To" />
+                          <DatePicker value={adminCustomTo} minDate={adminCustomFrom || leave._rawFromDate} maxDate={leave._rawToDate} onChange={setAdminCustomTo}
+                            slotProps={{
+                              textField: { size: "small", fullWidth: true },
+                              popper: { sx: GlobalStyle.datePickerPopperSx },
+                            }}
+                            sx={{ ...GlobalStyle.datePickerStyle, width: "100%", minWidth: 0, "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "10px" } }} />
+                        </Box>
                         </Box>
                       )}
 
@@ -456,13 +462,19 @@ const LeaveRequestDetailDialog = ({ open, onClose, leave = {}, onApprove, onReje
                     <Box sx={{ minWidth: 0 }}>
                       <CustomInputLabel label="Approved From" />
                       <DatePicker value={customFrom} minDate={leave._adminCapFromDate || leave._rawFromDate} maxDate={leave._adminCapToDate || leave._rawToDate} onChange={setCustomFrom}
-                        slotProps={{ textField: { size: "small", fullWidth: true } }}
+                        slotProps={{
+                          textField: { size: "small", fullWidth: true },
+                          popper: { sx: GlobalStyle.datePickerPopperSx },
+                        }}
                         sx={{ ...GlobalStyle.datePickerStyle, width: "100%", minWidth: 0, "& .MuiOutlinedInput-root": { backgroundColor: "#F5F5F5", borderRadius: "12px" } }} />
                     </Box>
                     <Box sx={{ minWidth: 0 }}>
                       <CustomInputLabel label="Approved To" />
                       <DatePicker value={customTo} minDate={customFrom || leave._adminCapFromDate || leave._rawFromDate} maxDate={leave._adminCapToDate || leave._rawToDate} onChange={setCustomTo}
-                        slotProps={{ textField: { size: "small", fullWidth: true } }}
+                        slotProps={{
+                          textField: { size: "small", fullWidth: true },
+                          popper: { sx: GlobalStyle.datePickerPopperSx },
+                        }}
                         sx={{ ...GlobalStyle.datePickerStyle, width: "100%", minWidth: 0, "& .MuiOutlinedInput-root": { backgroundColor: "#F5F5F5", borderRadius: "12px" } }} />
                     </Box>
                   </Box>

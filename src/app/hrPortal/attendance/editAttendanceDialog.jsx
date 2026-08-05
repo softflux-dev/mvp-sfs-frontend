@@ -186,7 +186,10 @@ const EditAttendanceDialog = ({
                 <DatePicker
                   value={form.date}
                   onChange={(val) => setForm((prev) => ({ ...prev, date: val }))}
-                  slotProps={{ textField: { size: "small", fullWidth: true } }}
+                  slotProps={{
+                    textField: { size: "small", fullWidth: true },
+                    popper: { sx: GlobalStyle.datePickerPopperSx },
+                  }}
                   sx={{
                     ...GlobalStyle.datePickerStyle,
                     width: "100%",

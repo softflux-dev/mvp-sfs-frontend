@@ -24,6 +24,8 @@ import messageIcon      from "../../assets/icons/chat-icon-blue.svg";
 // ── Map notification type → icon ─────────────────────────────────────────────
 const TYPE_ICON = {
   newTaskAssignment:        { src: documentIcon,  alt: "Document", bg: "#EEF2FF" },
+  taskReassigned:            { src: documentIcon,  alt: "Document", bg: "#EEF2FF" },
+  projectReassigned:         { src: mobileIcon,    alt: "Team",     bg: "#F5F3FF" },
   projectDeadlineReminder:  { src: clockIcon,     alt: "Clock",    bg: "#FFF7ED" },
   projectDeadlineChanged:   { src: clockIcon,     alt: "Clock",    bg: "#FFF7ED" },
   leaveRequestSubmitted:    { src: calendarIcon,  alt: "Calendar", bg: "#ECFDF5" },
@@ -55,6 +57,7 @@ function relativeTime(dateStr) {
 
 const TASK_ASSIGN_STATUS_TYPES = ["newTaskAssignment", "taskStatusUpdate"];
 const OTHER_TASK_TYPES         = ["taskDeadlineExtended", "taskOverdue"];
+const REASSIGNED_TYPES         = ["taskReassigned", "projectReassigned"];
 const BUG_TYPES                = ["bugStatusUpdated"];
 const MESSAGE_TYPES            = ["newMessageReceived"];
 const PROJECT_TYPES            = ["projectDeadlineChanged", "projectDeadlineReminder", "projectTeamUpdated", "projectModuleUpdated"];
@@ -92,9 +95,9 @@ function resolveNotificationRoute(n, role) {
     return null;
   }
 
-  // ── Task assigned / task status updated ─────────────────────────────────
+// ── Task assigned / task status updated ─────────────────────────────────
   if (TASK_ASSIGN_STATUS_TYPES.includes(type)) {
-    if (role === "EMPLOYEE")                     return "/my-tasks";
+    if (role === "EMPLOYEE" || role === "HR")    return data.taskId ? `/emp/tasks/${data.taskId}` : "/my-tasks";
     if (role === "PROJECT_MANAGER")              return "/task-management";
     if (role === "ADMIN" && data.taskId)         return `/projects/tasks/${data.taskId}`;
     return null;
@@ -102,9 +105,23 @@ function resolveNotificationRoute(n, role) {
 
   // ── Other task-related (deadline extended, overdue) ──────────────────
   if (OTHER_TASK_TYPES.includes(type)) {
-    if (role === "EMPLOYEE")                        return "/my-tasks";
+    if (role === "EMPLOYEE" || role === "HR")       return data.taskId ? `/emp/tasks/${data.taskId}` : "/my-tasks";
     if (role === "PROJECT_MANAGER" && data.taskId)  return `/pm-tasks/${data.taskId}`;
     if (role === "ADMIN" && data.taskId)            return `/projects/tasks/${data.taskId}`;
+    return null;
+  }
+
+  // ── Reassigned (task or project) ──────────────────────────────────────
+  if (REASSIGNED_TYPES.includes(type)) {
+    if (type === "taskReassigned" && data.taskId) {
+      if (role === "EMPLOYEE")        return `/emp/tasks/${data.taskId}`;
+      if (role === "PROJECT_MANAGER") return `/pm-tasks/${data.taskId}`;
+      if (role === "HR")              return `/emp/tasks/${data.taskId}`;
+    }
+    if (type === "projectReassigned" && data.projectId) {
+      if (role === "PROJECT_MANAGER") return `/pm-projects/${data.projectId}`;
+      if (role === "HR" || role === "EMPLOYEE") return null;
+    }
     return null;
   }
 

@@ -260,21 +260,24 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
                   <MenuItem key={m} value={idx}>{m}</MenuItem>
                 ))}
               </CustomSelect>
-              <DatePicker
-                views={["year"]}
-                value={yearDate}
-                onChange={(val) => val && setYearDate(val)}
-                sx={{
-                  ...GlobalStyle.datePickerStyle,
-                  width: "100%",
-                  "& .MuiOutlinedInput-root": {
-                    backgroundColor: "#fff",
-                    borderRadius: "14px",
-                    "& fieldset": { border: "none" },
-                  },
-                }}
-                slotProps={{ textField: { size: "small", fullWidth: true } }}
-              />
+             <DatePicker
+              views={["year"]}
+              value={yearDate}
+              onChange={(val) => val && setYearDate(val)}
+              sx={{
+                ...GlobalStyle.datePickerStyle,
+                width: "100%",
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#fff",
+                  borderRadius: "14px",
+                  "& fieldset": { border: "none" },
+                },
+              }}
+              slotProps={{
+                textField: { size: "small", fullWidth: true },
+                popper: { sx: GlobalStyle.datePickerPopperSx },
+              }}
+            />
             </Box>
           </Box>
 

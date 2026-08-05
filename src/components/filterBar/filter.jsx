@@ -940,33 +940,34 @@ holidays: [
                   ))}
                 </CustomSelect>
               )}
-             {f.type === "date" && (
-              <DatePicker
-                value={values[f.key] || null}
-                onChange={(v) => setVal(f.key, v)}
-                minDate={f.minDateKey && values[f.minDateKey] ? new Date(values[f.minDateKey]) : undefined}
-                sx={{
-                  ...GlobalStyle.datePickerStyle,
-                  "& input": {
-                    color: values[f.key] ? "inherit" : "transparent",
-                  },
-                  "& input::placeholder": {
-                    color: "#9CA3AF",
-                    opacity: 1,
-                    visibility: "visible",
-                  },
-                }}
-                slotProps={{
-                  textField: {
-                    label: "",
-                    fullWidth: true,
-                    inputProps: {
-                      placeholder: f.placeholder,
-                    },
-                  },
-                }}
-              />
-            )}
+            {f.type === "date" && (
+  <DatePicker
+    value={values[f.key] || null}
+    onChange={(v) => setVal(f.key, v)}
+    minDate={f.minDateKey && values[f.minDateKey] ? new Date(values[f.minDateKey]) : undefined}
+    sx={{
+      ...GlobalStyle.datePickerStyle,
+      "& input": {
+        color: values[f.key] ? "inherit" : "transparent",
+      },
+      "& input::placeholder": {
+        color: "#9CA3AF",
+        opacity: 1,
+        visibility: "visible",
+      },
+    }}
+    slotProps={{
+      textField: {
+        label: "",
+        fullWidth: true,
+        inputProps: {
+          placeholder: f.placeholder,
+        },
+      },
+      popper: { sx: GlobalStyle.datePickerPopperSx },
+    }}
+  />
+)}
             {f.type === "monthyear" && (
   <DatePicker
     views={["year", "month"]}
@@ -1005,7 +1006,7 @@ holidays: [
     }}
   />
 )}
-            {f.type === "year" && (
+           {f.type === "year" && (
             <DatePicker
               views={["year"]}
               openTo="year"
@@ -1014,9 +1015,10 @@ holidays: [
               sx={{ ...GlobalStyle.datePickerStyle, "& input": { color: values[f.key] ? "inherit" : "transparent" } }}
               slotProps={{
                 textField: { label: "", fullWidth: true, inputProps: { placeholder: f.placeholder } },
+                popper: { sx: GlobalStyle.datePickerPopperSx },
               }}
             />
-          )}
+            )}
             </Grid>
           ))}
         </Grid>

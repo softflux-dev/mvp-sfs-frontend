@@ -153,36 +153,42 @@ const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loadin
               </Box>
             </Box>
 
-            {/* From / To Date */}
-            <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
-              <Box ref={fieldRefs.fromDate}>
-                <CustomInputLabel label="Start Date *" />
-                <DatePicker
-                  value={formData.fromDate}
-                  onChange={handleFromDateChange}
-                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.fromDate } }}
-                  sx={{
-                    ...GlobalStyle.datePickerStyle, width: "100%",
-                    "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } },
-                  }}
-                />
-                {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.fromDate}</Typography>}
-              </Box>
-              <Box ref={fieldRefs.toDate}>
-                <CustomInputLabel label="End Date *" />
-                <DatePicker
-                  value={formData.toDate}
-                  onChange={handleChange("toDate")}
-                  minDate={formData.fromDate || undefined}
-                  slotProps={{ textField: { size: "small", fullWidth: true, error: !!errors.toDate } }}
-                  sx={{
-                    ...GlobalStyle.datePickerStyle, width: "100%",
-                    "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } },
-                  }}
-                />
-                {errors.toDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.toDate}</Typography>}
-              </Box>
+           {/* From / To Date */}
+          <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
+            <Box ref={fieldRefs.fromDate}>
+              <CustomInputLabel label="Start Date *" />
+              <DatePicker
+                value={formData.fromDate}
+                onChange={handleFromDateChange}
+                slotProps={{
+                  textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
+                  popper: { sx: GlobalStyle.datePickerPopperSx },
+                }}
+                sx={{
+                  ...GlobalStyle.datePickerStyle, width: "100%",
+                  "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } },
+                }}
+              />
+              {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.fromDate}</Typography>}
             </Box>
+            <Box ref={fieldRefs.toDate}>
+              <CustomInputLabel label="End Date *" />
+              <DatePicker
+                value={formData.toDate}
+                onChange={handleChange("toDate")}
+                minDate={formData.fromDate || undefined}
+                slotProps={{
+                  textField: { size: "small", fullWidth: true, error: !!errors.toDate },
+                  popper: { sx: GlobalStyle.datePickerPopperSx },
+                }}
+                sx={{
+                  ...GlobalStyle.datePickerStyle, width: "100%",
+                  "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } },
+                }}
+              />
+              {errors.toDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.toDate}</Typography>}
+            </Box>
+          </Box>
             <Typography fontSize="11px" color="text.secondary" mt={-1.5}>
               For a single-day holiday, set both dates the same.
             </Typography>

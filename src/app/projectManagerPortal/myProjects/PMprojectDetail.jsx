@@ -1,6 +1,6 @@
 import { useState, useEffect }         from "react";
 import { Box, IconButton, Typography } from "@mui/material";
-import { useNavigate, useLocation,useParams }    from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 import CustomTabs          from "../../../components/tabs";
 import ProjectDetailHeader from "../../admin/projects/projectDetailHeader";
@@ -44,14 +44,45 @@ const PMprojectDetail = () => {
   const [stages,      setStages]      = useState(DEFAULT_STAGES);
   const [teamMembers, setTeamMembers] = useState([]);
 
-  // ── Fetch full project to get saved stages ────────────────────────────────
+  // ── Fetch full project to get saved stages (and, when navigated without
+  // state — e.g. from a notification — backfill the rest of the project
+  // fields too, so Team/Tasks/etc tabs get a real project.id to work with) ──
   useEffect(() => {
-    const projectId = location.state?.project?.id;
+    const projectId = location.state?.project?.id || routeProjectId;
     if (!projectId) return;
+
     getProjectByIdApi(projectId).then((res) => {
       if (res?.status === 200 || res?.status === 201) {
         const full = res.data.data.project;
         if (full.stages?.length) setStages(full.stages);
+
+        // Only backfill when navigation state didn't already give us the
+        // project — avoids clobbering anything already populated correctly.
+        if (!location.state?.project) {
+          setProject({
+            id:               full._id,
+            projectName:      full.projectName,
+            client:           full.clientName || "—",
+            description:      full.description || "",
+            status: full.status
+              ? full.status.charAt(0).toUpperCase() + full.status.slice(1)
+              : "—",
+            progress:         full.progress ?? 0,
+            startDate: full.startDate
+              ? new Date(full.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "—",
+            endDate: full.endDate
+              ? new Date(full.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+              : "—",
+            budget:           full.budget ?? 0,
+            totalTasks:       full.totalTasks     ?? 0,
+            completedTasks:   full.completedTasks ?? 0,
+            projectManager:   full.projectManager?.fullName || "—",
+            projectManagerId: full.projectManager?._id      || "",
+            projectType:      full.projectType?.value || full.projectType?._id || "",
+            projectTypeId:    full.projectType?._id        || "",
+          });
+        }
       }
     });
   }, []);

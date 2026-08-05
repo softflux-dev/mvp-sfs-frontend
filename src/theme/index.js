@@ -687,7 +687,7 @@ const getTheme = (direction = "ltr") =>
           },
         },
       },
-    MuiPickersDay: {
+   MuiPickersDay: {
   styleOverrides: {
     root: {
       fontFamily: '"Poppins", sans-serif',
@@ -707,6 +707,22 @@ const getTheme = (direction = "ltr") =>
     },
   },
     },
+
+MuiYearCalendar: {
+  styleOverrides: {
+    button: {
+      fontFamily: '"Poppins", sans-serif',
+    },
+    selected: {
+      backgroundColor: "#AA2493 !important",
+      color: "#ffffff !important",
+      "&:hover, &:focus": {
+        backgroundColor: "#8a1d78 !important",
+        color: "#ffffff !important",
+      },
+    },
+  },
+},
 
     
     },
