@@ -712,7 +712,4 @@ const EMP_ROUTES = [
 
 
 
-
-
-
 export { ADMIN_ROUTES, AUTH_ROUTES, HR_ROUTES, PM_ROUTES, EMP_ROUTES };

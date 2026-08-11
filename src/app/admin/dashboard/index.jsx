@@ -94,7 +94,7 @@ const Dashboard = () => {
       id: 5, title: "Completed Projects",
       value: String(stats?.completedProjects ?? "0"),
       description: "All time", icon: progressIcon, iconHover: completedIconWhite,
-      onClick: () => navigate("/projects"),
+      
     },
     {
       id: 6, title: "Avg Attendance Rate",
