@@ -1,20 +1,14 @@
-// src/api/modules/moduleCategory.js
-import api           from "../index";
-import useUserStore  from "../../zustand/useUserStore";
+import ENDPOINTS from "../endpoints";
+import api       from "../index";
 
-const getBase = () => {
-  const role = useUserStore.getState()?.user?.role;
-  return role === "ADMIN" ? "admin/module-categories" : "pm/module-categories";
-};
+export const getModuleCategoriesApi = (projectId) =>
+  api(`${ENDPOINTS.getModules}/${projectId}/module-categories`, null, "get");
 
-export const getModuleCategoriesApi = () =>
-  api(getBase(), null, "get");
+export const createModuleCategoryApi = (projectId, payload) =>
+  api(`${ENDPOINTS.createModule}/${projectId}/module-categories`, payload, "post");
 
-export const createModuleCategoryApi = (payload) =>
-  api(getBase(), payload, "post");
+export const updateModuleCategoryApi = (projectId, id, payload) =>
+  api(`${ENDPOINTS.updateModule}/${projectId}/module-categories/${id}`, payload, "put");
 
-export const updateModuleCategoryApi = (id, payload) =>
-  api(`${getBase()}/${id}`, payload, "put");
-
-export const deleteModuleCategoryApi = (id) =>
-  api(`${getBase()}/${id}`, null, "delete");
+export const deleteModuleCategoryApi = (projectId, id) =>
+  api(`${ENDPOINTS.deleteModule}/${projectId}/module-categories/${id}`, null, "delete");

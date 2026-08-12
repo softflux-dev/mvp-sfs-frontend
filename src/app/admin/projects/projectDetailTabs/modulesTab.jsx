@@ -23,7 +23,7 @@ const ModulesTab = ({ project = {}, role = "admin" }) => {
     deleteModule,
   } = useModule(project.id);
 
-  const { moduleCategories, fetchModuleCategories } = useModuleCategory();
+  const { moduleCategories, fetchModuleCategories } = useModuleCategory(project.id);
 
   const [modalOpen,     setModalOpen]     = useState(false);
   const [editingModule, setEditingModule] = useState(null);
@@ -147,10 +147,11 @@ const ModulesTab = ({ project = {}, role = "admin" }) => {
         loading={actionLoading}
         categoryOptions={moduleCategories}
       />
-      <AddModuleCategory
+     <AddModuleCategory
         open={categoryModalOpen}
         onClose={() => setCategoryModalOpen(false)}
         onSave={() => fetchModuleCategories()}
+        projectId={project.id}
       />
       <ConfirmationDialog ref={confirmDialogRef} />
       <SuccessPopup

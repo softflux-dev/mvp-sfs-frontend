@@ -74,7 +74,7 @@ const TasksTab = ({
 
   const { modules, loading: modulesLoading } = useModule(project.id);
   const { departments, fetchDepartments }    = useDepartment();
-  const { moduleCategories }                 = useModuleCategory();     
+  const { moduleCategories } = useModuleCategory(project.id);  
 
 
   const [modalOpen,   setModalOpen]   = useState(false);

@@ -10,7 +10,7 @@ import SuccessPopup        from "../../../../components/popups/confirmationDialo
 import ConfirmationDialog  from "../../../../components/popups/confirmation";
 import { useModuleCategory } from "../../../../hooks/moduleCategory";
 
-const AddModuleCategory = ({ open, onClose, onSave }) => {
+const AddModuleCategory = ({ open, onClose, onSave, projectId }) => {
   const {
     moduleCategories,
     loading,
@@ -19,7 +19,8 @@ const AddModuleCategory = ({ open, onClose, onSave }) => {
     createModuleCategory,
     updateModuleCategory,
     deleteModuleCategory,
-  } = useModuleCategory();
+  } = useModuleCategory(projectId);
+  
 
   const [catName,       setCatName]       = useState("");
   const [inputError,    setInputError]    = useState("");
