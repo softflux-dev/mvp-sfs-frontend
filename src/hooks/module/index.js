@@ -6,7 +6,7 @@ import {
   deleteModuleApi,
 } from "../../api/modules/module";
 
-export const useModule = (projectId) => {
+export const useModule = (projectId, role = "admin") => {
   const [modules,       setModules]       = useState([]);
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -18,7 +18,7 @@ export const useModule = (projectId) => {
     setLoading(true);
     setError("");
     try {
-      const response = await getModulesApi(projectId);
+       const response = await getModulesApi(projectId, role);
 
       if (response?.status === 200 || response?.status === 201) {
         const { modules: data } = response.data.data;
@@ -36,14 +36,14 @@ export const useModule = (projectId) => {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, role]);
 
   // ── Create ─────────────────────────────────────────────────────────────────
   const createModule = useCallback(async (payload) => {
     setActionLoading(true);
     setError("");
     try {
-      const response = await createModuleApi(projectId, payload);
+     const response = await createModuleApi(projectId, payload, role);
 
       if (response?.status === 200 || response?.status === 201) {
         await fetchModules();
@@ -60,14 +60,15 @@ export const useModule = (projectId) => {
     } finally {
       setActionLoading(false);
     }
-  }, [projectId, fetchModules]);
+  }, [projectId,role, fetchModules]);
 
   // ── Update ─────────────────────────────────────────────────────────────────
   const updateModule = useCallback(async (moduleId, payload) => {
     setActionLoading(true);
     setError("");
     try {
-      const response = await updateModuleApi(projectId, moduleId, payload);
+         const response = await updateModuleApi(projectId, moduleId, payload, role);
+
 
       if (response?.status === 200 || response?.status === 201) {
         await fetchModules();
@@ -84,14 +85,14 @@ export const useModule = (projectId) => {
     } finally {
       setActionLoading(false);
     }
-  }, [projectId, fetchModules]);
+  }, [projectId, role, fetchModules]);
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   const deleteModule = useCallback(async (moduleId) => {
     setActionLoading(true);
     setError("");
     try {
-      const response = await deleteModuleApi(projectId, moduleId);
+      const response = await deleteModuleApi(projectId, moduleId, role);
 
       if (response?.status === 200 || response?.status === 201) {
         await fetchModules();
@@ -108,11 +109,11 @@ export const useModule = (projectId) => {
     } finally {
       setActionLoading(false);
     }
-  }, [projectId, fetchModules]);
+  }, [projectId,role, fetchModules]);
 
   useEffect(() => {
     fetchModules();
-  }, [projectId]);
+  }, [projectId, role]);
 
   return {
     modules,

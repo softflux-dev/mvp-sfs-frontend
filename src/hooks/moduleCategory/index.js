@@ -6,7 +6,7 @@ import {
   deleteModuleCategoryApi,
 } from "../../api/modules/moduleCategory";
 
-export const useModuleCategory = (projectId) => {
+export const useModuleCategory = (projectId, role = "admin") => {
   const [moduleCategories, setModuleCategories] = useState([]);
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -17,7 +17,7 @@ export const useModuleCategory = (projectId) => {
     setLoading(true);
     setError("");
     try {
-      const response = await getModuleCategoriesApi(projectId);
+     const response = await getModuleCategoriesApi(projectId, role);
       if (response?.status === 200 || response?.status === 201) {
         const { moduleCategories: data } = response.data.data;
         setModuleCategories(Array.isArray(data) ? data : []);
@@ -34,14 +34,15 @@ export const useModuleCategory = (projectId) => {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, role]);
 
   const createModuleCategory = useCallback(async (label) => {
     if (!projectId) return { success: false, message: "No project selected." };
     setActionLoading(true);
     setError("");
     try {
-      const response = await createModuleCategoryApi(projectId, { label });
+         const response = await createModuleCategoryApi(projectId, { label }, role);
+
       if (response?.status === 200 || response?.status === 201) {
         await fetchModuleCategories();
         return {
@@ -61,14 +62,15 @@ export const useModuleCategory = (projectId) => {
     } finally {
       setActionLoading(false);
     }
-  }, [projectId, fetchModuleCategories]);
+  }, [projectId, role, fetchModuleCategories]);
 
   const updateModuleCategory = useCallback(async (id, label) => {
     if (!projectId) return { success: false, message: "No project selected." };
     setActionLoading(true);
     setError("");
     try {
-      const response = await updateModuleCategoryApi(projectId, id, { label });
+         const response = await updateModuleCategoryApi(projectId, id, { label }, role);
+
       if (response?.status === 200 || response?.status === 201) {
         await fetchModuleCategories();
         return { success: true, message: "Category updated successfully." };
@@ -84,14 +86,15 @@ export const useModuleCategory = (projectId) => {
     } finally {
       setActionLoading(false);
     }
-  }, [projectId, fetchModuleCategories]);
+  }, [projectId, role, fetchModuleCategories]);
 
   const deleteModuleCategory = useCallback(async (id) => {
     if (!projectId) return { success: false, message: "No project selected." };
     setActionLoading(true);
     setError("");
     try {
-      const response = await deleteModuleCategoryApi(projectId, id);
+          const response = await deleteModuleCategoryApi(projectId, id, role);
+
       if (response?.status === 200 || response?.status === 201) {
         await fetchModuleCategories();
         return { success: true, message: "Category deleted successfully." };
@@ -107,7 +110,7 @@ export const useModuleCategory = (projectId) => {
     } finally {
       setActionLoading(false);
     }
-  }, [projectId, fetchModuleCategories]);
+  }, [projectId, role, fetchModuleCategories]);
 
   useEffect(() => { fetchModuleCategories(); }, [fetchModuleCategories]);
 

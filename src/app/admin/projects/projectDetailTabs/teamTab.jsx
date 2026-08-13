@@ -190,6 +190,7 @@ useEffect(() => {
         onSave={handleAddSave}
         loading={addLoading}
         apiError={addError}
+        existingMemberIds={members.map((m) => m._id)}
       />
 
       <ConfirmationDialog ref={confirmDialogRef} />

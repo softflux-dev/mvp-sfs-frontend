@@ -49,6 +49,7 @@ const ModuleCard = ({
         borderRadius: "16px",
         border: "1px solid #F0F0F0",
         p: 2.5,
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         gap: 1.5,
@@ -58,7 +59,19 @@ const ModuleCard = ({
     >
       {/* Title + Status chip */}
       <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
-        <Typography fontSize="15px" fontWeight={700} color="text.primary">{title}</Typography>
+        <Typography
+          fontSize="15px"
+          fontWeight={700}
+          color="text.primary"
+          sx={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {title}
+        </Typography>
         <Chip
           label={status}
           sx={{ height: "22px", fontSize: "11px", fontWeight: 500, px: 0.5, borderRadius: "8px",
@@ -78,8 +91,25 @@ const ModuleCard = ({
                 backgroundColor: planCfg.bg, color: planCfg.color }} />
       </Box>
 
-      {/* Description */}
-      <Typography fontSize="12px" color="text.secondary" lineHeight={1.5}>{description}</Typography>
+      {/* Description — clamped so long text can't stretch the card taller than its siblings */}
+      <Typography
+        fontSize="12px"
+        color="text.secondary"
+        lineHeight={1.5}
+        sx={{
+          display: "-webkit-box",
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+          minHeight: "calc(1.5em * 3)",
+        }}
+      >
+        {description}
+      </Typography>
+
+      {/* Spacer pushes the rest of the card to the bottom so short-description
+          cards still line up with long-description ones */}
+      <Box sx={{ flexGrow: 1 }} />
 
       {/* Tasks label */}
       <Typography fontSize="12px" fontWeight={500} color="text.secondary">{tasksLabel}</Typography>

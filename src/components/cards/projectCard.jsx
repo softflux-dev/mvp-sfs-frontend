@@ -37,6 +37,7 @@ const ProjectCard = ({
         borderRadius: "20px",
         border: "1px solid #F0F0F0",
         p: 2.5,
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         gap: 1.5,
@@ -46,8 +47,18 @@ const ProjectCard = ({
     >
       {/* ── Title + Status ────────────────────────────────────────────── */}
       <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
-        <Box>
-          <Typography fontSize="15px" fontWeight={700} color="text.primary">
+        <Box flex={1} minWidth={0}>
+          <Typography
+            fontSize="15px"
+            fontWeight={700}
+            color="text.primary"
+            sx={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
             {projectName}
           </Typography>
        {/*    <Typography fontSize="12px" color="text.secondary" mt={0.25}>
@@ -63,6 +74,10 @@ const ProjectCard = ({
           }}
         />
       </Box>
+
+      {/* Spacer pushes progress/members/button to line up across cards
+          regardless of how many lines the title took */}
+      <Box sx={{ flexGrow: 1 }} />
 
       {/* ── Progress ──────────────────────────────────────────────────── */}
       <Box>

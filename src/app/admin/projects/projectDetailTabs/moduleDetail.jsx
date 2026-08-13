@@ -55,20 +55,62 @@ const Meta = ({ label, value, valueColor }) => (
   </Box>
 );
 
+const DESCRIPTION_CLAMP_LINES = 3;
+
+const ExpandableDescription = ({ text }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const textRef = useRef(null);
+
+  useEffect(() => {
+    if (textRef.current) {
+      setIsClamped(textRef.current.scrollHeight > textRef.current.clientHeight + 1);
+    }
+  }, [text]);
+
+  return (
+    <Box mb={2}>
+      <Typography
+        ref={textRef}
+        fontSize={13}
+        color="text.secondary"
+        sx={!expanded ? {
+          display: "-webkit-box",
+          WebkitLineClamp: DESCRIPTION_CLAMP_LINES,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        } : undefined}
+      >
+        {text}
+      </Typography>
+      {(isClamped || expanded) && (
+        <Typography
+          fontSize={12}
+          fontWeight={600}
+          sx={{ color: "#AA2493", cursor: "pointer", mt: 0.5 }}
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </Typography>
+      )}
+    </Box>
+  );
+};
+
 const ModuleDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId, moduleId } = useParams();
   const role = location.state?.role || "admin";
 
-  const {
-    module, plan, taskCount, loading, error,
-    generatingUC, savingUC, generatingFC, savingFC,
-    fetchDetail,
-    generateUseCases, saveUseCases, detailUseCase,
-    generateFlowchart, saveFlowchart,
-    generateTasks, commitTasks,
-  } = usePlan(projectId, moduleId);
+ const {
+  module, plan, taskCount, loading, error,
+  generatingUC, savingUC, generatingFC, savingFC,
+  fetchDetail,
+  generateUseCases, saveUseCases, detailUseCase,
+  generateFlowchart, saveFlowchart,
+  generateTasks, commitTasks,
+} = usePlan(projectId, moduleId, role);   
 
   // Local editable copies (seeded from the saved plan)
   const [useCases,  setUseCases]  = useState([]);
@@ -195,7 +237,7 @@ const ModuleDetail = () => {
         </Typography>
       </Box>
 
-      {/* Header */}
+     {/* Header */}
       <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: "20px 24px", mb: 2 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1} mb={2}>
           <Box display="flex" alignItems="center" gap={1.5}>
@@ -212,6 +254,10 @@ const ModuleDetail = () => {
             )}
           </Box>
         </Box>
+
+        {module?.description && (
+          <ExpandableDescription text={module.description} />
+        )}
 
         <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
                    gap: 2, backgroundColor: "#F5F5F5", borderRadius: "12px", p: 2 }}>

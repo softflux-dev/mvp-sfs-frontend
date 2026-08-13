@@ -6,15 +6,16 @@ import { useCurrencyBootstrap, usePhoneConfigBootstrap } from "../hooks/companyS
 // Detail/nested pages — always accessible regardless of role
 const ALWAYS_ALLOWED_PATTERNS = [
   /^\/projects\/[^/]+$/,
+  /^\/projects\/[^/]+\/modules\/[^/]+$/,      
   /^\/employees\/[^/]+$/,
   /^\/integrations\/[^/]+$/,
   /^\/projects\/tasks\/[^/]+$/,
   /^\/pm-tasks\/[^/]+$/,
   /^\/emp\/tasks\/[^/]+$/,
   /^\/pm-projects\/[^/]+$/,
+  /^\/pm-projects\/[^/]+\/modules\/[^/]+$/,   
   /^\/employee\/bugs$/,
 ];
-
 // Fallback static paths — used only when user has no rolePages assigned
 const ROLE_FALLBACK_PATHS = {
   ADMIN: [

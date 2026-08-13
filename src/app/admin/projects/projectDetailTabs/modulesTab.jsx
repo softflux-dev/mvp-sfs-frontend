@@ -14,16 +14,11 @@ import { useModuleCategory } from "../../../../hooks/moduleCategory";
 const ModulesTab = ({ project = {}, role = "admin" }) => {
   const navigate = useNavigate();
   const {
-    modules,
-    loading,
-    actionLoading,
-    error,
-    createModule,
-    updateModule,
-    deleteModule,
-  } = useModule(project.id);
+  modules, loading, actionLoading, error,
+  createModule, updateModule, deleteModule,
+} = useModule(project.id, role);
 
-  const { moduleCategories, fetchModuleCategories } = useModuleCategory(project.id);
+const { moduleCategories, fetchModuleCategories } = useModuleCategory(project.id, role);
 
   const [modalOpen,     setModalOpen]     = useState(false);
   const [editingModule, setEditingModule] = useState(null);

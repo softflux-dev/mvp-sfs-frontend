@@ -120,14 +120,15 @@ export const useMessages = (conversationId, currentUserId) => {
     } catch { /* silent */ }
   }, [conversationId, markOwn]);
 
-  // ── Send (text + optional attachments) ────────────────────────────────────
-  const sendMessage = useCallback(async (text, tempId, attachments = []) => {
+ 
+ // ── Send (text + optional attachments + optional mentions) ────────────────
+  const sendMessage = useCallback(async (text, tempId, attachments = [], mentions = []) => {
     if ((!text?.trim() && !attachments.length) || !conversationId) return { success: false };
     setSending(true);
 
     const optimistic = {
       _id: tempId, tempId, conversation: conversationId,
-      text: text?.trim() || "", attachments,
+      text: text?.trim() || "", attachments, mentions,
       createdAt: new Date().toISOString(), isOwn: true, pending: true,
     };
     setMessages((prev) => [...prev, optimistic]);
@@ -140,7 +141,7 @@ export const useMessages = (conversationId, currentUserId) => {
     try {
       const socket = getSocket();
       if (socket?.connected) {
-        const response = await emitWithAck("send_message", { conversationId, text: text?.trim() || "", tempId, attachments });
+        const response = await emitWithAck("send_message", { conversationId, text: text?.trim() || "", tempId, attachments, mentions });
         if (response?.success) {
           replaceOptimistic(response.message);
           setSending(false);
@@ -148,7 +149,7 @@ export const useMessages = (conversationId, currentUserId) => {
         }
       }
       // REST fallback
-      const res = await sendMessageRestApi(conversationId, { text: text?.trim() || "", tempId, attachments });
+      const res = await sendMessageRestApi(conversationId, { text: text?.trim() || "", tempId, attachments, mentions });
       if (res?.status === 200 || res?.status === 201) {
         replaceOptimistic(res.data.data.message);
         setSending(false);
@@ -163,7 +164,7 @@ export const useMessages = (conversationId, currentUserId) => {
   }, [conversationId]);
 
   // ── Upload attachments to Cloudinary, then send ───────────────────────────
-  const sendWithAttachments = useCallback(async (files, text, tempId) => {
+  const sendWithAttachments = useCallback(async (files, text, tempId, mentions = []) => {
     try {
       // Upload each file to Cloudinary in parallel
       const uploaded = await Promise.all(
@@ -177,7 +178,7 @@ export const useMessages = (conversationId, currentUserId) => {
         mimeType: files[i].type || "",
       }));
 
-      return await sendMessage(text, tempId, attachments);
+      return await sendMessage(text, tempId, attachments, mentions);
     } catch {
       return { success: false, message: "Upload failed." };
     }

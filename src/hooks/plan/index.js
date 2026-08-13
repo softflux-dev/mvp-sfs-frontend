@@ -12,7 +12,7 @@ import {
 
 const EMPTY_PLAN = { status: "none", useCases: [], flowchart: { nodes: [], edges: [] } };
 
-export const usePlan = (projectId, moduleId) => {
+export const usePlan = (projectId, moduleId, role = "admin") => {
   const [module,        setModule]        = useState(null);
   const [plan,          setPlan]          = useState(EMPTY_PLAN);
   const [taskCount,     setTaskCount]     = useState(0);
@@ -24,12 +24,12 @@ export const usePlan = (projectId, moduleId) => {
   const [error,         setError]         = useState("");
 
   // ── Fetch module + plan ────────────────────────────────────────────────────
-  const fetchDetail = useCallback(async () => {
+ const fetchDetail = useCallback(async () => {
     if (!projectId || !moduleId) return;
     setLoading(true);
     setError("");
     try {
-      const res = await getModuleDetailApi(projectId, moduleId);
+      const res = await getModuleDetailApi(projectId, moduleId, role);
       if (res?.status === 200 || res?.status === 201) {
         const mod = res.data.data.module;
         setModule(mod);
@@ -45,14 +45,14 @@ export const usePlan = (projectId, moduleId) => {
     } finally {
       setLoading(false);
     }
-  }, [projectId, moduleId]);
+  }, [projectId, moduleId, role]);
 
   // ── Stage 1 — generate use cases only ──────────────────────────────────────
   const generateUseCases = useCallback(async () => {
     setGeneratingUC(true);
     setError("");
     try {
-      const res = await generateUseCasesApi(projectId, moduleId);
+      const res = await generateUseCasesApi(projectId, moduleId, role);
       if (res?.status === 200 || res?.status === 201) {
         setPlan(res.data.data.plan);
         return { success: true };
@@ -67,14 +67,14 @@ export const usePlan = (projectId, moduleId) => {
     } finally {
       setGeneratingUC(false);
     }
-  }, [projectId, moduleId]);
+  }, [projectId, moduleId, role]);
 
   // ── Save edited / checked use cases ────────────────────────────────────────
   const saveUseCases = useCallback(async (useCases) => {
     setSavingUC(true);
     setError("");
     try {
-      const res = await saveUseCasesApi(projectId, moduleId, useCases);
+      const res = await saveUseCasesApi(projectId, moduleId, useCases, role);
       if (res?.status === 200 || res?.status === 201) {
         setPlan(res.data.data.plan);
         return { success: true, message: "Use cases saved." };
@@ -88,12 +88,13 @@ export const usePlan = (projectId, moduleId) => {
     } finally {
       setSavingUC(false);
     }
-  }, [projectId, moduleId]);
+  }, [projectId, moduleId, role]);
 
   // ── AI implementation detail for one use case (instructions optional) ──────
   const detailUseCase = useCallback(async (title, description, instructions) => {
     try {
-      const res = await detailUseCaseApi(projectId, moduleId, { title, description, instructions });
+        const res = await detailUseCaseApi(projectId, moduleId, { title, description, instructions }, role);
+
       if (res?.status === 200 || res?.status === 201) {
         return { success: true, details: res.data.data.details || "" };
       }
@@ -101,14 +102,14 @@ export const usePlan = (projectId, moduleId) => {
     } catch (e) {
       return { success: false, message: e?.response?.data?.message || "AI generation failed." };
     }
-  }, [projectId, moduleId]);
+  }, [projectId, moduleId, role]);
 
   // ── Stage 2 — generate flowchart from the finalized (checked) use cases ────
   const generateFlowchart = useCallback(async () => {
     setGeneratingFC(true);
     setError("");
     try {
-      const res = await generateFlowchartApi(projectId, moduleId);
+      const res = await generateFlowchartApi(projectId, moduleId, role);
       if (res?.status === 200 || res?.status === 201) {
         setPlan(res.data.data.plan);
         return { success: true };
@@ -123,14 +124,15 @@ export const usePlan = (projectId, moduleId) => {
     } finally {
       setGeneratingFC(false);
     }
-  }, [projectId, moduleId]);
+  }, [projectId, moduleId, role]);
 
   // ── Save the edited / dragged flowchart graph ───────────────────────────────
   const saveFlowchart = useCallback(async (flowchart) => {
     setSavingFC(true);
     setError("");
     try {
-      const res = await saveFlowchartApi(projectId, moduleId, flowchart);
+      const res = await saveFlowchartApi(projectId, moduleId, flowchart, role);
+
       if (res?.status === 200 || res?.status === 201) {
         setPlan(res.data.data.plan);
         return { success: true, message: "Flowchart saved." };
@@ -144,12 +146,13 @@ export const usePlan = (projectId, moduleId) => {
     } finally {
       setSavingFC(false);
     }
-  }, [projectId, moduleId]);
+  }, [projectId, moduleId, role]);
 
   // ── Stage 3 — generate task proposals (returns list, not persisted) ────────
   const generateTasks = useCallback(async () => {
     try {
-      const res = await generatePlanTasksApi(projectId, moduleId);
+       const res = await generatePlanTasksApi(projectId, moduleId, role);
+
       if (res?.status === 200 || res?.status === 201) {
         return { success: true, tasks: res.data.data.tasks || [] };
       }
@@ -157,12 +160,12 @@ export const usePlan = (projectId, moduleId) => {
     } catch (e) {
       return { success: false, message: e?.response?.data?.message || "AI generation failed." };
     }
-  }, [projectId, moduleId]);
+  }, [projectId, moduleId, role]);
 
   // ── Commit edited tasks to the module ──────────────────────────────────────
   const commitTasks = useCallback(async (tasks) => {
     try {
-      const res = await commitPlanTasksApi(projectId, moduleId, tasks);
+      const res = await commitPlanTasksApi(projectId, moduleId, tasks, role);
       if (res?.status === 200 || res?.status === 201) {
         await fetchDetail();
         return { success: true, message: res.data.message };
@@ -171,7 +174,7 @@ export const usePlan = (projectId, moduleId) => {
     } catch (e) {
       return { success: false, message: e?.response?.data?.message || "Something went wrong." };
     }
-  }, [projectId, moduleId, fetchDetail]);
+  }, [projectId, moduleId, role, fetchDetail]);
 
   return {
     module, plan, taskCount,

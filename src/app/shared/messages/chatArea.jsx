@@ -47,6 +47,22 @@ const getDateLabel = (dateStr) => {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 };
 
+// ── Mention helpers ──────────────────────────────────────────────────────────
+// Finds an in-progress "@query" the caret is currently sitting inside of.
+// Returns null if the caret isn't inside a mention trigger.
+const findMentionTrigger = (text, caretPos) => {
+  const upToCaret = text.slice(0, caretPos);
+  const at = upToCaret.lastIndexOf("@");
+  if (at === -1) return null;
+  // The character right before "@" must be start-of-string or whitespace
+  const before = at === 0 ? "" : upToCaret[at - 1];
+  if (before && !/\s/.test(before)) return null;
+  const query = upToCaret.slice(at + 1);
+  // If the user already typed a space after @, they're done mentioning
+  if (/\s/.test(query)) return null;
+  return { start: at, query };
+};
+
 const ChatArea = ({
   conversation,
   currentUser,
@@ -62,11 +78,19 @@ const ChatArea = ({
   const [menuAnchor,     setMenuAnchor]     = useState(null);
   const [pendingFiles,   setPendingFiles]   = useState([]);
 
+  // ── @mention state ──────────────────────────────────────────────────────
+  const [mentionOpen,     setMentionOpen]     = useState(false);
+  const [mentionQuery,    setMentionQuery]    = useState("");
+  const [mentionStart,    setMentionStart]    = useState(null);
+  const [mentionActiveIdx,setMentionActiveIdx]= useState(0);
+  const [mentionedUsers,  setMentionedUsers]  = useState([]); // [{id, name}] confirmed-inserted mentions
+
   const bottomRef    = useRef(null);
   const topRef       = useRef(null);
   const typingTimer  = useRef(null);
   const confirmRef   = useRef();
   const fileInputRef = useRef(null);
+  const inputRef     = useRef(null);
 
   const {
     messages, loading, sending, hasMore,
@@ -77,10 +101,27 @@ const ChatArea = ({
 
   const { renameGroup, deleteConversation, kickMember } = useConversationActions();
 
+  const isGroup = conversation?.type === "project";
+
+  // ── Group members eligible to be @mentioned (everyone but yourself) ─────
+  const mentionableMembers = (conversation?.participants || [])
+    .map((p) => ({
+      id:     (p.user?._id || p.user)?.toString(),
+      name:   p.name || p.fullName || "Unknown",
+      avatar: resolveFileUrl(p.avatar) || "",
+    }))
+    .filter((p) => p.id && p.id !== String(currentUser?._id));
+
+  const mentionCandidates = mentionableMembers.filter((p) =>
+    p.name.toLowerCase().includes(mentionQuery.toLowerCase())
+  );
+
   useEffect(() => {
     setTypingUsers([]);
     setInput("");
     setPendingFiles([]);
+    setMentionOpen(false);
+    setMentionedUsers([]);
   }, [conversation?._id]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
@@ -130,19 +171,55 @@ const ChatArea = ({
     return () => observer.disconnect();
   }, [hasMore, loadMore]);
 
+  useEffect(() => { setMentionActiveIdx(0); }, [mentionQuery, mentionOpen]);
+
+  const closeMentionMenu = () => {
+    setMentionOpen(false);
+    setMentionQuery("");
+    setMentionStart(null);
+  };
+
+  const handleSelectMention = useCallback((person) => {
+    if (mentionStart == null) return;
+    const caret = inputRef.current?.selectionStart ?? input.length;
+    const before = input.slice(0, mentionStart);
+    const after  = input.slice(caret);
+    const insertion = `@${person.name} `;
+    const newValue = `${before}${insertion}${after}`;
+    setInput(newValue);
+    setMentionedUsers((prev) => prev.some((m) => m.id === person.id) ? prev : [...prev, person]);
+    closeMentionMenu();
+    // restore focus + caret after the inserted mention
+    requestAnimationFrame(() => {
+      const pos = before.length + insertion.length;
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange?.(pos, pos);
+    });
+  }, [input, mentionStart]);
+
   const handleSend = useCallback(async () => {
     if ((!input.trim() && !pendingFiles.length) || !conversation?._id || sending) return;
     const text   = input.trim();
     const files  = pendingFiles;
     const tempId = uuid();
+
+    // Only forward mentions whose "@Name" tag is still actually present in
+    // the final text — protects against stale entries if the user deleted
+    // a tag after inserting it.
+    const mentionIds = mentionedUsers
+      .filter((m) => text.includes(`@${m.name}`))
+      .map((m) => m.id);
+
     setInput("");
     setPendingFiles([]);
+    setMentionedUsers([]);
+    closeMentionMenu();
     clearTimeout(typingTimer.current);
     getSocket()?.emit("typing_stop", { conversationId: conversation._id });
 
     const result = files.length
-      ? await sendWithAttachments(files, text, tempId)
-      : await sendMessage(text, tempId);
+      ? await sendWithAttachments(files, text, tempId, mentionIds)
+      : await sendMessage(text, tempId, [], mentionIds);
 
     if (result?.success) {
       onMessageSent?.(conversation._id, {
@@ -151,18 +228,59 @@ const ChatArea = ({
         sentAt: new Date().toISOString(),
       });
     }
-  }, [input, pendingFiles, conversation?._id, sending, sendMessage, sendWithAttachments, onMessageSent, currentUser]);
+  }, [input, pendingFiles, mentionedUsers, conversation?._id, sending, sendMessage, sendWithAttachments, onMessageSent, currentUser]);
 
-  const handleKeyDown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } };
+  const handleKeyDown = (e) => {
+    if (mentionOpen && mentionCandidates.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionActiveIdx((i) => (i + 1) % mentionCandidates.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionActiveIdx((i) => (i - 1 + mentionCandidates.length) % mentionCandidates.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        handleSelectMention(mentionCandidates[mentionActiveIdx]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closeMentionMenu();
+        return;
+      }
+    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
 
   const handleInputChange = (e) => {
-    setInput(e.target.value);
+    const value  = e.target.value;
+    const caret  = e.target.selectionStart ?? value.length;
+    setInput(value);
+
     if (!conversation?._id) return;
     const socket = getSocket();
-    if (!socket?.connected) return;
-    socket.emit("typing_start", { conversationId: conversation._id });
-    clearTimeout(typingTimer.current);
-    typingTimer.current = setTimeout(() => socket.emit("typing_stop", { conversationId: conversation._id }), 2000);
+    if (socket?.connected) {
+      socket.emit("typing_start", { conversationId: conversation._id });
+      clearTimeout(typingTimer.current);
+      typingTimer.current = setTimeout(() => socket.emit("typing_stop", { conversationId: conversation._id }), 2000);
+    }
+
+    // Only offer @mentions inside group chats — mentioning in a 1:1 direct
+    // chat has no one else to pick from.
+    if (!isGroup) { closeMentionMenu(); return; }
+
+    const trigger = findMentionTrigger(value, caret);
+    if (trigger) {
+      setMentionOpen(true);
+      setMentionQuery(trigger.query);
+      setMentionStart(trigger.start);
+    } else {
+      closeMentionMenu();
+    }
   };
 
   const handleFileSelect = (e) => {
@@ -196,7 +314,6 @@ const ChatArea = ({
     );
   }
 
-  const isGroup  = conversation.type === "project";
   const isCreator = String(conversation.createdBy) === String(currentUser?._id);
 
   // Admin and PM can manage any group, not just ones they created
@@ -219,6 +336,12 @@ const ChatArea = ({
     lastDateLabel = label;
     return { ...msg, showDateLabel: show, dateLabel: label };
   });
+
+  // All participant display names — used by ChatBubble to highlight "@Name"
+  // occurrences inside already-sent message text.
+  const allParticipantNames = (conversation?.participants || [])
+    .map((p) => p.name || p.fullName)
+    .filter(Boolean);
 
   return (
     <>
@@ -289,6 +412,8 @@ const ChatArea = ({
                 isGroup={isGroup}
                 onEdit={editMessage}
                 onDelete={deleteMessage}
+                participantNames={allParticipantNames}
+                currentUserId={currentUser?._id}
               />
             </Box>
           ))}
@@ -316,7 +441,41 @@ const ChatArea = ({
         )}
 
         {/* Input Bar */}
-        <Box sx={{ px: 2, py: 1.5, borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+        <Box sx={{ position: "relative", px: 2, py: 1.5, borderTop: "1px solid #F5F5F5", display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+
+          {/* @mention dropdown */}
+          {mentionOpen && mentionCandidates.length > 0 && (
+            <Box
+              sx={{
+                position: "absolute", bottom: "100%", left: 16, mb: 1,
+                width: 260, maxHeight: 220, overflowY: "auto",
+                backgroundColor: "#fff", borderRadius: "12px",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.12)", border: "1px solid #F0F0F0",
+                zIndex: 20,
+              }}
+            >
+              {mentionCandidates.map((p, i) => (
+                <Box
+                  key={p.id}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelectMention(p); }}
+                  onMouseEnter={() => setMentionActiveIdx(i)}
+                  sx={{
+                    display: "flex", alignItems: "center", gap: 1.25,
+                    px: 1.5, py: 1, cursor: "pointer",
+                    backgroundColor: i === mentionActiveIdx ? "#AA249312" : "transparent",
+                  }}
+                >
+                  <Avatar src={p.avatar} sx={{ width: 28, height: 28, fontSize: "11px", fontWeight: 600 }}>
+                    {p.name?.charAt(0)}
+                  </Avatar>
+                  <Typography fontSize="13px" fontWeight={500} color="text.primary" noWrap>
+                    {p.name}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          )}
+
           <Box sx={{ width: 44, height: 44, borderRadius: "14px", backgroundColor: "#F5F5F5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, "&:hover": { backgroundColor: "#EBEBEB" } }}>
             <Box component="img" src={EmojiIcon} alt="emoji" sx={{ width: 20, height: 20 }} />
           </Box>
@@ -330,7 +489,15 @@ const ChatArea = ({
           <input ref={fileInputRef} type="file" multiple hidden onChange={handleFileSelect} />
 
           <Box flex={1}>
-            <TextInput placeholder="Type a message..." value={input} onChange={handleInputChange} onKeyDown={handleKeyDown} inputBgColor="#F5F5F5" fullWidth />
+            <TextInput
+              inputRef={inputRef}
+              placeholder={isGroup ? "Type a message... use @ to mention someone" : "Type a message..."}
+              value={input}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              inputBgColor="#F5F5F5"
+              fullWidth
+            />
           </Box>
 
           <Box

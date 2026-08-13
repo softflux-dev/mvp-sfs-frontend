@@ -33,6 +33,7 @@ const AddTeamMember = ({
   onSave,
   loading  = false,
   apiError = "",
+  existingMemberIds = [],
 }) => {
   const [departments,    setDepartments]    = useState([]);
   const [selectedDept,   setSelectedDept]   = useState("");
@@ -44,6 +45,10 @@ const AddTeamMember = ({
   const [selectedMembers, setSelectedMembers] = useState([]);
 
   const [errors, setErrors] = useState({});
+
+  // ── Set of employee ids already on the project team — checkbox stays
+  // disabled and a flag is shown for these instead of allowing re-selection
+  const existingIdSet = new Set((existingMemberIds || []).map((id) => id?.toString()));
 
   // ── Fetch departments on open ─────────────────────────────────────────────
   useEffect(() => {
@@ -80,6 +85,7 @@ const AddTeamMember = ({
 
   // ── Toggle a single employee in/out of master selection ───────────────────
   const handleToggleEmployee = (emp) => {
+    if (existingIdSet.has(emp._id?.toString())) return; // already on team — no-op
     setSelectedMembers((prev) => {
       const already = prev.find((m) => m._id === emp._id);
       if (already) return prev.filter((m) => m._id !== emp._id);
@@ -242,47 +248,61 @@ const AddTeamMember = ({
                 >
                   {deptEmployees.map((emp, index) => {
                     const isSelected = selectedIds.includes(emp._id);
+                    const isAlreadyOnTeam = existingIdSet.has(emp._id?.toString());
                     return (
-                      <Box
-                        key={emp._id}
-                        onClick={() => handleToggleEmployee(emp)}
-                        sx={{
-                          display: "flex", alignItems: "center", gap: 1.5,
-                          px: 1.5, py: 1,
-                          cursor: "pointer",
-                          backgroundColor: isSelected ? "#F9FAFB" : "transparent",
-                          borderBottom: index < deptEmployees.length - 1
-                            ? "1px solid #F3F4F6" : "none",
-                          "&:hover": { backgroundColor: "#F5F5F5" },
-                          transition: "background-color 0.15s",
-                        }}
-                      >
-                        <Avatar src={emp.avatar}
+                      <Box key={emp._id}>
+                        <Box
+                          onClick={() => handleToggleEmployee(emp)}
                           sx={{
-                            width: 34, height: 34, fontSize: "11px", fontWeight: 600,
-                            background: "linear-gradient(135deg, #AA2493, #022179)",
-                            color: "#fff", flexShrink: 0,
+                            display: "flex", alignItems: "center", gap: 1.5,
+                            px: 1.5, py: 1,
+                            cursor: isAlreadyOnTeam ? "not-allowed" : "pointer",
+                            backgroundColor: isAlreadyOnTeam ? "#FAFAFA" : isSelected ? "#F9FAFB" : "transparent",
+                            opacity: isAlreadyOnTeam ? 0.6 : 1,
+                            borderBottom: index < deptEmployees.length - 1
+                              ? "1px solid #F3F4F6" : "none",
+                            "&:hover": { backgroundColor: isAlreadyOnTeam ? "#FAFAFA" : "#F5F5F5" },
+                            transition: "background-color 0.15s",
                           }}
-                        >{getInitials(emp.fullName)}</Avatar>
-                        <Box flex={1} minWidth={0}>
-                          <Typography fontSize="13px" fontWeight={500} noWrap>
-                            {emp.fullName}
-                          </Typography>
-                          <Typography fontSize="11px" color="text.secondary" noWrap>
-                            {emp.designation || emp.email}
-                          </Typography>
+                        >
+                          <Avatar src={emp.avatar}
+                            sx={{
+                              width: 34, height: 34, fontSize: "11px", fontWeight: 600,
+                              background: "linear-gradient(135deg, #AA2493, #022179)",
+                              color: "#fff", flexShrink: 0,
+                            }}
+                          >{getInitials(emp.fullName)}</Avatar>
+                          <Box flex={1} minWidth={0}>
+                            <Typography fontSize="13px" fontWeight={500} noWrap>
+                              {emp.fullName}
+                            </Typography>
+                            <Typography fontSize="11px" color="text.secondary" noWrap>
+                              {emp.designation || emp.email}
+                            </Typography>
+                          </Box>
+                          <Checkbox
+                            checked={isAlreadyOnTeam ? true : isSelected}
+                            disabled={isAlreadyOnTeam}
+                            disableRipple
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => handleToggleEmployee(emp)}
+                            sx={{
+                              p: 0, color: "#D1D5DB",
+                              "&.Mui-checked": { color: isAlreadyOnTeam ? "#B0B0B0" : "#AA2493" },
+                              "&.Mui-disabled": { color: "#C4C4C4" },
+                              "& .MuiSvgIcon-root": { fontSize: 20 },
+                            }}
+                          />
                         </Box>
-                        <Checkbox
-                          checked={isSelected}
-                          disableRipple
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={() => handleToggleEmployee(emp)}
-                          sx={{
-                            p: 0, color: "#D1D5DB",
-                            "&.Mui-checked": { color: "#AA2493" },
-                            "& .MuiSvgIcon-root": { fontSize: 20 },
-                          }}
-                        />
+                        {isAlreadyOnTeam && (
+                          <Typography
+                            fontSize="11px"
+                            color="text.secondary"
+                            sx={{ px: 1.5, pb: 1, pl: "58px", fontStyle: "italic" }}
+                          >
+                            Already in your team
+                          </Typography>
+                        )}
                       </Box>
                     );
                   })}

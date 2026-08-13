@@ -89,7 +89,7 @@ const AddModule = ({ open, onClose, onSave, editingModule = null, loading = fals
 
   return (
     <>
-      <DialogContainer open={open} onClose={handleClose} maxWidth="440px" fullWidth>
+      <DialogContainer open={open} onClose={handleClose} maxWidth="700px" fullWidth>
         <DialogHeader
           title={editingModule ? "Edit Module" : "Add Module"}
           onClose={handleClose}

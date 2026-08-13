@@ -43,8 +43,53 @@ const StatusLabel = ({ pending, failed }) => {
   return null;
 };
 
-const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
-  const { text, createdAt, senderName, senderAvatar, attachments = [], pending, failed, isEdited, isDeleted } = message;
+// ── Highlight "@Name" occurrences that match a known group member ──────────
+// Longest names are matched first so "@John Doe" isn't cut short by a
+// coincidental shorter match like "@John".
+const renderTextWithMentions = (text, participantNames = [], isOwn, isSelfMentioned) => {
+  if (!text || !participantNames.length) return text;
+
+  const names = [...new Set(participantNames)]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")); // escape regex specials
+
+  if (!names.length) return text;
+
+  const pattern = new RegExp(`@(${names.join("|")})`, "g");
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    const mentionedName = match[1];
+    parts.push(
+      <Box
+        key={`${match.index}-${mentionedName}`}
+        component="span"
+        sx={{
+          fontWeight: 700,
+          color: isOwn ? "#fff" : "#AA2493",
+          backgroundColor: isOwn ? "rgba(255,255,255,0.22)" : "#AA249318",
+          borderRadius: "4px",
+          px: "3px",
+        }}
+      >
+        @{mentionedName}
+      </Box>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return parts;
+};
+
+const ChatBubble = ({
+  message, isOwn, isGroup = false, onEdit, onDelete,
+  participantNames = [], currentUserId,
+}) => {
+  const { text, createdAt, senderName, senderAvatar, attachments = [], pending, failed, isEdited, isDeleted, mentions = [] } = message;
 
   const [hovered,    setHovered]    = useState(false);
   const [menuAnchor, setMenuAnchor] = useState(null);
@@ -54,6 +99,8 @@ const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
   const timeStr = createdAt
     ? new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
+
+  const isSelfMentioned = mentions.some((m) => String(m?._id || m) === String(currentUserId));
 
   const handleEditSave = async () => {
     if (editText.trim() && editText.trim() !== text) {
@@ -118,6 +165,8 @@ const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
             : "#F5F5F5",
           boxShadow: isOwn ? "0 4px 15px rgba(170, 36, 147, 0.25)" : "0 2px 8px rgba(0,0,0,0.06)",
           minWidth: editing ? "220px" : "auto",
+          outline: !isOwn && isSelfMentioned ? "2px solid #AA2493" : "none",
+          outlineOffset: !isOwn && isSelfMentioned ? "1px" : 0,
         }}>
           {editing ? (
             <Box>
@@ -144,7 +193,7 @@ const ChatBubble = ({ message, isOwn, isGroup = false, onEdit, onDelete }) => {
             <>
               {text && (
                 <Typography fontSize="13px" lineHeight={1.6} color={isOwn ? "#fff" : "text.primary"}>
-                  {text}
+                  {renderTextWithMentions(text, participantNames, isOwn, isSelfMentioned)}
                 </Typography>
               )}
               {attachments?.map((att, i) => <FileAttachment key={i} attachment={att} isOwn={isOwn} />)}

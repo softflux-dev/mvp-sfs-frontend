@@ -1,14 +1,10 @@
 import ENDPOINTS from "../endpoints";
 import api       from "../index";
 
-export const getModulesApi = (projectId) =>
-  api(`${ENDPOINTS.getModules}/${projectId}/modules`, null, "get");
+const base = (projectId, role = "admin") =>
+  role === "pm" ? `pm/projects/${projectId}/modules` : `${ENDPOINTS.getModules}/${projectId}/modules`;
 
-export const createModuleApi = (projectId, payload) =>
-  api(`${ENDPOINTS.createModule}/${projectId}/modules`, payload, "post");
-
-export const updateModuleApi = (projectId, moduleId, payload) =>
-  api(`${ENDPOINTS.updateModule}/${projectId}/modules/${moduleId}`, payload, "put");
-
-export const deleteModuleApi = (projectId, moduleId) =>
-  api(`${ENDPOINTS.deleteModule}/${projectId}/modules/${moduleId}`, null, "delete");
+export const getModulesApi   = (projectId, role) => api(base(projectId, role), null, "get");
+export const createModuleApi = (projectId, payload, role) => api(base(projectId, role), payload, "post");
+export const updateModuleApi = (projectId, moduleId, payload, role) => api(`${base(projectId, role)}/${moduleId}`, payload, "put");
+export const deleteModuleApi = (projectId, moduleId, role) => api(`${base(projectId, role)}/${moduleId}`, null, "delete");

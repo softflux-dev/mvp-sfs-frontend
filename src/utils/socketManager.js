@@ -1,6 +1,6 @@
-// src/utils/socketManager.js — FULL REPLACEMENT
+// src/utils/socketManager.js —
 import { io } from "socket.io-client";
-import { baseUrl } from "../api/index";   // ← adjust to match the actual exported name
+import { baseUrl } from "../api/index";   
 
 let socket = null;
 let currentToken = null;
