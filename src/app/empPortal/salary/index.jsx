@@ -38,7 +38,7 @@ const tableHeader = [
   { id: "month",      label: "Month"       },
   { id: "baseSalary", label: "Base Salary" },
   { id: "bonus",      label: "Bonus"       },
-  { id: "overtime",   label: "Overtime"    },
+  { id: "overtime",   label: "Overtime Pay"    },
   { id: "deductions", label: "Deductions"  },
   { id: "netPay",     label: "Net Pay"     },
   { id: "status",     label: "Status"      },
@@ -99,7 +99,7 @@ const Salary = () => {
   // reconciles with Net Pay everywhere below.
   const latestSlipDeductions = (latestSlip?.deductions || 0) + (latestSlip?.unpaidLeaveDeduction || 0);
 
-  const totals = payslips.reduce(
+ const totals = payslips.reduce(
     (acc, p) => ({
       base:       acc.base       + (p.baseSalary  || 0),
       bonus:      acc.bonus      + (p.bonus       || 0),
@@ -282,32 +282,26 @@ const handleExportPDF = async () => {
                 accent: "#AA2493",
                 bg:     "#FDF4FF",
               },
-              { label: "Base Salary", value: fmt(latestSlip?.baseSalary), sub: "Monthly gross" },
+                           { label: "Base Salary", value: fmt(latestSlip?.baseSalary), sub: "Monthly gross" },
               {
                 label:  "Bonus",
-                value:  fmt(latestSlip?.bonus),
-                sub:    latestSlip?.bonus > 0 ? "This month" : "None this month",
-                accent: latestSlip?.bonus > 0 ? "#04C373" : "text.secondary",
+                value:  fmt(totals.bonus),
+                sub:    `${selectedYear} total`,
+                accent: totals.bonus > 0 ? "#04C373" : "text.secondary",
               },
               {
                 label:  "Overtime",
-                value:  fmt(latestSlip?.extraAmount),
-                sub:    (latestSlip?.extraHours || 0) > 0
-                  ? `${latestSlip.extraHours}h × ${latestSlip.otMultiplier ?? 1}x`
-                  : "No extra hours",
-                accent: (latestSlip?.extraAmount || 0) > 0 ? "#04C373" : "text.secondary",
+                value:  fmt(totals.overtime),
+                sub:    `${selectedYear} total`,
+                accent: totals.overtime > 0 ? "#04C373" : "text.secondary",
               },
               {
                 label:  "Deductions",
-                value:  fmt(latestSlipDeductions),
-                // Combines both possible reasons so the sub-text is honest
-                // about what actually made up the number above.
-                sub: [
-                  (latestSlip?.deductions || 0) > 0 ? `${latestSlip?.shortfallHours}h shortfall` : null,
-                  (latestSlip?.unpaidLeaveDeduction || 0) > 0 ? `${latestSlip?.unpaidLeaveDays}d unpaid leave` : null,
-                ].filter(Boolean).join(" · ") || "No deductions",
-                accent: latestSlipDeductions > 0 ? "#FF3B30" : "text.secondary",
+                value:  fmt(totals.deductions),
+                sub:    `${selectedYear} total`,
+                accent: totals.deductions > 0 ? "#FF3B30" : "text.secondary",
               },
+          
               {
                 label:  `${selectedYear} Net Total`,
                 value:  fmt(totals.net),

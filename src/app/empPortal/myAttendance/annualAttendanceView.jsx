@@ -43,7 +43,7 @@ const AnnualAttendanceView = ({ selectedYear, onYearChange }) => {
 
       <Box sx={{ display: "flex", gap: 1.5, mb: 3, backgroundColor: "#F5F5F5", borderRadius: "16px", padding: "12px" }}>
         <AnnualMiniTile value={totals.present} label="Total Present" />
-        <AnnualMiniTile value={totals.absent}  label="Total Absent"  highlight />
+        <AnnualMiniTile value={totals.absent}  label="Total Absent"   />
         <AnnualMiniTile value={totals.late}    label="Total Late"    />
         <AnnualMiniTile value={totals.leave}   label="Total Leave"   />
       </Box>

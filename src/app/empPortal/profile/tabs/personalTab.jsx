@@ -64,11 +64,10 @@ const PersonalTab = ({ profile = {}, loading = false, onSave }) => {
       return;
     }
 
-    const fd = new FormData();
-    fd.append("fullName", formData.fullName);
-    fd.append("phone",    formData.phone);
-
-    const result = await onSave?.(fd);
+    const result = await onSave?.({
+      fullName: formData.fullName,
+      phone:    formData.phone,
+    });
     if (result?.success) {
       setSaveSuccess(true);
       setErrors({});

@@ -125,11 +125,21 @@ const ChatArea = ({
   }, [conversation?._id]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
-  useEffect(() => {
+    useEffect(() => {
     if (!conversation?._id) return;
     const socket = getSocket();
     if (!socket) return;
     const convId = String(conversation._id);
+
+    // Guarantee this socket is actually in the conversation's room every time
+    // a chat is opened/re-rendered here — don't rely solely on the sidebar's
+    // click handler or the initial "join_conversations" done at connect time.
+    // Both are fine in the common case, but any gap between them (a
+    // reconnect that races with the room list fetch, this component staying
+    // mounted across a background socket reconnect, etc.) meant this room
+    // join could be silently missed, and messages for the OPEN chat would
+    // then never arrive live — only a full reload re-established it.
+    socket.emit("join_conversation", { conversationId: convId });
 
     const handleNew     = ({ conversationId, message }) => { if (String(conversationId) === convId) addIncomingMessage(message); };
     const handleEdited  = ({ conversationId, message }) => { if (String(conversationId) === convId) applyMessageEdit({ message }); };
@@ -150,6 +160,27 @@ const ChatArea = ({
     };
 
     fetchMissed();
+
+    // If this socket ever drops and reconnects while this chat stays open
+    // (flaky wifi, backgrounded tab, tunnel hiccup, server restart), the
+    // one-time fetchMissed() above can't help — it already ran. Any message
+    // sent during that gap would otherwise be invisible in the chat pane
+    // forever, even though separate systems (the notification bell) still
+    // pick it up via polling. Re-running fetchMissed() on every reconnect
+    // closes that gap.
+    const handleReconnect = () => {
+      socket.emit("join_conversation", { conversationId: convId });
+      fetchMissed();
+    };
+    socket.on("connect", handleReconnect);
+
+    // Belt-and-suspenders: also poll for anything missed every few seconds
+    // while this chat stays open. The socket path above should be the one
+    // doing the real work — this is just a cheap safety net so a single
+    // dropped/delayed broadcast (whatever the exact cause) surfaces within
+    // a few seconds instead of requiring a manual reload.
+    const pollTimer = setInterval(() => { fetchMissed(); }, 4000);
+
     socket.on("new_message",         handleNew);
     socket.on("message_edited",      handleEdited);
     socket.on("message_deleted",     handleDeleted);
@@ -157,6 +188,8 @@ const ChatArea = ({
     socket.on("user_stopped_typing", handleTypingStop);
 
     return () => {
+      clearInterval(pollTimer);
+      socket.off("connect",             handleReconnect);
       socket.off("new_message",         handleNew);
       socket.off("message_edited",      handleEdited);
       socket.off("message_deleted",     handleDeleted);

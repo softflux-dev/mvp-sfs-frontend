@@ -27,7 +27,7 @@ const TasksTab = ({ employee = {} }) => {
   const { tasks, loading, error } = useEmployeeTask(employee.id);
 
   const [selectedProject, setSelectedProject] = useState("");
-  const [filters,         setFilters]         = useState({ search: "", status: "" });
+  const [filters,         setFilters]         = useState({ search: "", status: "", priority: "" });
 
   // ── per-project stages map: { projectId: stages[] } ──────────────────────
   const [projectStages, setProjectStages] = useState({});
@@ -83,12 +83,11 @@ const TasksTab = ({ employee = {} }) => {
     });
     return Array.from(merged.values());
   }, [selectedProject, projectStages]);
-
-  // ── Map tasks → table rows ────────────────────────────────────────────────
   const tableData = tasks
     .filter((t) => {
-      const search = filters.search?.toLowerCase() || "";
-      const status = filters.status || "";
+      const search   = filters.search?.toLowerCase() || "";
+      const status   = filters.status || "";
+      const priority = filters.priority || "";
 
       const matchProject = !selectedProject ||
         (t.project?._id || t.project) === selectedProject;
@@ -99,7 +98,9 @@ const TasksTab = ({ employee = {} }) => {
 
       const matchStatus = !status || t.status === status;
 
-      return matchProject && matchSearch && matchStatus;
+      const matchPriority = !priority || t.priority === priority;
+
+      return matchProject && matchSearch && matchStatus && matchPriority;
     })
     .map((t) => ({
       id:          t._id,
@@ -111,6 +112,7 @@ const TasksTab = ({ employee = {} }) => {
         : "—",
       status:      t.status || "",   // raw stage id — project_status chip resolves via activeStages
     }));
+
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -130,8 +132,9 @@ const TasksTab = ({ employee = {} }) => {
         onFilterChange={(f) => {
           setSelectedProject(f.project || "");
           setFilters({
-            search: f.search || "",
-            status: f.status || "",
+            search:   f.search   || "",
+            status:   f.status   || "",
+            priority: f.priority || "",
           });
         }}
       />

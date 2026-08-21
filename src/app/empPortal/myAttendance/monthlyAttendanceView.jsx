@@ -9,7 +9,7 @@ const DAY_STATUS_CONFIG = {
   Absent:       { bg: "#FF00001A", color: "#FF0000" },
   Late:         { bg: "#F973161A", color: "#F97316" },
   Leave:        { bg: "#2B6EFF1A", color: "#2B6EFF" },
-  "Leave-Unpaid": { bg: "#F59E0B1A", color: "#F59E0B" },   // NEW — amber, distinct from paid leave's blue
+  "Leave-Unpaid": { bg: "#F59E0B1A", color: "#F59E0B" },   
   Holiday:      { bg: "#AA24931A", color: "#AA2493" },
   "Off Day":    { bg: "#F5F5F5",   color: "#9CA3AF" },
 };

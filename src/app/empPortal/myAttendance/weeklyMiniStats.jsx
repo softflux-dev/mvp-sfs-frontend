@@ -129,7 +129,7 @@ const WeeklyMiniStats = ({ week, weekIdx, totalWeeks, onPrev, onNext }) => {
         }}
       >
         <MiniStatTile value={week.stats.present} label="Present" />
-        <MiniStatTile value={week.stats.absent}  label="Absent"  highlight />
+        <MiniStatTile value={week.stats.absent}  label="Absent"   />
         <MiniStatTile value={week.stats.late}    label="Late"    />
         <MiniStatTile value={week.stats.leave}   label="Leave"   />
         <MiniStatTile value={week.stats.worked}  label="Worked"  />

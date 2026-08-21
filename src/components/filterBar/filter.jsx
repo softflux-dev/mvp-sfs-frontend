@@ -327,6 +327,7 @@ employee_tasks: ({ projects = [], stages = [] }) => [
       { v: "", l: "All Task Status" },
       ...stages.map((s) => ({ v: s.id, l: s.label })),
     ],
+    disabledIf: (v) => !v.project,
   },
   {
     type: "select",
@@ -787,6 +788,7 @@ emp_my_tasks: ({ projects = [], stages = [] }) => [
     key: "search",
     placeholder: "Search tasks...",
     grid: { xs: 12, md: 3 },
+    disabledIf: (v) => !v.project,
   },
    {
     type: "select",
@@ -807,6 +809,7 @@ emp_my_tasks: ({ projects = [], stages = [] }) => [
       { v: "", l: "All Task Pipeline Status" },
       ...stages.map((s) => ({ v: s.id, l: s.label })),
     ],
+    disabledIf: (v) => !v.project,
   },
   {
     type: "select",
@@ -819,7 +822,9 @@ emp_my_tasks: ({ projects = [], stages = [] }) => [
       { v: "medium", l: "Medium"       },
       { v: "high",   l: "High"         },
     ],
+    disabledIf: (v) => !v.project,
   },
+
  
 ],
 salary_history: [
@@ -906,11 +911,13 @@ holidays: [
   // ── Only render fields whose showIf (if present) passes for current values ──
   const visibleFields = fields.filter((f) => !f.showIf || f.showIf(values));
 
-  return (
+   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box display="flex" gap={2} alignItems="center">
         <Grid container spacing={2} width="100%">
-          {visibleFields.map((f, i) => (
+          {visibleFields.map((f, i) => {
+            const isDisabled = f.disabledIf ? f.disabledIf(values) : !!f.disabled;
+            return (
             <Grid key={f.key || i} item size={f.grid}>
               {f.type === "search" && (
                 <TextInput
@@ -921,6 +928,7 @@ holidays: [
                   InputStartIcon={<Search size={18} color="#808080" />}
                   value={values[f.key] || ""}
                   onChange={(e) => setVal(f.key, e.target.value)}
+                  disabled={isDisabled}
                 />
               )}
               {f.type === "select" && (
@@ -931,7 +939,7 @@ holidays: [
                   height="45px"
                   value={values[f.key] || ""}
                   onChange={(e) => setVal(f.key, e.target.value)}
-                  isDisabled={f.disabled}
+                  isDisabled={isDisabled}
                 >
                   {f.options.map((op) => (
                     <MenuItem key={op.v} value={op.v}>
@@ -1020,7 +1028,8 @@ holidays: [
             />
             )}
             </Grid>
-          ))}
+            );
+          })}
         </Grid>
       </Box>
     </LocalizationProvider>

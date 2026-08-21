@@ -1,5 +1,5 @@
 // src/app/shared/messages/index.jsx — 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Box } from "@mui/material";
 
 import ConversationList     from "./conversationList";
@@ -34,19 +34,25 @@ const Messages = () => {
   const [modalOpen,          setModalOpen]          = useState(false);
   const [onlineUsers,        setOnlineUsers]        = useState(new Set());
 
-  const {
+const {
     conversations, loading: convsLoading,
     fetchConversations, bumpConversationToTop,
     incrementUnread, resetUnread, removeConversation,
     updateConversation,
   } = useConversations();
 
+  // Keep a live ref of the conversations list so the socket handlers below
+  // (registered once per token, not per render) can check current membership
+  // without re-subscribing every time the list changes.
+  const conversationsRef = useRef(conversations);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+
   useEffect(() => {
     if (!token) return;
     const socket = connectSocket(token);
 
     const onConnect    = () => fetchConversations();
-    const onNewMessage = ({ conversationId, message }) => {
+        const onNewMessage = ({ conversationId, message }) => {
       setActiveConversation((prev) => {
         if (prev?._id === conversationId) {
           markAsReadApi(conversationId).catch(() => {});
@@ -55,11 +61,23 @@ const Messages = () => {
         incrementUnread(conversationId);
         return prev;
       });
-      bumpConversationToTop(conversationId, {
+
+      const preview = {
         text:   message.text || (message.attachments?.length ? `📎 ${message.attachments[0].fileName}` : ""),
         sender: message.senderName,
         sentAt: message.createdAt,
-      });
+      };
+
+      // A message for a conversation not yet in the sidebar (someone just
+      // started a brand-new chat with this user) can't be "bumped" — there's
+      // nothing there to bump. Refetch the list so it shows up immediately
+      // instead of waiting for a reload.
+      const known = conversationsRef.current.some((c) => c._id === conversationId);
+      if (known) {
+        bumpConversationToTop(conversationId, preview);
+      } else {
+        fetchConversations();
+      }
     };
 
    const onConvUpdated = ({ conversationId, lastMessage, name }) => {
