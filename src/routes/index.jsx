@@ -29,6 +29,7 @@ import AttendanceDetail from "../app/hrPortal/attendance/attendanceDetail";
 import LeaveManagement from "../app/hrPortal/leaves";
 import PayrollManagement from "../app/hrPortal/payroll";
 import HRDocuments         from "../app/hrPortal/documents";
+<<<<<<< HEAD
 import PMDashboard from "../app/projectManagerPortal/dashboard";
 import MyProjects from "../app/projectManagerPortal/myProjects";
 import PMprojectDetail from "../app/projectManagerPortal/myProjects/PMprojectDetail";
@@ -50,6 +51,8 @@ import Profile from "../app/empPortal/profile";
 import Salary from "../app/empPortal/salary";
 import AllBugsPage from "../app/empPortal/myTasks/allBugsPage";
 import MyDocuments from "../app/empPortal/document";
+=======
+>>>>>>> 319662054ead088d238dc7cd9ddf3a30a05bbf5b
 
 
 // routes/icons
