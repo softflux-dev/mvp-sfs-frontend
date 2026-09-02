@@ -1,7 +1,7 @@
 // src/app/empPortal/myTasks/myTasks.jsx — 
 import { useState, useEffect }   from "react";
 import { Box, Grid, Typography }  from "@mui/material";
-import { useNavigate }            from "react-router-dom";
+import { useNavigate,useSearchParams }            from "react-router-dom";
 
 import HeaderText     from "../../../components/headerText";
 import CustomButton   from "../../../components/customButton";
@@ -24,34 +24,34 @@ const DEFAULT_STAGES = [
 
 const MyTasks = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialProject = searchParams.get("project") || "";
 
   const [view,            setView]            = useState("kanban");
-  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedProject, setSelectedProject] = useState(initialProject);
   const [stages,          setStages]          = useState(DEFAULT_STAGES);
 
-  // ── Cache full project list — never shrinks on filter ─────────────────────
   const [allProjects, setAllProjects] = useState([]);
 
   const { tasks, loading, error, handleFilterChange, fetchTasks, projectStagesMap } = useMyTasks();
 
-  // ── Build project list from initial unfiltered tasks ──────────────────────
-  // Only update when we have tasks AND no project is selected yet
-  // (so it doesn't re-derive to a single project after filtering)
   useEffect(() => {
-    if (!selectedProject && tasks.length) {
-      const derived = Array.from(
-        new Map(
-          tasks
-            .filter((t) => t.projectName && t.projectName !== "—")
-            .map((t) => [
-              t.projectId || t.projectName,
-              { _id: t.projectId || t.projectName, projectName: t.projectName },
-            ])
-        ).values()
-      );
-      if (derived.length > allProjects.length) {
-        setAllProjects(derived);
-      }
+    if (!tasks.length) return;
+    const derived = Array.from(
+      new Map(
+        tasks
+          .filter((t) => t.projectName && t.projectName !== "—")
+          .map((t) => [
+            t.projectId || t.projectName,
+            { _id: t.projectId || t.projectName, projectName: t.projectName },
+          ])
+      ).values()
+    );
+    // Always populate on first load (even if tasks are already filtered by
+    // a restored project selection), then only ever grow the list — never
+    // let a filtered fetch shrink it back down.
+    if (allProjects.length === 0 || (!selectedProject && derived.length > allProjects.length)) {
+      setAllProjects(derived);
     }
   }, [tasks, selectedProject]);
 
@@ -102,11 +102,14 @@ const MyTasks = () => {
 
       {/* Filter */}
       <Filter
-        mode="emp_my_tasks"
-        projects={allProjects}   // ← always full list, never shrinks
-        stages={stages}
-        onFilterChange={(f) => {
-        setSelectedProject(f.project || "");
+      mode="emp_my_tasks"
+      projects={allProjects}
+      stages={stages}
+      defaultValues={{ project: initialProject }}
+      onFilterChange={(f) => {
+        const project = f.project || "";
+        setSelectedProject(project);
+        setSearchParams(project ? { project } : {}, { replace: true });
         handleFilterChange({
           search:   f.search   || "",
           status:   f.status   || "",
@@ -114,7 +117,7 @@ const MyTasks = () => {
           project:  f.project  || "",
         });
       }}
-      />
+    />
 
       {/* Content */}
       {!selectedProject ? (

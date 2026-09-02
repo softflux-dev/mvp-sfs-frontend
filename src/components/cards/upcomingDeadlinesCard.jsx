@@ -28,9 +28,20 @@ const DeadlineRow = ({ item }) => {
         bgcolor: "#F6F6F6",
       }}
     >
-      <Box>
+     <Box>
         <Typography fontSize={14} fontWeight={600} color="text.primary">
           {item.title}
+          {item.taskId && (
+            <Typography
+              component="span"
+              fontSize={11}
+              fontWeight={600}
+              color="#AA2493"
+              sx={{ ml: 0.75, fontFamily: "monospace" }}
+            >
+              ({item.taskId})
+            </Typography>
+          )}
         </Typography>
         <Typography fontSize={12} color="text.secondary">
           {item.assignee} · {item.project}

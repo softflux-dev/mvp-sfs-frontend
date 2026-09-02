@@ -6,6 +6,7 @@ import ViewIcon from "../../../assets/icons/view.svg";
 
 // Employee columns (view only)
 const EMP_HEADERS = [
+  { id: "taskId",      label: "Task ID"      },
   { id: "task",        label: "Task"         },
   { id: "projectName", label: "Project Name" },
   { id: "module",      label: "Module"       },
@@ -18,13 +19,14 @@ const EMP_HEADERS = [
 ];
 
 const EMP_DISPLAY = [
-  "task", "projectName", "module", "task_assignees",
+   "task_id", "task", "projectName", "module", "task_assignees",
   "task_priority", "task_start_date", "task_end_date",
   "project_status", "perf_view",
 ];
 
 // PM/Admin columns (view + edit + delete)
 const PM_HEADERS = [
+  { id: "taskId",      label: "Task ID"      },
   { id: "task",        label: "Task"         },
   { id: "projectName", label: "Project Name" },
   { id: "module",      label: "Module"       },
@@ -37,6 +39,7 @@ const PM_HEADERS = [
 ];
 
 const PM_DISPLAY = [
+    "task_id",
   "task", "projectName", "module", "task_assignees",
   "task_priority", "task_start_date", "task_end_date",
   "project_status", "actions_menu",

@@ -48,6 +48,17 @@ const EmpTaskDetailHeader = ({ task = {}, stages = [] }) => {
       <Typography fontSize="24px" fontWeight={700} color="text.primary" mb={0.8} lineHeight={1.2}>
         {task.title || "—"}
       </Typography>
+      {/* Task ID — system-generated */}
+      {task.taskId && (
+        <Typography
+          fontSize="12px"
+          fontWeight={600}
+          color="#AA2493"
+          sx={{ fontFamily: "monospace", mb: 1.5 }}
+        >
+          {task.taskId}
+        </Typography>
+      )}
 
       {/* Project · Module · Priority chip · Stage chip */}
       <Box display="flex" alignItems="center" gap={1} flexWrap="wrap" mb={3}>

@@ -79,6 +79,20 @@ const MyLeaveRequestDetailDialog = ({ open, onClose, leave = {}, balance = null,
               <Grid size={{ xs: 6 }}><Typography fontSize="11px" color="text.secondary" mb={0.4}>Total Days Requested</Typography><Typography fontSize="14px" fontWeight={700}>{leave.totalDays ?? "—"}</Typography></Grid>
               <Grid size={{ xs: 6 }}><Typography fontSize="11px" color="text.secondary" mb={0.4}>From Date</Typography><Typography fontSize="14px" fontWeight={700}>{leave.fromDate || "—"}</Typography></Grid>
               <Grid size={{ xs: 6 }}><Typography fontSize="11px" color="text.secondary" mb={0.4}>To Date</Typography><Typography fontSize="14px" fontWeight={700}>{leave.toDate || "—"}</Typography></Grid>
+              {leave.status && leave.status !== "pending" && (
+                <>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography fontSize="11px" color="text.secondary" mb={0.4}>Approved Days</Typography>
+                    <Typography fontSize="14px" fontWeight={700} color={leave.status === "rejected" ? "#DC2626" : "#04C373"}>
+                      {leave.approvedDays ?? "—"}
+                    </Typography>
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <Typography fontSize="11px" color="text.secondary" mb={0.4}>Approved Dates</Typography>
+                    <Typography fontSize="14px" fontWeight={700}>{leave.approvedDates || "—"}</Typography>
+                  </Grid>
+                </>
+              )}
             </Grid>
           </Box>
 

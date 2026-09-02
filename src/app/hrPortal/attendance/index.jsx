@@ -140,7 +140,7 @@ const AttendanceMonitoring = () => {
           <Box display="flex" alignItems="center" gap={1.5}>
             <AlertTriangle size={18} color="#B45309" style={{ flexShrink: 0 }} />
             <Typography fontSize="13px" color="#B45309" fontWeight={500}>
-              {partialCount} employee{partialCount !== 1 ? "s have" : " has"} incomplete punch records
+              {partialCount} incomplete punch record{partialCount !== 1 ? "s" : ""} found
               (missing check-in or check-out). These must be filled in manually.
             </Typography>
           </Box>

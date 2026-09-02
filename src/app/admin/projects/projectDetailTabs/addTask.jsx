@@ -90,6 +90,13 @@ const AddTask = ({
     endDate:     useRef(null),
   };
 
+  const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const endMinDate = formData.startDate
+  ? (new Date(formData.startDate) > today ? new Date(formData.startDate) : today)
+  : today;
+
   // ── Project-driven dynamic data (only used when showProjectSelector=true) ──
   const [selectedProject,   setSelectedProject]   = useState("");
   const [dynModules,        setDynModules]        = useState([]);
@@ -368,6 +375,16 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
                 <Typography fontSize={13} color="error">{apiError}</Typography>
               </Box>
             )}
+           {/* Task ID — system-generated; shown always, populated once the task is saved */}
+            <Box>
+              <CustomInputLabel label="Task ID" />
+              <TextInput
+                value={editingTask?.taskId || "Will be generated automatically after saving"}
+                disabled
+                fullWidth
+                inputBgColor="#F0F0F0"
+              />
+            </Box>
 
             {/* 0. Project selector — only shown in PM task management page */}
             {showProjectSelector && (
@@ -568,20 +585,20 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
                 {errors.startDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.startDate}</Typography>}
               </Box>
               <Box ref={fieldRefs.endDate}>
-                <CustomInputLabel label="End Date *" />
-                <DatePicker
-                  value={formData.endDate}
-                  onChange={(v) => setFormData((prev) => ({ ...prev, endDate: v }))}
-                  minDate={formData.startDate ? new Date(formData.startDate) : new Date()}
-                  maxDate={activeProjectEnd ? new Date(activeProjectEnd) : undefined}
-                  slotProps={{
-                    textField: { size: "small", fullWidth: true, error: !!errors.startDate },
-                    popper: { sx: GlobalStyle.datePickerPopperSx },
-                  }}
-                  sx={GlobalStyle.datePickerStyle}
-                />
-                {errors.endDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.endDate}</Typography>}
-              </Box>
+              <CustomInputLabel label="End Date *" />
+              <DatePicker
+                value={formData.endDate}
+                onChange={(v) => setFormData((prev) => ({ ...prev, endDate: v }))}
+                minDate={endMinDate}   
+                maxDate={activeProjectEnd ? new Date(activeProjectEnd) : undefined}
+                slotProps={{
+                  textField: { size: "small", fullWidth: true, error: !!errors.startDate },
+                  popper: { sx: GlobalStyle.datePickerPopperSx },
+                }}
+                sx={GlobalStyle.datePickerStyle}
+              />
+              {errors.endDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.endDate}</Typography>}
+            </Box>
             </Box>
 
             {/* 10. Link */}

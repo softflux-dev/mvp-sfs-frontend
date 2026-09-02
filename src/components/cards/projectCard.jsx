@@ -27,6 +27,7 @@ const ProjectCard = ({
   members       = [],
   isActive      = false,
   onViewDetails,
+  onAddTeam,
 }) => {
   const statusCfg = STATUS_CONFIG[status] || { bg: "#F5F5F5", color: "#757575" };
 
@@ -96,27 +97,37 @@ const ProjectCard = ({
       {/* ── Members + Meta ────────────────────────────────────────────── */}
       <Box display="flex" alignItems="center" justifyContent="space-between">
         {/* Avatars */}
-        <AvatarGroup
-          max={4}
-          sx={{ "& .MuiAvatar-root": { width: 28, height: 28, fontSize: "10px" } }}
-        >
-          {members.length > 0
-            ? members.map((src, i) => (
-                <Avatar key={i} src={src} sx={{ width: 28, height: 28 }} />
-              ))
-            : [1, 2, 3].map((i) => (
-                <Avatar
-                  key={i}
-                  sx={{
-                    width: 28, height: 28,
-                    background: "linear-gradient(90deg, #AA2493 0%, #022179 100%)",
-                    fontSize: "10px", fontWeight: 600,
-                  }}
-                >
-                  {String.fromCharCode(64 + i)}
-                </Avatar>
-              ))}
-        </AvatarGroup>
+        {members.length > 0 ? (
+          <AvatarGroup
+            max={4}
+            sx={{ "& .MuiAvatar-root": { width: 28, height: 28, fontSize: "10px" } }}
+          >
+            {members.map((src, i) => (
+              <Avatar key={i} src={src} sx={{ width: 28, height: 28 }} />
+            ))}
+          </AvatarGroup>
+        ) : (
+          <Box
+            onClick={(e) => { e.stopPropagation(); onAddTeam?.(); }}
+            sx={{
+              display: "flex", alignItems: "center", gap: 0.5,
+              cursor: onAddTeam ? "pointer" : "default",
+              "&:hover": onAddTeam ? { "& .add-team-text": { textDecoration: "underline" } } : undefined,
+            }}
+          >
+            <Box sx={{
+              width: 28, height: 28, borderRadius: "50%",
+              border: "1.5px dashed #C9CDD4",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <Typography fontSize="14px" color="#9CA3AF" lineHeight={1}>+</Typography>
+            </Box>
+            <Typography className="add-team-text" fontSize="11px" fontWeight={500} color="text.secondary">
+              Add Team
+            </Typography>
+          </Box>
+        )}
 
         {/* Due date + task count */}
         <Box display="flex" alignItems="center" gap={1.5}>

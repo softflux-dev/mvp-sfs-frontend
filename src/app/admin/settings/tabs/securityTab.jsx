@@ -1,5 +1,10 @@
 // tabs/securityTab.jsx — 
-import { useState, useEffect } from "react";
+// UNSAVED-CHANGES GUARD: reports dirty state up via onDirtyChange whenever
+// there's typed-but-unsubmitted password input, or the session timeout has
+// been changed from its loaded value. Two-Factor is intentionally excluded
+// — it's a static, frontend-only toggle that was never persisted to begin
+// with, so there's nothing meaningful to "lose" by navigating away.
+import { useState, useEffect, useRef } from "react";
 import { Box, Typography, Grid, MenuItem, CircularProgress } from "@mui/material";
 
 import CustomInputLabel from "../../../../components/customInputLabel";
@@ -18,7 +23,7 @@ const SESSION_TIMEOUT_OPTIONS = [
   { value: "never",  label: "Never" },
 ];
 
-const SecurityTab = () => {
+const SecurityTab = ({ onDirtyChange = () => {} }) => {
   const { settings, loading, actionLoading, error, saveSettings, changePassword } = useSecuritySettings();
 
   const [passwords,       setPasswords]       = useState({ current: "", newPass: "", confirm: "" });
@@ -34,11 +39,22 @@ const SecurityTab = () => {
   // Purely a local UI toggle reserved for a future real implementation.
   const [twoFactor, setTwoFactor] = useState(false);
 
+  // ── Unsaved-changes tracking ─────────────────────────────────────────────
+  const initialSessionTimeoutRef = useRef("30min");
+
   useEffect(() => {
     if (settings) {
-      setSessionTimeout(settings.sessionTimeout || "30min");
+      const loaded = settings.sessionTimeout || "30min";
+      setSessionTimeout(loaded);
+      initialSessionTimeoutRef.current = loaded;
     }
   }, [settings]);
+
+  useEffect(() => {
+    const hasPasswordInput = !!(passwords.current || passwords.newPass || passwords.confirm);
+    const hasTimeoutChange = sessionTimeout !== initialSessionTimeoutRef.current;
+    onDirtyChange(hasPasswordInput || hasTimeoutChange);
+  }, [passwords, sessionTimeout]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePasswordChange = (field) => (e) => {
     setPasswords((prev) => ({ ...prev, [field]: e.target.value }));
@@ -99,6 +115,8 @@ const SecurityTab = () => {
     const result = await saveSettings({ sessionTimeout });
     if (result.success) {
       setSettingSuccess(true);
+      initialSessionTimeoutRef.current = sessionTimeout;
+      onDirtyChange(!!(passwords.current || passwords.newPass || passwords.confirm));
     }
   };
 

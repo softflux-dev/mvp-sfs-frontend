@@ -82,6 +82,7 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange, ro
           })
           .map((t) => ({
             id:             t._id,
+            taskId:         t.taskId || "",
             title:          t.title,
             priority:       t.priority
               ? t.priority.charAt(0).toUpperCase() + t.priority.slice(1)
@@ -384,6 +385,7 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange, ro
                         >
                          <PipelineCard
                           title={task.title}
+                          taskId={task.taskId} 
                           priority={task.priority}
                           deadline={task.deadline}
                           assigneeName={task.assigneeName}

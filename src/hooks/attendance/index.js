@@ -249,9 +249,7 @@ const fetchImportHistory = useCallback(async () => {
         }
         // Reassurance rather than a problem: manual entries and HR edits are
         // deliberately preserved, so HR knows their typed hours survived.
-        if (skippedManual > 0) {
-          warnings.push(`${skippedManual} manually entered/edited record(s) were preserved and not overwritten.`);
-        }
+        
         if (warnings.length) setImportWarning(warnings.join(" · "));
 
         return { success: true, ...res.data.data };

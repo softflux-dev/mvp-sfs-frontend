@@ -203,6 +203,42 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
         return;
       }
 
+      // ── Guard: block future-dated rows, and block an incomplete row
+// (check-in with no check-out, or vice versa) for TODAY specifically —
+// today's punch cycle isn't finished yet, so a lone check-in is expected,
+// not an error to fix; but the row can't be imported as "complete" data. ───
+const todayStr = (() => {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+})();
+
+const futureRows = parsedRecords.filter((r) => r.date && r.date > todayStr);
+if (futureRows.length > 0) {
+  const dates = [...new Set(futureRows.map((r) => r.date))].sort();
+  setError(
+    `This file contains ${futureRows.length} row(s) with future date(s) (${dates[0]}${dates.length > 1 ? ` to ${dates[dates.length - 1]}` : ""}). ` +
+    `Attendance can't be uploaded for dates that haven't happened yet. Remove these rows and re-upload.`
+  );
+  setParsing(false);
+  return;
+}
+
+const todayIncompleteRows = parsedRecords.filter((r) => {
+  if (r.date !== todayStr) return false;
+  const hasIn  = r.checkIn  && r.checkIn  !== "-" && r.checkIn.trim()  !== "";
+  const hasOut = r.checkOut && r.checkOut !== "-" && r.checkOut.trim() !== "";
+  return hasIn !== hasOut; // exactly one of the two present
+});
+if (todayIncompleteRows.length > 0) {
+  setError(
+    `${todayIncompleteRows.length} row(s) for today (${todayStr}) have only a check-in or only a check-out. ` +
+    `Today's attendance isn't complete yet — remove today's row(s) and re-upload once the day has ended, or upload today separately later.`
+  );
+  setParsing(false);
+  return;
+}
+
+
       // ── Guard: make sure the file's actual dates match the selected period.
       // Prevents the silent "0 present / all absent" corruption caused by
       // trusting the dropdown instead of the file's real dates. ─────────────

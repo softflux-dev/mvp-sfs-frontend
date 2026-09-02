@@ -52,6 +52,7 @@ const AllBugsPage = () => {
   const location = useLocation();
 
   const taskId       = location.state?.taskId       || null;
+  const taskDisplayId = location.state?.taskDisplayId || "";
   const taskTitle    = location.state?.taskTitle    || "Bug Reports";
   const taskStatus   = location.state?.taskStatus   || "";
   const projectName  = location.state?.projectName  || "";
@@ -81,7 +82,10 @@ const AllBugsPage = () => {
   };
 
   const filtered = bugs.filter((b) => {
-    const matchSearch   = !search || b.title.toLowerCase().includes(search.toLowerCase()) || (b._id || b.id || "").toLowerCase().includes(search.toLowerCase());
+     const matchSearch   = !search
+      || b.title.toLowerCase().includes(search.toLowerCase())
+      || (b.tcId || "").toLowerCase().includes(search.toLowerCase())        
+      || (b._id || b.id || "").toLowerCase().includes(search.toLowerCase());
     const matchSeverity = severityFilter === "all" || b.severity === severityFilter;
     const matchStatus   = statusFilter   === "all" || b.status   === statusFilter;
     return matchSearch && matchSeverity && matchStatus;
@@ -125,6 +129,11 @@ const AllBugsPage = () => {
           <Typography fontSize="26px" fontWeight={700} color="text.primary" lineHeight={1.3} mb={0.75}>
             {taskTitle}
           </Typography>
+          {taskDisplayId && (
+            <Typography fontSize="12px" fontWeight={600} color="#AA2493" sx={{ fontFamily: "monospace", mb: 0.75 }}>
+              {taskDisplayId}
+            </Typography>
+          )}
           <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
             {projectName && (
               <Typography fontSize="13px" color="text.secondary">{projectName}</Typography>
@@ -151,8 +160,8 @@ const AllBugsPage = () => {
           {/* Filters */}
           <Box display="flex" gap={2} flexWrap="wrap" alignItems="center" mb={2.5}>
             <Box sx={{ flex: "1 1 220px", minWidth: 0 }}>
-              <TextInput
-                placeholder="Search by title or ID..."
+            <TextInput
+                placeholder="Search by title or ticket ID..."  
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 inputBgColor="#F5F5F5"

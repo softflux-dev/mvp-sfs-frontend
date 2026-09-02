@@ -9,6 +9,24 @@ import {
 } from "../../api/modules/projectDocument";
 import { baseUrl } from "../../api/index";
 
+// Fetches the zip as a blob and triggers a save via an in-page <a> click —
+// avoids window.open's top-level navigation, which is what makes dev
+// tunnels (*.devtunnels.ms) show their consent interstitial repeatedly.
+const downloadZipViaFetch = async (url, filename) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Zip download failed");
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(blobUrl);
+};
+
 export const useProjectDocument = (projectId) => {
   const [documents,     setDocuments]     = useState([]);
   const [loading,       setLoading]       = useState(false);
@@ -39,26 +57,25 @@ export const useProjectDocument = (projectId) => {
   // ── Upload — optimistic update: prepend the returned doc immediately,
   // no second fetchDocuments() call needed. The backend returns the fully
   // populated document so the table row is complete straight away.
-  const uploadDocument = useCallback(async (formData) => {
+   const uploadDocument = useCallback(async (formData) => {
     setActionLoading(true);
     setError("");
     try {
-      let fileUrl = "", fileName = "", fileSize = "";
-      const fileToSend = formData.file || formData.files?.[0];
-      if (fileToSend) {
-        const uploaded = await uploadToCloudinary(fileToSend, "project-documents");
-        fileUrl  = uploaded.url;
-        fileName = uploaded.fileName;
-        fileSize = uploaded.fileSize;
-      }
+      const filesToSend = formData.files?.length ? formData.files : (formData.file ? [formData.file] : []);
+
+      const uploadedFiles = await Promise.all(
+        filesToSend.map((f) => uploadToCloudinary(f, "project-documents"))
+      );
+
+      const files = uploadedFiles.map((u) => ({
+        fileName: u.fileName, filePath: u.url, fileSize: u.fileSize,
+      }));
 
       const payload = {
         title:        formData.title,
         documentType: formData.documentType || formData.type || "other",
         assigneeIds:  formData.assigneeIds || [],
-        fileUrl,
-        fileName,
-        fileSize,
+        files,
       };
 
       const response = await uploadProjectDocumentApi(projectId, payload);
@@ -104,9 +121,23 @@ export const useProjectDocument = (projectId) => {
     try {
       const res = await downloadProjectDocumentApi(projectId, documentId);
       if (res?.status === 200 || res?.status === 201) {
-        const { fileUrl, fileName } = res.data.data;
+        const { fileUrl, fileName, isZip } = res.data.data;
+                if (isZip) {
+          await downloadZipViaFetch(
+            `${baseUrl.replace(/\/$/, "")}/admin/projects/${projectId}/documents/${documentId}/download-zip`,
+            `${fileName || "documents"}.zip`
+          );
+          return;
+        }
+        // Cloudinary serves PDFs inline by default (no Content-Disposition
+        // header for cross-origin requests), so the `download` attribute
+        // alone doesn't force a save dialog — inject fl_attachment to make
+        // Cloudinary itself set that header.
+        const forceDownloadUrl = fileUrl.includes("/upload/")
+          ? fileUrl.replace("/upload/", "/upload/fl_attachment/")
+          : fileUrl;
         const a = document.createElement("a");
-        a.href     = fileUrl;
+        a.href     = forceDownloadUrl;
         a.download = fileName || "";
         a.target   = "_blank";
         a.click();

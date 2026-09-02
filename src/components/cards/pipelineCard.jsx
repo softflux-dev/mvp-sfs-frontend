@@ -10,10 +10,11 @@ const PRIORITY_CONFIG = {
 };
 
 const PipelineCard = ({
-  title        = "Create UI Dashboard",
-  priority     = "Low",
-  deadline     = "march 16",
-  comments     = 5,
+  title        = "",
+  taskId       = "",
+  priority     = "",
+  deadline     = "",
+  comments     = 0,
   attachments,           // optional — only shown when passed
   assignee     = "",
   assigneeName = "",
@@ -35,16 +36,23 @@ const PipelineCard = ({
         "&:hover": { boxShadow: "0 4px 12px rgba(0,0,0,0.08)" },
       }}
     >
-      {/* ── Priority chip + Assignee avatar ──────────────────────────────── */}
+       {/* ── Priority chip + Task ID + Assignee avatar ────────────────────── */}
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-        <Chip
-          label={priority}
-          sx={{
-            height: "20px", fontSize: "11px", fontWeight: 600,
-            px: 0.5, borderRadius: "10px",
-            backgroundColor: pcfg.bg, color: pcfg.color,
-          }}
-        />
+        <Box display="flex" alignItems="center" gap={0.75}>
+          <Chip
+            label={priority}
+            sx={{
+              height: "20px", fontSize: "11px", fontWeight: 600,
+              px: 0.5, borderRadius: "10px",
+              backgroundColor: pcfg.bg, color: pcfg.color,
+            }}
+          />
+          {taskId && (
+            <Typography fontSize="10px" fontWeight={600} color="#9CA3AF" sx={{ fontFamily: "monospace" }}>
+              {taskId}
+            </Typography>
+          )}
+        </Box>
         <Avatar
           src={assignee}
           alt={assigneeName}

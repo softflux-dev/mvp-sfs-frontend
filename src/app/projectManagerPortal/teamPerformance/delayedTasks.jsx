@@ -25,7 +25,19 @@ const DelayedTasks = ({ tasks = [], loading = false }) => {
               sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", p: "10px 14px", borderRadius: "12px", backgroundColor: "#FFF5F5", border: "1px solid #FECACA" }}
             >
               <Box>
-                <Typography fontSize="13px" fontWeight={600} color="text.primary">{task.taskName}</Typography>
+                <Typography fontSize="13px" fontWeight={600} color="text.primary">{task.taskName}
+                  {task.taskId && (
+                    <Typography
+                      component="span"
+                      fontSize="11px"
+                      fontWeight={600}
+                      color="#AA2493"
+                      sx={{ ml: 0.75, fontFamily: "monospace" }}
+                    >
+                      ({task.taskId})
+                    </Typography>
+                  )}
+                </Typography>
                 <Typography fontSize="11px" color="text.secondary" mt={0.3}>
                   {task.assignee} · {task.project}
                 </Typography>

@@ -162,7 +162,7 @@ const KanbanView = ({ tasks = [], stages = [], onTaskStatusUpdated }) => {
                           sx={{ opacity: dragSnapshot.isDragging ? 0.85 : 1, transform: dragSnapshot.isDragging ? "rotate(2deg)" : "none", transition: "transform 0.1s ease" }}
                         >
                           <PipelineCard
-                            title={task.task || task.title} priority={task.priority}
+                            title={task.task || task.title} taskId={task.taskId} priority={task.priority}
                             deadline={task.endDate} comments={task.comments}
                             attachments={task.attachments} assignees={task.assignees}
                             project={task.projectName || task.project?.projectName || task.project || ""}

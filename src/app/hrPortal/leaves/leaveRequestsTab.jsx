@@ -20,8 +20,10 @@ import viewIcon   from "../../../assets/icons/view.svg";
 const tableHeader = [
   { id: "name",          label: "Employee"        },
   { id: "leaveType",     label: "Type"            },
-  { id: "dates",         label: "From & To Dates" },
-  { id: "days",          label: "Days"            },
+  { id: "appliedDays",   label: "Applied Days"    },
+  { id: "approvedDays",  label: "Approved Days"   },
+  { id: "dates",         label: "Applied Dates"   },
+  { id: "approvedDates", label: "Approved Dates"  },
   { id: "reason",        label: "Reason"          },
   { id: "submittedDate", label: "Submitted"       },
   { id: "status",        label: "Status"          },
@@ -29,7 +31,7 @@ const tableHeader = [
 ];
 
 const displayRows = [
-  "employee_details", "lm_type", "lm_dates", "lm_days", "lm_reason", "lm_submitted", "lm_status", "lm_actions",
+  "employee_details", "lm_type", "lm_days", "approvedDays", "lm_dates", "approvedDates", "lm_reason", "lm_submitted", "lm_status", "lm_actions",
 ];
 
 const LEAVE_TYPE_LABELS = {
@@ -59,7 +61,23 @@ const LeaveRequestsTab = () => {
 
   const confirmRef = useRef();
 
-  const tableData = leaves.map((l) => ({
+  const tableData = leaves.map((l) => {
+  // Populated directly on the Leave doc once HR (or Admin, on rejection)
+  // has reviewed it — see controllers/hr/leave.js reviewLeave and
+  // controllers/admin/leave.js reviewEscalation.
+  const approvedDays = l.status === "approved"
+    ? l.approvedDays ?? 0
+    : l.status === "rejected"
+      ? 0
+      : "—";
+
+  const approvedDates = l.status === "approved" && l.approvedFromDate && l.approvedToDate
+    ? `${new Date(l.approvedFromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${new Date(l.approvedToDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    : l.status === "rejected"
+      ? "—"
+      : "—";
+
+  return {
     id: l._id,
     employeeMongoId: l.employee?._id || "",
     name: l.employee?.fullName || "—",
@@ -75,24 +93,24 @@ const LeaveRequestsTab = () => {
     _rawFromDate: l.fromDate ? new Date(l.fromDate) : null,
     _rawToDate:   l.toDate   ? new Date(l.toDate)   : null,
     days: l.totalDays ?? 1,
+    appliedDays: l.totalDays ?? 1,
+    approvedDays,
+    approvedDates,
     reason: l.reason?.length > 35 ? l.reason.slice(0, 35) + "..." : l.reason || "—",
     reasonFull: l.reason || "",
     submittedDate: l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
     status: l.status ? l.status.charAt(0).toUpperCase() + l.status.slice(1) : "Pending",
     hrNotes: l.hrNotes || "",
     rejectionReason: l.rejectionReason || "",
-    // NEW — what the employee picked when applying (paid/unpaid), so HR/Admin
-    // can see it before deciding on the Leave Type Override below.
     paymentPreference: l.paymentPreference || "paid",
     escalationRequired: !!l.escalation?.required,
     escalationHrLocked: !!l.escalation?.hrLocked,
     escalationAdminStatus: l.escalation?.adminStatus || "none",
-    // NEW — the ceiling Admin set (if a custom range, not the full request).
-    // Both null means Admin approved the full range / not escalated.
     _adminCapFromDate: l.escalation?.adminApprovedFromDate ? new Date(l.escalation.adminApprovedFromDate) : null,
     _adminCapToDate:   l.escalation?.adminApprovedToDate   ? new Date(l.escalation.adminApprovedToDate)   : null,
     audit: l.audit || [],
-  }));
+  };
+});
 
   const handleApprove = (row, payload) => {
     const isCustom = payload?.decision === "approve_custom";

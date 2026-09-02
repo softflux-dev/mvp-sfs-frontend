@@ -56,8 +56,8 @@ const BugCard = ({ bug = {}, onView, onEdit, onDelete }) => {
         {/* ── Header row ── */}
         <Box display="flex" alignItems="flex-start" justifyContent="space-between" px={1.5} pt={1.5} pb={1}>
           <Box flex={1} minWidth={0} pr={1}>
-            <Typography fontSize="11px" fontWeight={500} color="text.secondary" mb={0.3} sx={{ letterSpacing: "0.2px" }}>
-              {bug.id}
+            <Typography fontSize="11px" fontWeight={700} color="#AA2493" mb={0.3} sx={{ letterSpacing: "0.2px", fontFamily: "monospace" }}>
+              {bug.tcId || bug._id || bug.id}
             </Typography>
             <Typography fontSize="13px" fontWeight={600} color="text.primary" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {bug.title}

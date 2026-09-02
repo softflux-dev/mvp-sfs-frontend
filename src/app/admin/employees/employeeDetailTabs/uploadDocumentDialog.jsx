@@ -1,6 +1,13 @@
 // employees/employeeDetailTabs/uploadDocumentDialog.jsx
+// CHANGED: file box now matches UploadProjectDocumentDialog — supports
+// selecting/dropping multiple files at once, shows each as a removable
+// chip/row, and lets the user keep adding more via "Choose Files". Submits
+// as formData.files (array) instead of a single formData.file; useDocument's
+// uploadDocument already handles the array (falls back to single `file`
+// for backward compatibility, so nothing else needs to change).
 import { useRef, useState } from "react";
-import { Box, MenuItem, Typography, CircularProgress } from "@mui/material";
+import { Box, MenuItem, Typography, CircularProgress, IconButton } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
 import {
   DialogContainer,
   DialogHeader,
@@ -23,7 +30,7 @@ const DOCUMENT_TYPES = [
 const EMPTY_FORM = {
   title:        "",
   documentType: "",
-  file:         null,
+  files:        [],
 };
 
 const UploadDocumentDialog = ({ open, onClose, onSave, loading = false }) => {
@@ -34,9 +41,21 @@ const UploadDocumentDialog = ({ open, onClose, onSave, loading = false }) => {
   const set = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
+  // ── Append newly chosen files to whatever's already selected, instead of
+  // replacing — lets the user click "Choose Files" more than once. ─────────
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0] || null;
-    setForm((prev) => ({ ...prev, file }));
+    const picked = Array.from(e.target.files || []);
+    if (!picked.length) return;
+    setForm((prev) => ({ ...prev, files: [...prev.files, ...picked] }));
+    // reset the input so choosing the same file again still fires onChange
+    e.target.value = "";
+  };
+
+  const handleRemoveFile = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+    }));
   };
 
   const handleClose = () => {
@@ -105,15 +124,17 @@ const UploadDocumentDialog = ({ open, onClose, onSave, loading = false }) => {
               </CustomSelect>
             </Box>
 
-            {/* ── File ───────────────────────────────────────────────────── */}
+            {/* ── Files (multi-select) ──────────────────────────────────── */}
             <Box>
-              <CustomInputLabel label="File" />
+              <CustomInputLabel label="Files" />
 
-              {/* Hidden native file input — triggered by CustomButton below */}
+              {/* Hidden native file input — `multiple` lets the OS picker
+                  select several files in one go; triggered by the button. */}
               <input
                 ref={fileInputRef}
                 type="file"
                 hidden
+                multiple
                 accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
                 onChange={handleFileChange}
               />
@@ -131,23 +152,64 @@ const UploadDocumentDialog = ({ open, onClose, onSave, loading = false }) => {
                 }}
               >
                 <CustomButton
-                  btnLabel="Choose File"
+                  btnLabel="Choose Files"
                   variant="chooseFile"
                   handlePressBtn={() => fileInputRef.current?.click()}
                 />
 
-                <Typography
-                  fontSize="13px"
-                  color={form.file ? "text.primary" : "text.secondary"}
-                  sx={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {form.file ? form.file.name : "No file chosen"}
+                <Typography fontSize="13px" color="text.secondary">
+                  {form.files.length
+                    ? `${form.files.length} file${form.files.length > 1 ? "s" : ""} selected`
+                    : "No files chosen"}
                 </Typography>
               </Box>
+
+              {/* ── Selected files list — each removable individually ───── */}
+              {form.files.length > 0 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                    mt: 1.5,
+                  }}
+                >
+                  {form.files.map((file, index) => (
+                    <Box
+                      key={`${file.name}-${index}`}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        backgroundColor: "#fff",
+                        borderRadius: "12px",
+                        px: 1.5,
+                        py: 0.75,
+                      }}
+                    >
+                      <Typography
+                        fontSize="13px"
+                        color="text.primary"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "380px",
+                        }}
+                      >
+                        {file.name}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleRemoveFile(index)}
+                        sx={{ p: 0.5 }}
+                      >
+                        <CloseIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
+                  ))}
+                </Box>
+              )}
             </Box>
           </Box>
         </DialogBody>
@@ -162,7 +224,7 @@ const UploadDocumentDialog = ({ open, onClose, onSave, loading = false }) => {
             ? <CircularProgress size={18} sx={{ color: "#fff" }} />
             : "Save"
         }
-        isConfirmBtnDisable={!form.title || !form.file || loading}
+        isConfirmBtnDisable={!form.title || !form.files.length || loading}
         variant="gradient"
       />
       </DialogContainer>

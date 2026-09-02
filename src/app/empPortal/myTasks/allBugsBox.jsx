@@ -34,10 +34,25 @@ const BugGridTile = ({ bug, onClick }) => (
     sx={{
       borderRadius: "12px", overflow: "hidden",
       minHeight: "97px", cursor: "pointer",
-      backgroundColor: "#fff",
+      backgroundColor: "#fff", position: "relative",   // ← added position: relative
       "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.08)" },
     }}
   >
+    {/* Ticket ID badge — top left */}
+    {(bug.tcId || bug._id || bug.id) && (
+      <Box
+        sx={{
+          position: "absolute", top: 6, left: 6, zIndex: 1,
+          px: "6px", py: "2px", borderRadius: "6px",
+          backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)",
+        }}
+      >
+        <Typography fontSize="10px" fontWeight={600} color="#fff" sx={{ fontFamily: "monospace" }}>
+          {bug.tcId || bug._id || bug.id}
+        </Typography>
+      </Box>
+    )}
+
     {bug.screenshots?.[0]?.url ? (
       <img
         src={bug.screenshots[0].url}
@@ -92,7 +107,14 @@ const AllBugsBox = ({ task = {}, taskId, onViewAllBugs }) => {
         />
 
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5} mt={3}>
-          <Typography fontSize="15px" fontWeight={700} color="text.primary">All Bugs</Typography>
+          <Box>
+            <Typography fontSize="15px" fontWeight={700} color="text.primary">All Bugs</Typography>
+            {task?.taskId && (
+              <Typography fontSize="11px" fontWeight={600} color="#AA2493" sx={{ fontFamily: "monospace" }}>
+                {task.taskId}
+              </Typography>
+            )}
+          </Box>
           <GradientLink onClick={onViewAllBugs}>View All Bug</GradientLink>
         </Box>
 

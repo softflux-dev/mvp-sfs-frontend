@@ -1,5 +1,7 @@
 // tabs/workingHoursTab.jsx — 
-import { useState, useEffect } from "react";
+// UNSAVED-CHANGES GUARD: reports dirty state up via onDirtyChange whenever
+// formData drifts from the snapshot taken at load / after a successful save.
+import { useState, useEffect, useRef } from "react";
 import { Box, Typography, Button, Grid, CircularProgress } from "@mui/material";
 import { LocalizationProvider, TimePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -37,24 +39,36 @@ const fmtHoursLabel = (decimalHrs) => {
   return `${h}h ${m}m`;
 };
 
-const WorkingHoursTab = () => {
+const WorkingHoursTab = ({ onDirtyChange = () => {} }) => {
   const { settings, loading, actionLoading, error, saveSettings } = useWorkingHours();
 
   const [formData,    setFormData]    = useState(INITIAL_FORM);
   const [errors,      setErrors]      = useState({});
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // ── Unsaved-changes tracking ─────────────────────────────────────────────
+  // dayjs objects serialize via toJSON() to a stable ISO string, so
+  // JSON.stringify works fine for the diff here.
+  const initialSnapshotRef = useRef(null);
+
   // Populate from backend once loaded
   useEffect(() => {
     if (settings) {
-      setFormData({
+      const next = {
         startTime:   settings.startTime ? dayjs(settings.startTime, "HH:mm") : INITIAL_FORM.startTime,
         endTime:     settings.endTime   ? dayjs(settings.endTime, "HH:mm")   : INITIAL_FORM.endTime,
         breakHours:  settings.breakHours != null ? String(settings.breakHours) : "1",
         workingDays: settings.workingDays?.length ? settings.workingDays : INITIAL_FORM.workingDays,
-      });
+      };
+      setFormData(next);
+      initialSnapshotRef.current = JSON.stringify(next);
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (!initialSnapshotRef.current) return;
+    onDirtyChange(JSON.stringify(formData) !== initialSnapshotRef.current);
+  }, [formData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDayToggle = (key) => {
     setFormData((prev) => ({
@@ -139,6 +153,8 @@ const WorkingHoursTab = () => {
     if (result.success) {
       setSaveSuccess(true);
       setErrors({});
+      initialSnapshotRef.current = JSON.stringify(formData);
+      onDirtyChange(false);
     }
   };
 

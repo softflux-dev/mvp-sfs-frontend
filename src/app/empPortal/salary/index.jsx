@@ -99,13 +99,20 @@ const Salary = () => {
   // reconciles with Net Pay everywhere below.
   const latestSlipDeductions = (latestSlip?.deductions || 0) + (latestSlip?.unpaidLeaveDeduction || 0);
 
- const totals = payslips.reduce(
+   // Round each value to whole rupees BEFORE summing — matches how each row
+  // is individually displayed via fmt() (0 decimals). Summing raw/unrounded
+  // values first and only rounding the total can drift from the sum of the
+  // rounded rows a person actually sees and manually adds up (e.g. off by
+  // ₹1 whenever the underlying figures carry fractional paisa).
+  const r0 = (n) => Math.round(n || 0);
+
+  const totals = payslips.reduce(
     (acc, p) => ({
-      base:       acc.base       + (p.baseSalary  || 0),
-      bonus:      acc.bonus      + (p.bonus       || 0),
-      overtime:   acc.overtime   + (p.extraAmount || 0),
-      deductions: acc.deductions + (p.deductions  || 0) + (p.unpaidLeaveDeduction || 0),
-      net:        acc.net        + (p.netPay      || 0),
+      base:       acc.base       + r0(p.baseSalary),
+      bonus:      acc.bonus      + r0(p.bonus),
+      overtime:   acc.overtime   + r0(p.extraAmount),
+      deductions: acc.deductions + r0(p.deductions) + r0(p.unpaidLeaveDeduction),
+      net:        acc.net        + r0(p.netPay),
     }),
     { base: 0, bonus: 0, overtime: 0, deductions: 0, net: 0 }
   );

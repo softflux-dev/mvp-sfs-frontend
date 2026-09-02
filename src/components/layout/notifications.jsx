@@ -1,6 +1,7 @@
 // components/appBar/notifications.jsx  — 
-// UI is identical to the original. Only the data source is replaced:
-// mock array → useNotifications hook with 30s polling.
+// UI is identical to the original, except the bell's unread indicator is
+// now a number badge (exact unread count) instead of a plain dot — matches
+// the badge style already used for unread messages in the drawer.
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -187,11 +188,17 @@ const Notifications = () => {
         {unreadCount > 0 && (
           <Box
             sx={{
-              position: "absolute", top: 2, right: 2,
-              width: 10, height: 10, borderRadius: "50%",
+              position: "absolute", top: 0, right: 0,
+              minWidth: 16, height: 16, borderRadius: "999px",
               backgroundColor: "#AA2493", border: "2px solid #fff",
+              px: "3px",
+              display: "flex", alignItems: "center", justifyContent: "center",
             }}
-          />
+          >
+            <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </Typography>
+          </Box>
         )}
       </IconButton>
 

@@ -59,6 +59,7 @@ const TaskManagement = () => {
   // ── Table data ────────────────────────────────────────────────────────────
   const tableData = tasks.map((t) => ({
     id:              t.id || t._id,
+    taskId:          t.taskId || "", 
     task:            t.task,
     title:           t.title,
     projectName:     t.projectName,

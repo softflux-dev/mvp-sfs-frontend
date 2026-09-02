@@ -8,6 +8,7 @@ import { useEmployeeTask }   from "../../../../hooks/task";
 import { getProjectByIdApi } from "../../../../api/modules/project";
 
 const tableHeader = [
+   { id: "taskId",     label: "Task ID"     },
   { id: "task",      label: "Task"        },
   { id: "project",   label: "Project"     },
   { id: "module",    label: "Module"      },
@@ -16,6 +17,7 @@ const tableHeader = [
 ];
 
 const displayRows = [
+   "task_id", 
   "task",
   "projectName",
   "module",
@@ -94,6 +96,7 @@ const TasksTab = ({ employee = {} }) => {
 
       const matchSearch = !search ||
         t.title?.toLowerCase().includes(search) ||
+         t.taskId?.toLowerCase().includes(search) ||
         (t.project?.projectName || "").toLowerCase().includes(search);
 
       const matchStatus = !status || t.status === status;
@@ -104,6 +107,7 @@ const TasksTab = ({ employee = {} }) => {
     })
     .map((t) => ({
       id:          t._id,
+       taskId:       t.taskId || "",
       task:        t.title || "—",
       projectName: t.project?.projectName || t.project || "—",
       module:      t.module?.title        || t.module  || "—",

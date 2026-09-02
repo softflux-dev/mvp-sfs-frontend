@@ -29,21 +29,23 @@ const LEAVE_TYPE_LABELS = {
 };
 
 const tableHeader = [
-  { id: "leaveType",   label: "Leave Type"   },
-  { id: "fromDate",    label: "From Date"    },
-  { id: "toDate",      label: "To Date"      },
-  { id: "totalDays",   label: "Total Days"   },
-  { id: "reason",      label: "Reason"       },
-  { id: "status",      label: "Status"       },
-  { id: "submittedOn", label: "Submitted On" },
-  { id: "action",      label: "Action"       },
+  { id: "leaveType",     label: "Leave Type"     },
+  { id: "appliedDays",   label: "Applied Days"   },
+  { id: "approvedDays",  label: "Approved Days"  },
+  { id: "fromDate",      label: "Applied Dates"  },
+  { id: "approvedDates", label: "Approved Dates" },
+  { id: "reason",        label: "Reason"         },
+  { id: "status",        label: "Status"         },
+  { id: "submittedOn",   label: "Submitted On"   },
+  { id: "action",        label: "Action"         },
 ];
 
 const displayRows = [
   "leaveType",
-  "fromDate",
-  "toDate",
-  "totalDays",
+  "appliedDays",
+  "approvedDays",
+  "appliedDates",
+  "approvedDates",
   "reason",
   "leave_status",
   "submittedOn",
@@ -103,12 +105,30 @@ const MyLeaveRequests = ({
     });
   }, [leaves, filters.monthYear]);
 
-  const tableData = filteredLeaves.map((l) => ({
+ const tableData = filteredLeaves.map((l) => {
+  const appliedFromLabel = l.fromDate ? new Date(l.fromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+  const appliedToLabel   = l.toDate   ? new Date(l.toDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })   : "—";
+
+  const approvedDays = l.status === "approved"
+    ? l.approvedDays ?? 0
+    : l.status === "rejected"
+      ? 0
+      : "—";
+
+  const approvedDates = l.status === "approved" && l.approvedFromDate && l.approvedToDate
+    ? `${new Date(l.approvedFromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} – ${new Date(l.approvedToDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    : "—";
+
+  return {
     id:          l._id,
     leaveType:   LEAVE_TYPE_LABELS[l.leaveType] || l.leaveType || "—",
     leaveTypeRaw: l.leaveType,
-    fromDate:    l.fromDate ? new Date(l.fromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
-    toDate:      l.toDate   ? new Date(l.toDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })   : "—",
+    fromDate:    appliedFromLabel,
+    toDate:      appliedToLabel,
+    appliedDates: `${appliedFromLabel} – ${appliedToLabel}`,
+    appliedDays: l.totalDays ?? 1,
+    approvedDays,
+    approvedDates,
     totalDays:   l.totalDays ?? 1,
     reason:      l.reason ? (l.reason.length > 40 ? l.reason.slice(0, 40) + "..." : l.reason) : "—",
     reasonFull:  l.reason || "",
@@ -116,7 +136,8 @@ const MyLeaveRequests = ({
     submittedOn: l.createdAt ? new Date(l.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
     hrNotes:     l.hrNotes || "",
     paymentPreference: l.paymentPreference || "paid",
-  }));
+  };
+});
 
   return (
     <Box>

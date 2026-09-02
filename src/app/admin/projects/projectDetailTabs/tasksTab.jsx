@@ -16,6 +16,7 @@ import { uploadTaskAttachmentUrlApi } from "../../../../api/modules/task";
 import { useModuleCategory } from "../../../../hooks/moduleCategory";   
 
 const tableHeader = [
+   { id: "taskId",     label: "Task ID"     }, 
   { id: "task",       label: "Task"        },
   { id: "module",     label: "Module"      },
    { id: "category",   label: "Category"    },
@@ -28,6 +29,7 @@ const tableHeader = [
 ];
 
 const displayRows = [
+  "task_id",
   "task",
   "module",
   "task_category", 
@@ -135,6 +137,7 @@ const TasksTab = ({
   // ── Table data — keep status raw (stage id) for chip resolution ───────────
   const tableData = tasks.map((t) => ({
     id:           t._id,
+    taskId:       t.taskId || "", 
     projectId:    project.id,   
     task:         t.title,
     module:       t.module?.title || "—",

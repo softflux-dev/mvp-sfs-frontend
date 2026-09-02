@@ -318,6 +318,7 @@ const ADMIN_ROUTES = [
   exact: "exact",
   path: "/projects/tasks/:id",
   isHideMenu: true,
+  
 },
 {
   id: 15,
@@ -617,6 +618,7 @@ const EMP_ROUTES = [
       exact: "exact",
       path: "/emp/tasks/:id",
       isHideMenu: true,
+      parentPath: "/my-tasks", 
     },
 /*     {
       id: 4,

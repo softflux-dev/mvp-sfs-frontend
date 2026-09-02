@@ -301,3 +301,52 @@ export const useConversationUsers = () => {
 
   return { users, loading, searchUsers };
 };
+
+// ── useUnreadMessagesCount — total unread count across ALL conversations,
+// for the sidebar "Messages" nav badge. Independent of the Messages page's
+// own useConversations() (which only runs while that page is mounted) —
+// this needs to work from the Drawer, which is mounted everywhere. ──────────
+export const useUnreadMessagesCount = () => {
+  const [totalUnread, setTotalUnread] = useState(0);
+
+  const fetchUnread = useCallback(async () => {
+    try {
+      const res = await getConversationsApi();
+      if (res?.status === 200 || res?.status === 201) {
+        const convs = res.data.data.conversations || [];
+        const total = convs.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+        setTotalUnread(total);
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    fetchUnread();
+
+    // Live-update via socket when available (Messages page connects it) —
+    // falls back to periodic polling below either way, so this works even
+    // before the user has ever opened Messages this session.
+    const socket = getSocket();
+    const handleUpdate = () => fetchUnread();
+    if (socket) {
+      socket.on("new_message",         handleUpdate);
+      socket.on("conversation_updated",handleUpdate);
+      socket.on("messages_read",       handleUpdate);
+      socket.on("connect",             handleUpdate);
+    }
+
+    const pollTimer = setInterval(fetchUnread, 20000);
+
+    return () => {
+      clearInterval(pollTimer);
+      if (socket) {
+        socket.off("new_message",          handleUpdate);
+        socket.off("conversation_updated", handleUpdate);
+        socket.off("messages_read",        handleUpdate);
+        socket.off("connect",              handleUpdate);
+      }
+    };
+  }, [fetchUnread]);
+
+  return { totalUnread, refetchUnread: fetchUnread };
+};

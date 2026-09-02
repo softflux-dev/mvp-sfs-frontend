@@ -4,8 +4,12 @@
 //                         leaveApprovedRejected, taskStatusUpdate, projectTeamUpdated
 //   Always-on (shown as read-only): projectDeadlineReminder, projectDeadlineChanged,
 //                                   projectModuleUpdated, newMessageReceived
+//
+// UNSAVED-CHANGES GUARD: reports dirty state up via onDirtyChange whenever
+// `prefs` drifts from the snapshot taken right after the initial load
+// finishes / right after a successful save.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 
 import CustomButton  from "../../../../components/customButton";
@@ -30,7 +34,7 @@ const ALWAYS_ON = [
   { key: "newMessageReceived",      label: "New Message Received (In-App Only)"     },
 ];
 
-const NotificationPreferencesTab = () => {
+const NotificationPreferencesTab = ({ onDirtyChange = () => {} }) => {
   const {
     prefs,
     setPrefs,
@@ -42,6 +46,25 @@ const NotificationPreferencesTab = () => {
 
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // ── Unsaved-changes tracking ─────────────────────────────────────────────
+  // Snapshot is taken once, the first time `loading` finishes — not on every
+  // `prefs` change, since the hook may hand back a new object reference on
+  // each load. After that, any drift from the snapshot is "dirty".
+  const initialSnapshotRef = useRef(null);
+  const hasSnapshotRef     = useRef(false);
+
+  useEffect(() => {
+    if (!loading && !hasSnapshotRef.current && prefs) {
+      initialSnapshotRef.current = JSON.stringify(prefs);
+      hasSnapshotRef.current = true;
+    }
+  }, [loading, prefs]);
+
+  useEffect(() => {
+    if (!initialSnapshotRef.current) return;
+    onDirtyChange(JSON.stringify(prefs) !== initialSnapshotRef.current);
+  }, [prefs]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleToggle = (key, channel) => (e) => {
     setPrefs((prev) => ({
       ...prev,
@@ -51,7 +74,11 @@ const NotificationPreferencesTab = () => {
 
   const handleSave = async () => {
     const result = await savePrefs(prefs);
-    if (result.success) setSaveSuccess(true);
+    if (result.success) {
+      setSaveSuccess(true);
+      initialSnapshotRef.current = JSON.stringify(prefs);
+      onDirtyChange(false);
+    }
   };
 
   if (loading) {

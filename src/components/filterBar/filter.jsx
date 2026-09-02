@@ -160,7 +160,7 @@ const Filter = ({
   {
     type: "search",
     key: "search",
-    placeholder: "Search tasks...",
+    placeholder: "Search by task name or task ID...",
     grid: { xs: 12, md: 2.4 },
   },
   {
@@ -305,7 +305,7 @@ employee_tasks: ({ projects = [], stages = [] }) => [
   {
     type: "search",
     key: "search",
-    placeholder: "Search tasks...",
+    placeholder: "Search by task name or task ID...",
     grid: { xs: 12, md: 3 },
   },
   {
@@ -713,7 +713,7 @@ task_management: ({ projects = [], employees = [], stages = [] }) => [
   {
     type: "search",
     key: "search",
-    placeholder: "Search tasks...",
+    placeholder: "Search by task title or task ID...",
     grid: { xs: 12, md: 3 },
   },
   {
@@ -786,7 +786,7 @@ emp_my_tasks: ({ projects = [], stages = [] }) => [
   {
     type: "search",
     key: "search",
-    placeholder: "Search tasks...",
+    placeholder: "Search by task title or task ID...",
     grid: { xs: 12, md: 3 },
     disabledIf: (v) => !v.project,
   },

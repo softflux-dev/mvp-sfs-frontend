@@ -351,6 +351,15 @@ case "project_status": {
     </TableCell>
   );
 }
+      // ── Task ID — system-generated, monospace, always visible ──────────────
+      case "task_id":
+        return (
+          <TableCell key={val}>
+            <Typography fontSize="12px" fontWeight={600} color="#AA2493" sx={{ fontFamily: "monospace" }}>
+              {row.taskId || "—"}
+            </Typography>
+          </TableCell>
+        );
 
         case "task_status": {
         const cfg = STATUS_CONFIG[row.taskStatus] || { bg: "#F5F5F5", color: "#757575" };

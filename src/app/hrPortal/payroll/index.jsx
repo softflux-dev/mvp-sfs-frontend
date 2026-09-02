@@ -29,6 +29,33 @@ import { sendPayslipWithPdfApi } from "../../../api/modules/payroll";
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
+
+
+// Send window: 25th of the payroll month through the 5th of the next month.
+// Checked against the SELECTED month/year (currentMonth/currentYear), same
+// as isGenerateWindowOpen — not just today's day-of-month in isolation.
+// Otherwise Sept 1–5 would wrongly show as "open" for September too, when
+// it's actually still August's window that's open.
+const isSendWindowOpen = (month, year) => {
+  const today = new Date();
+  const windowStart = new Date(year, month, 25, 0, 0, 0);
+  const windowEnd   = new Date(year, month + 1, 5, 23, 59, 59, 999);
+  return today >= windowStart && today <= windowEnd;
+};
+
+// Generate window: payroll for month M/year Y can only be generated between
+// the 25th of month M and the 5th of month M+1 — e.g. August payroll is
+// generatable Aug 25 → Sep 5 only, so attendance for the full month has
+// landed before generation. Unlike isSendWindowOpen, this checks the
+// SELECTED month (M, Y) against today, not just today's day-of-month —
+// otherwise Sept 1–5 would wrongly look "open" for September too.
+const isGenerateWindowOpen = (month, year) => {
+  const today = new Date();
+  const windowStart = new Date(year, month, 25, 0, 0, 0);
+  const windowEnd   = new Date(year, month + 1, 5, 23, 59, 59, 999);
+  return today >= windowStart && today <= windowEnd;
+};
+
 const tableHeader = [
   { id: "checkbox",   label: ""            },
   { id: "empId",      label: "ID"          },
@@ -190,22 +217,22 @@ const PayrollManagement = () => {
   };
 
   const handleGenerate = () => {
-    setApiError("");
-    if (attendanceImported === false) {
-      confirmRef.current?.open({
-        title: "No attendance imported for this month",
-        description:
-          `No attendance records exist for ${MONTH_NAMES[currentMonth]} ${currentYear}. ` +
-          `If you generate now, every employee is paid in full with no deductions and flagged as unverified. ` +
-          `Import the attendance sheet first for accurate figures. Generate anyway?`,
-        confirmText: "Generate Anyway",
-        cancelText:  "Import First",
-        onConfirm:   () => runGenerate(),
-      });
-      return;
-    }
-    runGenerate();
-  };
+  setApiError("");
+  if (attendanceImported === false) {
+    confirmRef.current?.open({
+      title: "No attendance imported for this month",
+      description:
+        `No attendance records exist for ${MONTH_NAMES[currentMonth]} ${currentYear}. ` +
+        `If you generate now, every employee is paid in full with no deductions and flagged as unverified. ` +
+        `Import the attendance sheet first for accurate figures. Generate anyway?`,
+      confirmText: "Generate Anyway",
+      cancelText:  "Import First",
+      onConfirm:   () => runGenerate(),
+    });
+    return;
+  }
+  runGenerate();
+};
 
   const handleSelectRow = (id) =>
     setSelectedRows((prev) => prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]);
@@ -281,6 +308,7 @@ const PayrollManagement = () => {
   };
 
   const handleSendSelected = () => {
+    if (!isSendWindowOpen(currentMonth, currentYear)) return;
     if (!selectedRows.length) { setApiError("Select at least one employee."); return; }
     const rows = tableData.filter((r) => selectedRows.includes(r.id));
     confirmRef.current?.open({
@@ -291,6 +319,7 @@ const PayrollManagement = () => {
   };
 
   const handleSendAll = () => {
+     if (!isSendWindowOpen(currentMonth, currentYear)) return;
     confirmRef.current?.open({
       title: "Send All Payslips?",
       description: `Send to ALL ${tableData.length} employees for ${MONTH_NAMES[currentMonth]} ${currentYear}?`,
@@ -312,13 +341,22 @@ const PayrollManagement = () => {
                 <>
                   {selectedRows.length > 0 && (
                     <CustomButton btnLabel={sending ? "Sending..." : `Send to Selected (${selectedRows.length})`}
-                      variant="outlined" handlePressBtn={handleSendSelected} isDisabled={actionLoading || sending} />
+                    variant="outlined" handlePressBtn={handleSendSelected}
+                    isDisabled={actionLoading || sending || !isSendWindowOpen(currentMonth, currentYear)} />
                   )}
                   <CustomButton btnLabel={sending ? "Sending..." : "Send All Payslips"}
-                    variant="outlined" handlePressBtn={handleSendAll} isDisabled={actionLoading || sending} />
+                  variant="outlined" handlePressBtn={handleSendAll}
+                  isDisabled={actionLoading || sending || !isSendWindowOpen(currentMonth, currentYear)} />
                 </>
               )}
             </Box>
+
+           
+            {hasGenerated && tableData.length > 0 && !isSendWindowOpen(currentMonth, currentYear) && (
+          <Typography fontSize="11px" color="text.secondary" mt={0.5} width="100%" textAlign="right">
+            Payslips can be sent between the 25th of {MONTH_NAMES[currentMonth]} and the 5th of {MONTH_NAMES[(currentMonth + 1) % 12]}.
+          </Typography>
+        )}
           </Grid>
         </Grid>
 
@@ -345,7 +383,7 @@ const PayrollManagement = () => {
             sx={GlobalStyle.datePickerStyle} 
           />
           </Box>
-          <CustomButton
+         <CustomButton
             btnLabel={actionLoading
               ? <Box display="flex" alignItems="center" gap={1}><CircularProgress size={14} sx={{ color: "#fff" }} />Generating...</Box>
               : hasGenerated ? "Re-generate Payroll" : "Generate Payroll"}
@@ -353,6 +391,7 @@ const PayrollManagement = () => {
           {hasGenerated && tableData.length > 0 && (
             <Typography fontSize="12px" color="#04C373" fontWeight={500}>✓ {MONTH_NAMES[currentMonth]} {currentYear}</Typography>
           )}
+         
         </Box>
 
         {sending && (

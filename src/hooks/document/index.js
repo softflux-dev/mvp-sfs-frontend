@@ -6,8 +6,29 @@ import {
   deleteEmployeeDocumentApi,
   downloadEmployeeDocumentApi,
 } from "../../api/modules/document";
-import { downloadSharedDocumentApi } from "../../api/modules/sharedDocument";
 import { baseUrl } from "../../api/index";
+
+// Fetches the zip as a blob and triggers a save via an in-page <a> click —
+// avoids window.open's top-level navigation, which is what makes dev
+// tunnels (*.devtunnels.ms) show their consent interstitial repeatedly.
+// CHANGED: this was previously called by downloadDocument below without
+// ever being defined here (it only existed in hooks/projectDocument.js and
+// hooks/sharedDocument.js), which threw a ReferenceError on every
+// multi-file download and surfaced as "Failed to download document."
+const downloadZipViaFetch = async (url, filename) => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Zip download failed");
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(blobUrl);
+};
 
 export const useDocument = (employeeId) => {
   const [documents,     setDocuments]     = useState([]);
@@ -37,22 +58,22 @@ export const useDocument = (employeeId) => {
     }
   }, [employeeId]);
 
-  const uploadDocument = useCallback(async (formData) => {
+    const uploadDocument = useCallback(async (formData) => {
     setActionLoading(true);
     setError("");
     try {
-      let fileUrl = "", fileName = "";
-      if (formData.file) {
-        const uploaded = await uploadToCloudinary(formData.file, "employee-documents");
-        fileUrl  = uploaded.url;
-        fileName = uploaded.fileName;
-      }
+      const filesToSend = formData.files?.length ? formData.files : (formData.file ? [formData.file] : []);
+      const uploadedFiles = await Promise.all(
+        filesToSend.map((f) => uploadToCloudinary(f, "employee-documents"))
+      );
+      const files = uploadedFiles.map((u) => ({
+        fileName: u.fileName, filePath: u.url, fileSize: u.fileSize,
+      }));
 
       const payload = {
         title:        formData.title,
         documentType: formData.documentType || "other",
-        fileUrl,
-        fileName,
+        files,
       };
 
       const response = await uploadEmployeeDocumentApi(employeeId, payload);
@@ -91,13 +112,23 @@ export const useDocument = (employeeId) => {
     }
   }, [employeeId, fetchDocuments]);
 
-  const downloadDocument = useCallback(async (documentId) => {
+   const downloadDocument = useCallback(async (documentId) => {
   try {
     const res = await downloadEmployeeDocumentApi(employeeId, documentId);
     if (res?.status === 200 || res?.status === 201) {
-      const { fileUrl, fileName } = res.data.data;
+      const { fileUrl, fileName, isZip } = res.data.data;
+     if (isZip) {
+        await downloadZipViaFetch(
+          `${baseUrl.replace(/\/$/, "")}/admin/employees/${employeeId}/documents/${documentId}/download-zip`,
+          `${fileName || "documents"}.zip`
+        );
+        return;
+      }
+      const forceDownloadUrl = fileUrl.includes("/upload/")
+        ? fileUrl.replace("/upload/", "/upload/fl_attachment/")
+        : fileUrl;
       const a = document.createElement("a");
-      a.href = fileUrl;
+      a.href = forceDownloadUrl;
       a.download = fileName || "";
       a.target = "_blank";
       a.click();

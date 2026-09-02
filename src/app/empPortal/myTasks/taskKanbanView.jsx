@@ -197,6 +197,7 @@ const TaskKanbanView = ({ tasks = [], loading, stages = DEFAULT_STAGES, onTaskSt
                         >
                           <PipelineCard
                             title={task.title || task.task}
+                            taskId={task.taskId}
                             priority={task.priority}
                             deadline={task.deadline || task.endDate}
                             comments={task.comments}

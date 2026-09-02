@@ -45,7 +45,7 @@ const INITIAL_FORM = {
   industry:       "",
   address:        "",
   website:        "",
-  currency:       "USD",
+  currency:       "",
   otMultiplier: 1,
   phoneCountries: [],
   phones:         [],
@@ -65,7 +65,15 @@ const OT_MULTIPLIER_OPTIONS = [
 
 const resolveLogoUrl = (logoUrl) => logoUrl || "";
 
-const CompanyProfileTab = () => {
+// Strips out file/blob fields before diffing formData against its snapshot —
+// those never round-trip through JSON meaningfully, so file changes are
+// checked separately (see isDirty effect below).
+const snapshotOf = (data) => JSON.stringify({
+  ...data,
+  logoFile: null, logoPreview: null, bannerFile: null, bannerPreview: null,
+});
+
+const CompanyProfileTab = ({ onDirtyChange = () => {} }) => {
   const fileInputRef   = useRef(null);
   const bannerInputRef = useRef(null);
   const { profile, loading, actionLoading, error, saveProfile } = useCompanyProfile();
@@ -80,12 +88,15 @@ const CompanyProfileTab = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [logoError,   setLogoError]   = useState("");
   const [bannerError, setBannerError] = useState("");
-  
+
+  // ── Unsaved-changes tracking — snapshot taken whenever fresh data loads
+  // from the backend (initial load, or right after a successful save). ────
+  const initialSnapshotRef = useRef(null);
 
   // Populate form once the profile loads from the backend
   useEffect(() => {
     if (profile) {
-      setFormData({
+      const next = {
         companyName:    profile.companyName    || "",
         industry:       profile.industry       || "",
         address:        profile.address        || "",
@@ -103,9 +114,19 @@ const CompanyProfileTab = () => {
         logoPreview:    resolveLogoUrl(profile.logoUrl),
         bannerFile:     null,
         bannerPreview:  resolveLogoUrl(profile.bannerUrl),
-      });
+      };
+      setFormData(next);
+      initialSnapshotRef.current = snapshotOf(next);
     }
   }, [profile]);
+
+  // ── Report dirty state up to Settings whenever formData changes ─────────
+  useEffect(() => {
+    if (!initialSnapshotRef.current) return;
+    const hasFileChange = !!formData.logoFile || !!formData.bannerFile;
+    const hasFieldChange = snapshotOf(formData) !== initialSnapshotRef.current;
+    onDirtyChange(hasFileChange || hasFieldChange);
+  }, [formData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleChange = (field) => (e) => {
     const val = e?.target ? e.target.value : e;
@@ -328,14 +349,20 @@ const handleFormatsChange = (next) => {
       });
 
       // Also refresh the local preview to the now-permanent backend URL,
-      // replacing the temporary blob: URL used during preview.
-      setFormData((prev) => ({
-        ...prev,
-        logoFile:      null,
-        logoPreview:   resolveLogoUrl(result.profile?.logoUrl) || prev.logoPreview,
-        bannerFile:    null,
-        bannerPreview: resolveLogoUrl(result.profile?.bannerUrl) || prev.bannerPreview,
-      }));
+      // replacing the temporary blob: URL used during preview — and take a
+      // fresh unsaved-changes snapshot at the same time so this save is
+      // correctly recognized as "no longer dirty".
+      setFormData((prev) => {
+        const next = {
+          ...prev,
+          logoFile:      null,
+          logoPreview:   resolveLogoUrl(result.profile?.logoUrl) || prev.logoPreview,
+          bannerFile:    null,
+          bannerPreview: resolveLogoUrl(result.profile?.bannerUrl) || prev.bannerPreview,
+        };
+        initialSnapshotRef.current = snapshotOf(next);
+        return next;
+      });
     }
   };
 

@@ -111,6 +111,7 @@ const EmpTaskSidebar = ({ task = {}, onStatusUpdate , stages = []}) => {
             navigate("/employee/bugs", {
               state: {
                 taskId:       taskId,
+                 taskDisplayId: task.taskId,
                 taskTitle:    task?.title    || "My Task",
                 taskStatus:    currentStageLabel,  
                 projectName:  task?.project?.projectName || task?.project || "",

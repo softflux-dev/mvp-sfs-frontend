@@ -46,6 +46,7 @@ const perfDisplayRows = [
 ];
 
 const delayedTableHeader = [
+   { id: "taskId",     label: "Task ID"     }, 
   { id: "taskName",    label: "Task"         },
   { id: "assignee",    label: "Assignee"     },
   { id: "project",     label: "Project"      },
@@ -54,6 +55,7 @@ const delayedTableHeader = [
 ];
 
 const delayedDisplayRows = [
+   "task_id", 
   "task_name",
   "task_assignees",
   "task_project",

@@ -14,6 +14,7 @@ import { createReportDoc, addSummaryCards, addReportTable, savePdf } from "../..
 const STAGE_COLORS = ["#2B6EFF", "#AA2493", "#F97316", "#04C373", "#030229"];
 
 const tableHeader = [
+   { id: "taskId",     label: "Task ID"     }, 
   { id: "taskName",      label: "Task"     },
   { id: "project",       label: "Project"  },
   { id: "assigneeNames", label: "Assignee" },
@@ -22,6 +23,7 @@ const tableHeader = [
 ];
 
 const displayRows = [
+    "task_id", 
   "task_name",
   "task_project",
   "task_assignees",
@@ -106,6 +108,7 @@ const TaskCompletionTab = forwardRef((props, ref) => {
   const stageLabelMap = new Map(stages.map((s) => [s.id, s.label]));
   const tableData = tasks.map((t) => ({
     id:            t._id,
+    taskId:       t.taskId || "", 
     taskName:      t.title,
     project:       selectedProject?.projectName || "—",
     assigneeNames: (t.assignees || []).map((a) => a.fullName || "").filter(Boolean),

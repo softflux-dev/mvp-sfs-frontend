@@ -12,8 +12,11 @@
 // applyLeaveDialog.jsx) needs to change — they all just read whatever value
 // annualLeaveDays resolves to, and now that's guaranteed to be internally
 // consistent instead of independently typed.
+//
+// UNSAVED-CHANGES GUARD: reports dirty state up via onDirtyChange whenever
+// formData drifts from the snapshot taken at load / after a successful save.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Box, Typography, Grid, CircularProgress } from "@mui/material";
 
 import CustomInputLabel from "../../../../components/customInputLabel";
@@ -24,12 +27,12 @@ import CustomSwitch     from "../../../../components/switch";
 import { useLeavePolicy } from "../../../../hooks/leavePolicy";
 
 const INITIAL_FORM = {
-  sickLeaveDays:          "10",
-  casualLeaveDays:        "8",
-  emergencyLeaveDays:     "5",
-  maternityLeaveDays:     "90",
-  shortLeavesPerMonth:    "2",
-  leaveApprovalThreshold: "10",
+  sickLeaveDays:          "",
+  casualLeaveDays:        "",
+  emergencyLeaveDays:     "",
+  maternityLeaveDays:     "",
+  shortLeavesPerMonth:    "",
+  leaveApprovalThreshold: "",
   autoApprove:            false,
   autoApproveDays:        "1",
 };
@@ -66,16 +69,19 @@ const blockInvalidPaste = (e) => {
   if (!/^\d+$/.test(String(pasted).trim())) e.preventDefault();
 };
 
-const LeavePolicyTab = () => {
+const LeavePolicyTab = ({ onDirtyChange = () => {} }) => {
   const { policy, loading, actionLoading, error, savePolicy } = useLeavePolicy();
 
   const [formData,    setFormData]    = useState(INITIAL_FORM);
   const [errors,      setErrors]      = useState({});
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // ── Unsaved-changes tracking ─────────────────────────────────────────────
+  const initialSnapshotRef = useRef(null);
+
   useEffect(() => {
     if (policy) {
-      setFormData({
+      const next = {
         sickLeaveDays:          policy.sickLeaveDays          != null ? String(policy.sickLeaveDays)          : "0",
         casualLeaveDays:        policy.casualLeaveDays        != null ? String(policy.casualLeaveDays)        : "0",
         emergencyLeaveDays:     policy.emergencyLeaveDays     != null ? String(policy.emergencyLeaveDays)     : "0",
@@ -84,9 +90,16 @@ const LeavePolicyTab = () => {
         leaveApprovalThreshold: policy.leaveApprovalThreshold != null ? String(policy.leaveApprovalThreshold) : "10",
         autoApprove:            policy.autoApprove            || false,
         autoApproveDays:        policy.autoApproveDays        != null ? String(policy.autoApproveDays)        : "1",
-      });
+      };
+      setFormData(next);
+      initialSnapshotRef.current = JSON.stringify(next);
     }
   }, [policy]);
+
+  useEffect(() => {
+    if (!initialSnapshotRef.current) return;
+    onDirtyChange(JSON.stringify(formData) !== initialSnapshotRef.current);
+  }, [formData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Annual Leave Days — always derived, never typed. Sick + Casual +
   // Emergency + Maternity only; Short Leaves stays out (per-month, not
@@ -154,6 +167,8 @@ const LeavePolicyTab = () => {
     if (result.success) {
       setSaveSuccess(true);
       setErrors({});
+      initialSnapshotRef.current = JSON.stringify(formData);
+      onDirtyChange(false);
     }
   };
 

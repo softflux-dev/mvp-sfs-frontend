@@ -20,6 +20,7 @@ import { useLocation } from "react-router-dom";
 import useUserStore from "../../zustand/useUserStore";
 import { ADMIN_ROUTES, HR_ROUTES, PM_ROUTES, EMP_ROUTES } from "../../routes";
 import logo from "../../assets/images/sprintexa-logo.png";
+import { useUnreadMessagesCount } from "../../hooks/messages";
 
 export const drawerWidth = 220;
 export const collapsedWidth = 64;
@@ -55,14 +56,29 @@ export default function Drawer({ drawerOpen, handleNavigation, toggleDrawer }) {
   const isMobileOrTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   const [openSubmenu, setOpenSubmenu] = React.useState({});
+  const { totalUnread } = useUnreadMessagesCount();
 
   const handleSubmenuToggle = (routeId) => {
     setOpenSubmenu((prev) => ({ ...prev, [routeId]: !prev[routeId] }));
   };
+  // Converts a route path template like "/emp/tasks/:id" into a matcher,
+// so hidden sub-pages can declare which nav item should stay highlighted.
+const pathMatchesTemplate = (pathname, template) => {
+  if (!template) return false;
+  const pattern = "^" + template.replace(/:[^/]+/g, "[^/]+") + "$";
+  return new RegExp(pattern).test(pathname);
+};
 
-  const isRouteActive = (path) => {
+ const isRouteActive = (path) => {
   if (path === "/") return location.pathname === "/";
-  return location.pathname === path || location.pathname.startsWith(path + "/");
+  if (location.pathname === path || location.pathname.startsWith(path + "/")) {
+    return true;
+  }
+  // Sub-pages that don't share a URL prefix with their parent nav item
+  // (e.g. task detail) declare `parentPath` in routes.js.
+  return ALL_ROUTES.some(
+    (r) => r.isHideMenu && r.parentPath === path && pathMatchesTemplate(location.pathname, r.path)
+  );
 };
 const isAdmin = false;
 
@@ -147,8 +163,22 @@ const visibleRoutes = React.useMemo(() => {
               }),
             }}
           >
-            <ListItemIcon sx={{ minWidth: 0, color: isActive ? "#fff" : "inherit" }}>
+           <ListItemIcon sx={{ minWidth: 0, color: isActive ? "#fff" : "inherit", position: "relative" }}>
               {isActive && route.activeIcon ? route.activeIcon : route.inActiveIcon || null}
+              {displayName === "Messages" && totalUnread > 0 && (
+                <Box
+                  sx={{
+                    position: "absolute", top: -4, right: -6,
+                    minWidth: 16, height: 16, borderRadius: "999px",
+                    backgroundColor: "#FF3B30", px: "3px",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  <Typography sx={{ fontSize: "9px", fontWeight: 700, color: "#fff", lineHeight: 1 }}>
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </Typography>
+                </Box>
+              )}
             </ListItemIcon>
 
             {drawerOpen && (
