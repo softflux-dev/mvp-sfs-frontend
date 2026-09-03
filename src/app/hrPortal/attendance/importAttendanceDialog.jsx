@@ -41,7 +41,21 @@ const cellToDateStr = (val) => {
     const d = String(val.getUTCDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   }
-  return String(val || "").trim();
+
+  //  — text-formatted date cells (e.g. "8/1/26", "8/12/2026") never come
+  // through as a Date object, only as a raw string. Without parsing these,
+  // every row's `date` stays as "8/1/26" and gets compared as a STRING
+  // against "YYYY-MM-DD" — "8/1/26" >= "2026-09-03" is true for every row
+  // (since "8" > "2" as characters), making the whole file look future-dated.
+  const str = String(val || "").trim();
+  const mdyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (mdyMatch) {
+    let [, m, d, y] = mdyMatch;
+    if (y.length === 2) y = (Number(y) < 70 ? "20" : "19") + y; // 2-digit year → 4-digit
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  return str;
 };
 
 const cellToTimeStr = (val) => {
@@ -212,27 +226,15 @@ const todayStr = (() => {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
 })();
 
-const futureRows = parsedRecords.filter((r) => r.date && r.date > todayStr);
-if (futureRows.length > 0) {
-  const dates = [...new Set(futureRows.map((r) => r.date))].sort();
-  setError(
-    `This file contains ${futureRows.length} row(s) with future date(s) (${dates[0]}${dates.length > 1 ? ` to ${dates[dates.length - 1]}` : ""}). ` +
-    `Attendance can't be uploaded for dates that haven't happened yet. Remove these rows and re-upload.`
-  );
-  setParsing(false);
-  return;
-}
+// ── Filter out today + future rows instead of rejecting the whole file —
+// today isn't "finished" yet (checkout may not have happened), so only
+// dates strictly BEFORE today are ever importable. ─────────────────────
+const importableRecords = parsedRecords.filter((r) => r.date && r.date < todayStr);
+const skippedCount = parsedRecords.length - importableRecords.length;
 
-const todayIncompleteRows = parsedRecords.filter((r) => {
-  if (r.date !== todayStr) return false;
-  const hasIn  = r.checkIn  && r.checkIn  !== "-" && r.checkIn.trim()  !== "";
-  const hasOut = r.checkOut && r.checkOut !== "-" && r.checkOut.trim() !== "";
-  return hasIn !== hasOut; // exactly one of the two present
-});
-if (todayIncompleteRows.length > 0) {
+if (importableRecords.length === 0) {
   setError(
-    `${todayIncompleteRows.length} row(s) for today (${todayStr}) have only a check-in or only a check-out. ` +
-    `Today's attendance isn't complete yet — remove today's row(s) and re-upload once the day has ended, or upload today separately later.`
+    `Every row in this file is dated today or later. Attendance can only be imported for fully completed past days.`
   );
   setParsing(false);
   return;
@@ -243,7 +245,7 @@ if (todayIncompleteRows.length > 0) {
       // Prevents the silent "0 present / all absent" corruption caused by
       // trusting the dropdown instead of the file's real dates. ─────────────
       const monthCounts = {};
-      parsedRecords.forEach((r) => {
+      importableRecords.forEach((r) => {
         const d = new Date(r.date);
         if (isNaN(d.getTime())) return;
         const key = `${d.getFullYear()}-${d.getMonth()}`;
@@ -267,7 +269,7 @@ if (todayIncompleteRows.length > 0) {
 
       onImport?.({
         month, year: yearDate.year(), file,
-        records: parsedRecords,
+        records: importableRecords,
         fileBase64,
       });
       handleClose();
@@ -351,6 +353,11 @@ if (todayIncompleteRows.length > 0) {
             <Typography fontSize="12px" fontWeight={600} color="#AA2493" mb={0.5}>Required columns in sheet:</Typography>
             <Typography fontSize="11px" color="text.secondary">
               ID, Name, Date, Check In, Check Out, Duration
+            </Typography>
+            {/* — clarify expected date format so ambiguous sheets (8/1/26 vs
+                1/8/26) don't get silently misread */}
+            <Typography fontSize="11px" color="text.secondary" mt={0.5}>
+              Date format: <strong>YYYY-MM-DD</strong> (e.g. 2026-08-01), or M/D/YYYY (e.g. 8/1/2026).
             </Typography>
           </Box>
 

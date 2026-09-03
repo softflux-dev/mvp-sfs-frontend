@@ -43,15 +43,13 @@ const isSendWindowOpen = (month, year) => {
   return today >= windowStart && today <= windowEnd;
 };
 
-// Generate window: payroll for month M/year Y can only be generated between
-// the 25th of month M and the 5th of month M+1 — e.g. August payroll is
-// generatable Aug 25 → Sep 5 only, so attendance for the full month has
-// landed before generation. Unlike isSendWindowOpen, this checks the
-// SELECTED month (M, Y) against today, not just today's day-of-month —
-// otherwise Sept 1–5 would wrongly look "open" for September too.
+// Generate window: payroll for month M/year Y can be generated/regenerated
+// from the 5th of month M through the 5th of month M+1 — HR needs to be able
+// to run/re-run the CURRENT month's payroll well before month-end, not just
+// in the last week. (Send window stays 25th–5th — unrelated, unchanged.)
 const isGenerateWindowOpen = (month, year) => {
   const today = new Date();
-  const windowStart = new Date(year, month, 25, 0, 0, 0);
+  const windowStart = new Date(year, month, 5, 0, 0, 0);
   const windowEnd   = new Date(year, month + 1, 5, 23, 59, 59, 999);
   return today >= windowStart && today <= windowEnd;
 };
@@ -383,14 +381,22 @@ const PayrollManagement = () => {
             sx={GlobalStyle.datePickerStyle} 
           />
           </Box>
-         <CustomButton
-            btnLabel={actionLoading
-              ? <Box display="flex" alignItems="center" gap={1}><CircularProgress size={14} sx={{ color: "#fff" }} />Generating...</Box>
-              : hasGenerated ? "Re-generate Payroll" : "Generate Payroll"}
-            variant="gradient" handlePressBtn={handleGenerate} isDisabled={actionLoading || loading} />
-          {hasGenerated && tableData.length > 0 && (
-            <Typography fontSize="12px" color="#04C373" fontWeight={500}>✓ {MONTH_NAMES[currentMonth]} {currentYear}</Typography>
-          )}
+        <CustomButton
+        btnLabel={actionLoading
+          ? <Box display="flex" alignItems="center" gap={1}><CircularProgress size={14} sx={{ color: "#fff" }} />Generating...</Box>
+          : hasGenerated ? "Re-generate Payroll" : "Generate Payroll"}
+        variant="gradient"
+        handlePressBtn={handleGenerate}
+        disabled={actionLoading || loading || !isGenerateWindowOpen(currentMonth, currentYear)} />
+        {hasGenerated && tableData.length > 0 && (
+          <Typography fontSize="12px" color="#04C373" fontWeight={500}>✓ {MONTH_NAMES[currentMonth]} {currentYear}</Typography>
+        )}
+
+        {!isGenerateWindowOpen(currentMonth, currentYear) && (
+          <Typography fontSize="11px" color="text.secondary" mt={0.5}>
+            {hasGenerated ? "Re-generation" : "Generation"} for {MONTH_NAMES[currentMonth]} is only allowed between the 5th of {MONTH_NAMES[currentMonth]} and the 5th of {MONTH_NAMES[(currentMonth + 1) % 12]}.
+          </Typography>
+        )}
          
         </Box>
 

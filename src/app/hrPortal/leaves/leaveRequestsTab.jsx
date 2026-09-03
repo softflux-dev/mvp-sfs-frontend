@@ -16,6 +16,8 @@ import { createReportDoc, addReportTable, savePdf } from "../../../utils/reportP
 
 import ExportIcon from "../../../assets/icons/download-icon-white.svg";
 import viewIcon   from "../../../assets/icons/view.svg";
+import rejectIcon from "../../../assets/icons/close-icon.svg";
+import approveIcon from "../../../assets/icons/complete-active.svg";
 
 const tableHeader = [
   { id: "name",          label: "Employee"        },
@@ -112,24 +114,25 @@ const LeaveRequestsTab = () => {
   };
 });
 
-  const handleApprove = (row, payload) => {
-    const isCustom = payload?.decision === "approve_custom";
-    confirmRef.current?.open({
-      title: isCustom ? "Approve Custom Range?" : "Approve Leave?",
-      description: `Confirm this decision for ${row.name}'s leave request?`,
-      confirmText: "Yes, Confirm",
-      cancelText: "Cancel",
-      onConfirm: async () => {
-        const result = await reviewLeave(row.id, payload);
-        if (result.success) {
-          setActionSuccess({ open: true, message: result.message || "Leave reviewed successfully." });
-          setViewOpen(false);
-        } else {
-          setApiError(result.message);
-        }
-      },
-    });
-  };
+const handleApprove = (row, payload) => {
+  const isCustom = payload?.decision === "approve_custom";
+  confirmRef.current?.open({
+    title: isCustom ? "Approve Custom Range?" : "Approve Leave?",
+    description: `Confirm this decision for ${row.name}'s leave request?`,
+    confirmText: "Yes, Confirm",
+    cancelText: "Cancel",
+    icon: approveIcon,        
+    onConfirm: async () => {
+      const result = await reviewLeave(row.id, payload);
+      if (result.success) {
+        setActionSuccess({ open: true, message: result.message || "Leave reviewed successfully." });
+        setViewOpen(false);
+      } else {
+        setApiError(result.message);
+      }
+    },
+  });
+};
 
   const handleReject = (row, payload) => {
     confirmRef.current?.open({
@@ -137,6 +140,7 @@ const LeaveRequestsTab = () => {
       description: payload?.hrNotes ? `Reject leave for ${row.name}?\nReason: "${payload.hrNotes}"` : `Reject leave request for ${row.name}?`,
       confirmText: "Yes, Reject",
       cancelText: "Cancel",
+      icon: rejectIcon,  
       onConfirm: async () => {
         const result = await reviewLeave(row.id, { decision: "reject_all", hrNotes: payload?.hrNotes || "" });
         if (result.success) {
