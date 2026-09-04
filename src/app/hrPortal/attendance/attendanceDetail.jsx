@@ -35,14 +35,8 @@ const AttendanceDetail = () => {
   } = useAttendanceDetail(employeeId, month, year);
 
 const handleEditSave = async (updated) => {
-    return await updateRecord(updated.id, {
-      checkIn:          updated.checkIn,
-      checkOut:         updated.checkOut,
-      attendanceStatus: updated.attendanceStatus,
-      notes:            updated.notes,
-      offSiteHours:     updated.offSiteHours,
-      extraHours:       updated.extraHours,
-    });
+  const { id, ...payload } = updated;
+   return await updateRecord(id, payload);
   };
 
   // Manual Entry — creates a brand-new record for a date that has none

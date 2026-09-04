@@ -109,6 +109,8 @@ export const useAttendanceDetail = (employeeId, month, year) => {
                   ...r,
                   checkIn:          updated.checkIn,
                   checkOut:         updated.checkOut,
+                   offSiteCheckIn:   updated.offSiteCheckIn  || "",
+                  offSiteCheckOut:  updated.offSiteCheckOut || "",
                   hours:            updated.hours,
                   onSiteHours:      updated.hours || "0h 0m",
                   offSiteHoursRaw:  offSiteRaw,
@@ -129,9 +131,9 @@ export const useAttendanceDetail = (employeeId, month, year) => {
         return { success: true };
       }
       return { success: false, message: res?.data?.message };
-    } catch {
-      return { success: false, message: "Something went wrong." };
-    } finally {
+    } catch (err) {
+  return { success: false, message: err?.response?.data?.message || "Something went wrong." };
+} finally {
       setActionLoading(false);
     }
   }, []);
@@ -152,37 +154,39 @@ export const useAttendanceDetail = (employeeId, month, year) => {
         const totalDecimal  = onSiteDecimal + offSiteRaw + extraRaw;
 
         const formatted = {
-          id:               newRecord._id,
-          date:             newRecord.date,
-          // `date` is the display string ("Jun 1, 2026"); rawDate must be the
-          // real Date so sorting and the edit dialog's DatePicker work.
-          rawDate:          newRecord.rawDate || newRecord.date,
-          checkIn:          newRecord.checkIn  || "",
-          checkOut:         newRecord.checkOut || "",
-          hours:            newRecord.hours,
-          onSiteHours:      newRecord.hours || "0h 0m",
-          offSiteHoursRaw:  offSiteRaw,
-          extraHoursRaw:    extraRaw,
-          offSiteHours:     formatDecimalHours(offSiteRaw),
-          extraHours:       formatDecimalHours(extraRaw),
-          totalHours:       formatDecimalHours(totalDecimal),
-          attendanceStatus: newRecord.attendanceStatus,
-          notes:            newRecord.notes || "",
-          isIncomplete:     newRecord.isIncomplete || false,
-          isOvertime:       newRecord.isOvertime   || false,
-          isManual:         newRecord.isManual     ?? true,
-          isNonWorkingDay:  newRecord.isNonWorkingDay || false,
-        };
-        // Insert in date order
-        setRecords((prev) =>
-          [...prev, formatted].sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate))
-        );
-        return { success: true };
+        id: newRecord._id,
+        date: newRecord.date,
+        rawDate: newRecord.rawDate || newRecord.date,
+        checkIn: newRecord.checkIn || "",
+        checkOut: newRecord.checkOut || "",
+        offSiteCheckIn: newRecord.offSiteCheckIn || "",
+        offSiteCheckOut: newRecord.offSiteCheckOut || "",
+        hours: newRecord.hours,
+        onSiteHours: newRecord.hours || "0h 0m",
+        offSiteHoursRaw: offSiteRaw,
+        extraHoursRaw: extraRaw,
+        offSiteHours: formatDecimalHours(offSiteRaw),
+        extraHours: formatDecimalHours(extraRaw),
+        totalHours: formatDecimalHours(totalDecimal),
+        attendanceStatus: newRecord.attendanceStatus,
+        notes: newRecord.notes || "",
+        isIncomplete: newRecord.isIncomplete || false,
+        isOvertime: newRecord.isOvertime || false,
+        isManual: newRecord.isManual ?? true,
+        isNonWorkingDay: newRecord.isNonWorkingDay || false,
+      };
+
+      setRecords((prev) => {
+        const idx = prev.findIndex((r) => r.id?.toString() === formatted.id?.toString());
+        const next = idx === -1 ? [...prev, formatted] : prev.map((r, i) => (i === idx ? formatted : r));
+        return next.sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate));
+      });
+      return { success: true };
       }
       return { success: false, message: res?.data?.message || "Failed to create entry." };
-    } catch {
-      return { success: false, message: "Something went wrong." };
-    } finally {
+    } catch (err) {
+  return { success: false, message: err?.response?.data?.message || "Something went wrong." };
+} finally {
       setActionLoading(false);
     }
   }, []);

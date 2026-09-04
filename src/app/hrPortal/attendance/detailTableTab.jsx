@@ -49,6 +49,8 @@ const DetailTableTab = ({
   const [manualOpen,   setManualOpen]   = useState(false);
   const [saving,       setSaving]       = useState(false);
   const [filters,      setFilters]      = useState({});
+  const [manualError, setManualError] = useState("");
+
 
   const filteredRecords = useMemo(() => {
     return dailyRecords.filter((row) => {
@@ -83,26 +85,27 @@ const DetailTableTab = ({
     setSaving(false);
   };
 
-  // ── Manual Entry — creates a brand-new record (e.g. weekend with no punch
-  // captured by the machine, or any ad-hoc date the system has no row for) ──
   const handleManualEntrySave = async (payload) => {
-    setSaving(true);
-    const result = await onManualEntrySave?.(payload);
-    if (result?.success) {
-      setManualOpen(false);
-    }
-    setSaving(false);
-  };
+  setSaving(true);
+  setManualError("");
+  const result = await onManualEntrySave?.(payload);
+  if (result?.success) {
+    setManualOpen(false);
+  } else {
+    setManualError(result?.message || "Failed to create entry.");
+  }
+  setSaving(false);
+};
 
   return (
     <>
       <Box mt={2} display="flex" justifyContent="flex-end">
         <CustomButton
-          btnLabel="Manual Entry"
-          variant="gradient"
-          startIcon={<Plus size={15} />}
-          handlePressBtn={() => setManualOpen(true)}
-        />
+  btnLabel="Manual Entry"
+  variant="gradient"
+  startIcon={<Plus size={15} />}
+  handlePressBtn={() => { setManualError(""); setManualOpen(true); }}
+/>
       </Box>
 
       <Box mt={1.5}>
@@ -128,6 +131,7 @@ const DetailTableTab = ({
         record={editingRow}
         onSave={handleEditSave}
         loading={saving}
+       
       />
 
       {/* Create a brand-new record — same dialog, create mode */}
@@ -138,6 +142,7 @@ const DetailTableTab = ({
         manualEntry={{ employeeId, date: new Date() }}
         onSave={handleManualEntrySave}
         loading={saving}
+         errorMessage={manualError}
       />
     </>
   );

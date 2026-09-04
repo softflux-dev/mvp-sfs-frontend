@@ -1014,18 +1014,20 @@ holidays: [
     }}
   />
 )}
-           {f.type === "year" && (
-            <DatePicker
-              views={["year"]}
-              openTo="year"
-              value={values[f.key] || null}
-              onChange={(v) => setVal(f.key, v)}
-              sx={{ ...GlobalStyle.datePickerStyle, "& input": { color: values[f.key] ? "inherit" : "transparent" } }}
-              slotProps={{
-                textField: { label: "", fullWidth: true, inputProps: { placeholder: f.placeholder } },
-                popper: { sx: GlobalStyle.datePickerPopperSx },
-              }}
-            />
+          {f.type === "year" && (
+              <DatePicker
+                views={["year"]}
+                openTo="year"
+                value={values[f.key] || null}
+                onChange={(v) => setVal(f.key, v)}
+                minDate={new Date(new Date().getFullYear() - 9, 0, 1)}  
+                maxDate={new Date(new Date().getFullYear(), 11, 31)}     
+                sx={{ ...GlobalStyle.datePickerStyle, "& input": { color: values[f.key] ? "inherit" : "transparent" } }}
+                slotProps={{
+                  textField: { label: "", fullWidth: true, inputProps: { placeholder: f.placeholder } },
+                  popper: { sx: GlobalStyle.datePickerPopperSx },
+                }}
+              />
             )}
             </Grid>
             );

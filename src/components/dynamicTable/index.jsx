@@ -1767,8 +1767,8 @@ case "att_mon_check_out":
 case "att_mon_hours":
   return (
     <TableCell key={val}>
-      <Typography fontSize="13px" color={!row.hours || row.hours === "—" ? "text.secondary" : "text.black"}>
-        {row.hours || "—"}
+      <Typography fontSize="13px" color={!row.totalHours || row.totalHours === "0h 0m" ? "text.secondary" : "text.black"}>
+        {row.totalHours || "—"}
       </Typography>
     </TableCell>
   );

@@ -32,26 +32,21 @@ const PartialPunchDialog = ({ open, onClose, onCountChange }) => {
   useEffect(() => { if (open) fetchPartial(); }, [open]);
 
   const handleEditSave = async (updated) => {
-    setSaving(true);
-    try {
-      const res = await updateAttendanceRecordApi(updated.id, {
-        checkIn:          updated.checkIn,
-        checkOut:         updated.checkOut,
-        attendanceStatus: updated.attendanceStatus,
-        notes:            updated.notes,
-      });
-      if (res?.status === 200 || res?.status === 201) {
-        // Remove resolved record from list instantly
-        const remaining = records.filter((r) => r.id?.toString() !== updated.id?.toString());
-        setRecords(remaining);
-        onCountChange?.(remaining.length);  // update banner count in parent
-        setSuccessOpen(true);
-        setEditOpen(false);
-        setEditingRow(null);
-      }
-    } catch { /* silent */ }
-    finally { setSaving(false); }
-  };
+  setSaving(true);
+  try {
+    const { id, ...payload } = updated;
+    const res = await updateAttendanceRecordApi(id, payload);
+    if (res?.status === 200 || res?.status === 201) {
+      const remaining = records.filter((r) => r.id?.toString() !== id?.toString());
+      setRecords(remaining);
+      onCountChange?.(remaining.length);
+      setSuccessOpen(true);
+      setEditOpen(false);
+      setEditingRow(null);
+    }
+  } catch { /* silent */ }
+  finally { setSaving(false); }
+};
 
   return (
     <>

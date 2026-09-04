@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import { Box, IconButton, Typography, Avatar, Grid, CircularProgress } from "@mui/material";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { Send } from "lucide-react";
-
+import { Send, Copy } from "lucide-react";
 import CustomButton        from "../../../components/customButton";
 import TextInput           from "../../../components/textInput";
 import AttachmentCard      from "../../../components/cards/attachmentCard";
@@ -271,6 +270,32 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
               </Typography>
             </Box>
           </Box>
+          {/* Link */}
+            <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
+              <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>Link</Typography>
+              {!displayTask.link ? (
+                <Typography fontSize="13px" color="text.secondary">No link added.</Typography>
+              ) : (
+                <Box
+                  display="flex" alignItems="center" justifyContent="space-between" gap={1}
+                  sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}
+                >
+                  <Typography
+                    fontSize="13px" color="#022179" fontWeight={500}
+                    sx={{ wordBreak: "break-all", cursor: "pointer", textDecoration: "underline" }}
+                    onClick={() => window.open(displayTask.link, "_blank", "noopener,noreferrer")}
+                  >
+                    {displayTask.link}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={() => navigator.clipboard.writeText(displayTask.link)}
+                  >
+                    <Copy size={14} color="#808080" />
+                  </IconButton>
+                </Box>
+              )}
+            </Box>
 
           {/* Attachments */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
