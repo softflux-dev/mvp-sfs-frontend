@@ -8,6 +8,7 @@ import CustomInputLabel    from "../../../../components/customInputLabel";
 import DialogActionButtons from "../../../../components/dialog/dialogAction";
 
 const MIN_STAGES = 3;
+const MAX_STAGES = 15;
 
 const ConfigureStagesDialog = ({ open, onClose, onSave, currentCount = 5, loading = false }) => {
   const [count, setCount] = useState(currentCount);
@@ -20,11 +21,13 @@ const ConfigureStagesDialog = ({ open, onClose, onSave, currentCount = 5, loadin
     }
   }, [open, currentCount]);
 
-  const clamp = (n) => (isNaN(n) ? MIN_STAGES : Math.max(MIN_STAGES, Math.floor(n)));
+    const clamp = (n) => (isNaN(n) ? MIN_STAGES : Math.min(MAX_STAGES, Math.max(MIN_STAGES, Math.floor(n))));
 
-  useEffect(() => {
+    useEffect(() => {
     if (count === "") { setError(""); return; }
-    setError(Number(count) < MIN_STAGES ? `Minimum ${MIN_STAGES} stages required.` : "");
+    if (Number(count) < MIN_STAGES) { setError(`Minimum ${MIN_STAGES} stages required.`); return; }
+    if (Number(count) > MAX_STAGES) { setError(`Maximum ${MAX_STAGES} stages allowed.`); return; }
+    setError("");
   }, [count]);
 
   const handleChange = (e) => {
@@ -45,7 +48,7 @@ const ConfigureStagesDialog = ({ open, onClose, onSave, currentCount = 5, loadin
       e.preventDefault();
       return;
     }
-    if (e.key === "ArrowDown") {
+        if (e.key === "ArrowDown") {
       const current = count === "" ? MIN_STAGES : Number(count);
       if (current <= MIN_STAGES) {
         e.preventDefault();
@@ -53,7 +56,16 @@ const ConfigureStagesDialog = ({ open, onClose, onSave, currentCount = 5, loadin
         setError(`Minimum ${MIN_STAGES} stages required.`);
       }
     }
+    if (e.key === "ArrowUp") {
+      const current = count === "" ? MIN_STAGES : Number(count);
+      if (current >= MAX_STAGES) {
+        e.preventDefault();
+        setCount(MAX_STAGES);
+        setError(`Maximum ${MAX_STAGES} stages allowed.`);
+      }
+    }
   };
+  
 
   // Belt-and-suspenders: also sanitize on paste, since pasting bypasses keydown.
   const handlePaste = (e) => {
@@ -63,7 +75,7 @@ const ConfigureStagesDialog = ({ open, onClose, onSave, currentCount = 5, loadin
 
   const handleBlur = () => setCount((prev) => clamp(Number(prev)));
 
-  const isInvalid = count === "" || Number(count) < MIN_STAGES;
+    const isInvalid = count === "" || Number(count) < MIN_STAGES || Number(count) > MAX_STAGES;
 
   const handleSave = () => {
     if (isInvalid) {
@@ -89,7 +101,7 @@ const ConfigureStagesDialog = ({ open, onClose, onSave, currentCount = 5, loadin
           <Typography fontSize="13px" color="text.secondary">
             Choose how many stages this project's task pipeline should have.
             The last stage is always treated as <strong>Completed</strong>.
-            Minimum {MIN_STAGES} stages.
+            Minimum {MIN_STAGES}, maximum {MAX_STAGES} stages.
           </Typography>
 
           <Box>
@@ -106,7 +118,7 @@ const ConfigureStagesDialog = ({ open, onClose, onSave, currentCount = 5, loadin
               fullWidth
               error={!!error}
               helperText={error}
-              inputProps={{ min: MIN_STAGES, step: 1 }}
+              inputProps={{ min: MIN_STAGES, max: MAX_STAGES, step: 1 }}
             />
           </Box>
 
