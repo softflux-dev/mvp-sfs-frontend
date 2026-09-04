@@ -17,6 +17,7 @@ import { usePhoneConfigStore } from "../../../../zustand/usePhoneConfigStore";
 import { validatePhone } from "../../../../utils/phone";
 import { baseUrl } from "../../../../api/index";
 import UploadIcon from "../../../../assets/icons/upload.svg";
+import { useUnsavedChangesStore } from "../../../../zustand/useUnsavedChangesStore";
 
 const INDUSTRY_OPTIONS = [
   { value: "technology",  label: "Technology"  },
@@ -92,6 +93,20 @@ const CompanyProfileTab = ({ onDirtyChange = () => {} }) => {
   // ── Unsaved-changes tracking — snapshot taken whenever fresh data loads
   // from the backend (initial load, or right after a successful save). ────
   const initialSnapshotRef = useRef(null);
+  const handleSaveRef = useRef();
+const setSaveHandler = useUnsavedChangesStore((s) => s.setSaveHandler);
+
+// Keep the ref pointing at the latest handleSave closure every render.
+useEffect(() => {
+  handleSaveRef.current = handleSave;
+});
+
+// Register a stable wrapper once, so the dialog can call it via the store
+// without needing to know this component exists.
+useEffect(() => {
+  setSaveHandler(() => handleSaveRef.current());
+  return () => setSaveHandler(null);
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Populate form once the profile loads from the backend
   useEffect(() => {
@@ -317,10 +332,10 @@ const handleFormatsChange = (next) => {
 
   const handleSave = async () => {
     const validationErrors = validate();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
+   if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors);
+    return { success: false };   
+  }
 
     const result = await saveProfile(formData);
     if (result.success) {
@@ -364,6 +379,7 @@ const handleFormatsChange = (next) => {
         return next;
       });
     }
+    return result;
   };
 
   if (loading) {

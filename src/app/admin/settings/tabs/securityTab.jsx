@@ -4,6 +4,14 @@
 // been changed from its loaded value. Two-Factor is intentionally excluded
 // — it's a static, frontend-only toggle that was never persisted to begin
 // with, so there's nothing meaningful to "lose" by navigating away.
+//
+// SAVE-HANDLER REGISTRATION: this tab has TWO independent save actions
+// (password update, session timeout) with two separate buttons. The shared
+// unsaved-changes dialog only has one "Save Changes" button, so the
+// registered handler runs whichever action(s) are actually dirty —
+// password only, timeout only, or both — and only reports success once
+// every attempted action succeeded, so nothing is silently skipped or
+// falsely marked saved.
 import { useState, useEffect, useRef } from "react";
 import { Box, Typography, Grid, MenuItem, CircularProgress } from "@mui/material";
 
@@ -14,6 +22,7 @@ import CustomSwitch     from "../../../../components/switch";
 import CustomSelect     from "../../../../components/customSelect";
 import SuccessPopup     from "../../../../components/popups/confirmationDialog";
 import { useSecuritySettings } from "../../../../hooks/securitySettings";
+import { useUnsavedChangesStore } from "../../../../zustand/useUnsavedChangesStore";
 
 const SESSION_TIMEOUT_OPTIONS = [
   { value: "15min", label: "15 Min" },
@@ -85,7 +94,7 @@ const SecurityTab = ({ onDirtyChange = () => {} }) => {
     const validationErrors = validatePasswords();
     if (Object.keys(validationErrors).length > 0) {
       setPasswordErrors(validationErrors);
-      return;
+      return { success: false };
     }
 
     const result = await changePassword({
@@ -101,12 +110,13 @@ const SecurityTab = ({ onDirtyChange = () => {} }) => {
     } else {
       setPasswordApiErr(result.message);
     }
+    return result;
   };
 
   const handleSaveSettings = async () => {
     if (!sessionTimeout) {
       setTimeoutError("Please select a session timeout.");
-      return;
+      return { success: false };
     }
     setTimeoutError("");
 
@@ -118,7 +128,53 @@ const SecurityTab = ({ onDirtyChange = () => {} }) => {
       initialSessionTimeoutRef.current = sessionTimeout;
       onDirtyChange(!!(passwords.current || passwords.newPass || passwords.confirm));
     }
+    return result;
   };
+
+  // ── Combined save — invoked by the shared unsaved-changes dialog's
+  // single "Save Changes" button. Runs whichever of the two independent
+  // actions above are actually dirty; succeeds only if every attempted
+  // action succeeds, so a failed password change (e.g. wrong current
+  // password) correctly keeps the dialog open instead of navigating away
+  // having silently dropped that half of the edit. ────────────────────────
+  const handleCombinedSave = async () => {
+    const hasPasswordInput = !!(passwords.current || passwords.newPass || passwords.confirm);
+    const hasTimeoutChange = sessionTimeout !== initialSessionTimeoutRef.current;
+
+    if (!hasPasswordInput && !hasTimeoutChange) {
+      return { success: true };
+    }
+
+    let allSucceeded = true;
+
+    if (hasTimeoutChange) {
+      const timeoutResult = await handleSaveSettings();
+      if (!timeoutResult.success) allSucceeded = false;
+    }
+
+    if (hasPasswordInput) {
+      const passwordResult = await handleUpdatePassword();
+      if (!passwordResult.success) allSucceeded = false;
+    }
+
+    return { success: allSucceeded };
+  };
+
+  // ── Register the combined save logic with the shared unsaved-changes
+  // store so the cross-tab/sidebar "Save Changes" dialog button can
+  // trigger it without needing to know this component or its internals
+  // exist. ─────────────────────────────────────────────────────────────
+  const handleSaveRef = useRef();
+  const setSaveHandler = useUnsavedChangesStore((s) => s.setSaveHandler);
+
+  useEffect(() => {
+    handleSaveRef.current = handleCombinedSave;
+  });
+
+  useEffect(() => {
+    setSaveHandler(() => handleSaveRef.current());
+    return () => setSaveHandler(null);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (

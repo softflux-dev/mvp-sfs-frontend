@@ -10,6 +10,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import AppBar from "./appBar";
 import Drawer, { drawerWidth, collapsedWidth } from "./drawer";
 import { useSessionTimeout } from "../../hooks/useSessionTimeout";  // ← adjust path if your hooks folder is elsewhere relative to this file
+import { useUnsavedChangesStore } from "../../zustand/useUnsavedChangesStore";
 
 export default function MainLayout({ children }) {
   const navigate = useNavigate();
@@ -35,11 +36,23 @@ export default function MainLayout({ children }) {
     }
   }, [isMobileOrTablet]);
 
+  // ── Unsaved-changes guard — Drawer funnels EVERY nav click (logo, top-
+  // level items, submenu children) through this single handleNavigation
+  // prop, so wrapping it here with guardNavigate covers all sidebar
+  // navigation with the same dialog/indicator Settings' own tab-switching
+  // uses — no changes needed inside drawer.jsx itself. If nothing is
+  // dirty, guardNavigate runs the real navigation immediately; if a
+  // dirty section is mounted, it opens the confirmation dialog instead
+  // and only navigates if the user picks "Discard & Leave". ─────────────
+  const guardNavigate = useUnsavedChangesStore((s) => s.guardNavigate);
+
+
   const handleNavigation = (path) => {
+  guardNavigate(() => {
     navigate(path);
-    // Mobile/tablet: collapse after navigation
     if (isMobileOrTablet) setDrawerOpen(false);
-  };
+  });
+};
 
   const toggleDrawer = () => {
     setDrawerOpen((prev) => !prev);

@@ -1,6 +1,9 @@
 // tabs/workingHoursTab.jsx — 
 // UNSAVED-CHANGES GUARD: reports dirty state up via onDirtyChange whenever
 // formData drifts from the snapshot taken at load / after a successful save.
+// Also registers its save handler with the shared unsaved-changes store, so
+// the "Save Changes" button on the cross-tab/sidebar confirmation dialog can
+// trigger THIS tab's actual save logic when it's the active dirty section.
 import { useState, useEffect, useRef } from "react";
 import { Box, Typography, Button, Grid, CircularProgress } from "@mui/material";
 import { LocalizationProvider, TimePicker } from "@mui/x-date-pickers";
@@ -13,6 +16,7 @@ import CustomButton     from "../../../../components/customButton";
 import SuccessPopup     from "../../../../components/popups/confirmationDialog";
 import GlobalStyle      from "../../../../style/style";
 import { useWorkingHours } from "../../../../hooks/workingHours";
+import { useUnsavedChangesStore } from "../../../../zustand/useUnsavedChangesStore";
 
 const DAYS = [
   { key: "MON", label: "Mon" },
@@ -139,7 +143,7 @@ const WorkingHoursTab = ({ onDirtyChange = () => {} }) => {
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
-      return;
+      return { success: false };
     }
 
     const result = await saveSettings({
@@ -156,7 +160,23 @@ const WorkingHoursTab = ({ onDirtyChange = () => {} }) => {
       initialSnapshotRef.current = JSON.stringify(formData);
       onDirtyChange(false);
     }
+    return result;
   };
+
+  // ── Register this tab's save logic with the shared unsaved-changes store
+  // so the cross-tab/sidebar "Save Changes" dialog button can trigger it
+  // without needing to know this component or its internals exist. ───────
+  const handleSaveRef = useRef();
+  const setSaveHandler = useUnsavedChangesStore((s) => s.setSaveHandler);
+
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  });
+
+  useEffect(() => {
+    setSaveHandler(() => handleSaveRef.current());
+    return () => setSaveHandler(null);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
   return (

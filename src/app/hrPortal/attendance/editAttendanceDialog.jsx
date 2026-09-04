@@ -89,7 +89,7 @@ const EditAttendanceDialog = ({
     setFieldErrors({ extraHoursValue: "" });
     if (record) {
       const status = record.attendanceStatus === "Partial" ? "Present" : (record.attendanceStatus || "");
-      const hasOnsite  = !!(record.checkIn && record.checkOut);
+      const hasOnsite  = !!(record.checkIn || record.checkOut);
       const hasOffsite = !!(record.offSiteCheckIn && record.offSiteCheckOut);
       const hasExtra   = (record.extraHoursRaw || 0) > 0;
       setForm({
@@ -118,7 +118,12 @@ const EditAttendanceDialog = ({
 
   const handleSave = () => {
     const { useOnsite, useOffsite, useExtra } = form;
-    if (!useOnsite && !useOffsite && !useExtra) return;
+    const hasAnyEntry = useOnsite || useOffsite || useExtra;
+
+    // Creating a brand-new record needs at least one entry type. Editing an
+    // EXISTING record can still save a status/notes-only change with no
+    // entry type toggled.
+    if (isCreateMode && !hasAnyEntry) return;
 
     if (useExtra) {
       const check = validateHoursField(form.extraHoursValue);
@@ -149,7 +154,7 @@ const EditAttendanceDialog = ({
   };
 
   const saveDisabled =
-    (!form.useOnsite && !form.useOffsite && !form.useExtra) ||
+    (isCreateMode && !form.useOnsite && !form.useOffsite && !form.useExtra) ||
     (form.useOnsite  && (!form.onsiteCheckIn  || !form.onsiteCheckOut))  ||
     (form.useOffsite && (!form.offsiteCheckIn || !form.offsiteCheckOut)) ||
     (form.useExtra   && (!form.extraHoursValue || Number(form.extraHoursValue) <= 0 || !!fieldErrors.extraHoursValue));

@@ -5,17 +5,24 @@
 //   Always-on (shown as read-only): projectDeadlineReminder, projectDeadlineChanged,
 //                                   projectModuleUpdated, newMessageReceived
 //
-// UNSAVED-CHANGES GUARD: reports dirty state up via onDirtyChange whenever
-// `prefs` drifts from the snapshot taken right after the initial load
-// finishes / right after a successful save.
+// UNSAVED-CHANGES GUARD — FIX: previously derived dirty state by diffing
+// `prefs` against a snapshot taken on first non-loading render. That raced
+// with the data-loading hook: if `prefs` was set more than once during load
+// (e.g. a default shape swapped for the real fetched values), the snapshot
+// could be taken against the wrong version, so the very next legitimate
+// load update looked identical to a user edit — falsely flagging the tab
+// dirty on a plain tab switch with zero edits. Now dirty is set explicitly,
+// only from the one place a real user edit happens (handleToggle), so
+// nothing about how/when the hook loads or re-sets `prefs` can trigger it.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react"; 
 import { Box, Typography, CircularProgress } from "@mui/material";
 
 import CustomButton  from "../../../../components/customButton";
 import SuccessPopup  from "../../../../components/popups/confirmationDialog";
 import CustomSwitch  from "../../../../components/switch";
 import { useNotificationPreferences } from "../../../../hooks/notificationPreferences";
+import { useUnsavedChangesStore } from "../../../../zustand/useUnsavedChangesStore";
 
 // ── Toggleable (admin can turn on/off) ────────────────────────────────────────
 const TOGGLEABLE = [
@@ -45,40 +52,34 @@ const NotificationPreferencesTab = ({ onDirtyChange = () => {} }) => {
   } = useNotificationPreferences();
 
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const handleSaveRef = useRef();
+const setSaveHandler = useUnsavedChangesStore((s) => s.setSaveHandler);
 
-  // ── Unsaved-changes tracking ─────────────────────────────────────────────
-  // Snapshot is taken once, the first time `loading` finishes — not on every
-  // `prefs` change, since the hook may hand back a new object reference on
-  // each load. After that, any drift from the snapshot is "dirty".
-  const initialSnapshotRef = useRef(null);
-  const hasSnapshotRef     = useRef(false);
+useEffect(() => {
+  handleSaveRef.current = handleSave;
+});
 
-  useEffect(() => {
-    if (!loading && !hasSnapshotRef.current && prefs) {
-      initialSnapshotRef.current = JSON.stringify(prefs);
-      hasSnapshotRef.current = true;
-    }
-  }, [loading, prefs]);
-
-  useEffect(() => {
-    if (!initialSnapshotRef.current) return;
-    onDirtyChange(JSON.stringify(prefs) !== initialSnapshotRef.current);
-  }, [prefs]); // eslint-disable-line react-hooks/exhaustive-deps
+useEffect(() => {
+  setSaveHandler(() => handleSaveRef.current());
+  return () => setSaveHandler(null);
+}, []);
 
   const handleToggle = (key, channel) => (e) => {
     setPrefs((prev) => ({
       ...prev,
       [key]: { ...prev[key], [channel]: e.target.checked },
     }));
+    // Explicit — this is the only place a real user edit happens on this tab.
+    onDirtyChange(true);
   };
 
   const handleSave = async () => {
     const result = await savePrefs(prefs);
     if (result.success) {
       setSaveSuccess(true);
-      initialSnapshotRef.current = JSON.stringify(prefs);
       onDirtyChange(false);
     }
+    return result;
   };
 
   if (loading) {
