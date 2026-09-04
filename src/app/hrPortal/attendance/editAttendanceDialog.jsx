@@ -83,10 +83,12 @@ const EditAttendanceDialog = ({
   const isCreateMode = !record && !!manualEntry;
   const [form, setForm] = useState(INITIAL);
   const [fieldErrors, setFieldErrors] = useState({ extraHoursValue: "" });
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setFieldErrors({ extraHoursValue: "" });
+        setFormError("");
     if (record) {
       const status = record.attendanceStatus === "Partial" ? "Present" : (record.attendanceStatus || "");
       const hasOnsite  = !!(record.checkIn || record.checkOut);
@@ -116,24 +118,36 @@ const EditAttendanceDialog = ({
     setForm((prev) => ({ ...prev, [field]: raw }));
   };
 
-  const handleSave = () => {
+    const handleSave = () => {
     const { useOnsite, useOffsite, useExtra } = form;
     const hasAnyEntry = useOnsite || useOffsite || useExtra;
+
+    setFormError("");
 
     // Creating a brand-new record needs at least one entry type. Editing an
     // EXISTING record can still save a status/notes-only change with no
     // entry type toggled.
-    if (isCreateMode && !hasAnyEntry) return;
+    if (isCreateMode && !hasAnyEntry) {
+      setFormError("Select at least one entry type (On-Site, Off-Site, or Extra Hours) and fill it in.");
+      return;
+    }
 
     if (useExtra) {
       const check = validateHoursField(form.extraHoursValue);
       if (!check.valid || !form.extraHoursValue || Number(form.extraHoursValue) <= 0) {
         setFieldErrors((prev) => ({ ...prev, extraHoursValue: check.error || "Enter hours worked" }));
+        setFormError("Please fix the errors below before saving.");
         return;
       }
     }
-    if (useOnsite  && (!form.onsiteCheckIn  || !form.onsiteCheckOut))  return;
-    if (useOffsite && (!form.offsiteCheckIn || !form.offsiteCheckOut)) return;
+    if (useOnsite && (!form.onsiteCheckIn || !form.onsiteCheckOut)) {
+      setFormError("On-Site is selected — enter both Check-In and Check-Out, or turn it off.");
+      return;
+    }
+    if (useOffsite && (!form.offsiteCheckIn || !form.offsiteCheckOut)) {
+      setFormError("Off-Site is selected — enter both Check-In and Check-Out, or turn it off.");
+      return;
+    }
 
     const payload = {
       attendanceStatus: form.attendanceStatus || undefined,
@@ -153,11 +167,7 @@ const EditAttendanceDialog = ({
     onSave?.(payload);
   };
 
-  const saveDisabled =
-    (isCreateMode && !form.useOnsite && !form.useOffsite && !form.useExtra) ||
-    (form.useOnsite  && (!form.onsiteCheckIn  || !form.onsiteCheckOut))  ||
-    (form.useOffsite && (!form.offsiteCheckIn || !form.offsiteCheckOut)) ||
-    (form.useExtra   && (!form.extraHoursValue || Number(form.extraHoursValue) <= 0 || !!fieldErrors.extraHoursValue));
+    const saveDisabled = form.useExtra && !!fieldErrors.extraHoursValue;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -300,6 +310,12 @@ const EditAttendanceDialog = ({
                 fullWidth
               />
             </Box>
+                        {formError && (
+              <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", backgroundColor: "#FFF0F0", border: "1px solid #FFCCCC", borderRadius: "10px", px: 2, py: 1.5 }}>
+                <AlertCircle size={16} color="#FF3B30" style={{ flexShrink: 0, marginTop: 1 }} />
+                <Typography fontSize="12px" color="error">{formError}</Typography>
+              </Box>
+            )}
 
             {errorMessage && (
               <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", backgroundColor: "#FFF0F0", border: "1px solid #FFCCCC", borderRadius: "10px", px: 2, py: 1.5 }}>
