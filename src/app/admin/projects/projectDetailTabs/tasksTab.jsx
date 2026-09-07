@@ -161,7 +161,7 @@ const TasksTab = ({
       ? t.taskStatus.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "—",
     departmentId: t.department?._id || "",
     description:  t.description    || "",
-    link:         t.link            || "",
+    links:        t.links?.length ? t.links : (t.link ? [t.link] : []),
   }));
 
   const menuOptions = [
@@ -202,7 +202,7 @@ const handleSave = async (formData) => {
     startDate:   formData.startDate   || null,
     endDate:     formData.endDate     || null,
     description: formData.description || "",
-    link:        formData.link        || "",
+    links:       formData.links        || [],
   };
  
   const result = editingTask

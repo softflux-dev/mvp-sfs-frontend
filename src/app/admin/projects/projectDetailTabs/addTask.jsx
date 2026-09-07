@@ -53,7 +53,7 @@ const INITIAL_FORM = {
   status:      "",
   startDate:   null,
   endDate:     null,
-  link:        "",
+  links:       [""],
   attachments: [],
 };
 
@@ -202,7 +202,9 @@ const endMinDate = formData.startDate
         status:      resolvedStatus,
         startDate:   editingTask.startDateRaw ? new Date(editingTask.startDateRaw) : null,
         endDate:     editingTask.endDateRaw   ? new Date(editingTask.endDateRaw)   : null,
-        link:        editingTask.link         || "",
+        links:       editingTask.links?.length
+          ? editingTask.links
+          : (editingTask.link ? [editingTask.link] : [""]),
         attachments: (editingTask.attachments || []).map((att) => ({
           url:         att.url      || "",
           publicId:    att.publicId || "",
@@ -260,6 +262,26 @@ const endMinDate = formData.startDate
 
   const handleFileRemove = (index) => {
     setFormData((prev) => ({ ...prev, attachments: prev.attachments.filter((_, i) => i !== index) }));
+  };
+
+    const handleLinkChange = (index) => (e) => {
+    const val = e.target.value;
+    setFormData((prev) => {
+      const next = [...prev.links];
+      next[index] = val;
+      return { ...prev, links: next };
+    });
+  };
+
+  const handleAddLink = () => {
+    setFormData((prev) => ({ ...prev, links: [...prev.links, ""] }));
+  };
+
+  const handleRemoveLink = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      links: prev.links.length > 1 ? prev.links.filter((_, i) => i !== index) : [""],
+    }));
   };
 
   const validate = () => {
@@ -344,6 +366,7 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
 
     onSave?.({
       ...formData,
+      links: formData.links.map((l) => l.trim()).filter(Boolean),
       project:      showProjectSelector ? selectedProject : undefined,
       assigneeIds:  selectedIds,
       department:   primaryDept,
@@ -602,9 +625,33 @@ const FIELD_ORDER = ["project", "module", "assigneeIds", "title", "priority", "s
             </Box>
 
             {/* 10. Link */}
+                       
             <Box>
-              <CustomInputLabel label="Link" />
-              <TextInput placeholder="https://..." value={formData.link} onChange={handleChange("link")} inputBgColor="#fff" fullWidth InputStartIcon={<Link size={14} color="#808080" />} />
+              <CustomInputLabel label="Links" />
+              <Box display="flex" flexDirection="column" gap={1}>
+                {formData.links.map((val, i) => (
+                  <Box key={i} display="flex" gap={1} alignItems="center">
+                    <TextInput
+                      placeholder="https://..."
+                      value={val}
+                      onChange={handleLinkChange(i)}
+                      inputBgColor="#fff" fullWidth
+                      InputStartIcon={<Link size={14} color="#808080" />}
+                    />
+                    {formData.links.length > 1 && (
+                      <IconButton size="small" onClick={() => handleRemoveLink(i)} sx={{ p: 0.5 }}>
+                        <X size={16} color="#FF3B30" />
+                      </IconButton>
+                    )}
+                  </Box>
+                ))}
+                <Box
+                  onClick={handleAddLink}
+                  sx={{ alignSelf: "flex-start", fontSize: "12px", fontWeight: 500, color: "#AA2493", cursor: "pointer" }}
+                >
+                  + Add another link
+                </Box>
+              </Box>
             </Box>
 
             {/* 11. Attachments */}

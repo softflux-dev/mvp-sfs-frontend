@@ -504,17 +504,19 @@ const handleDepartmentChange = (e) => {
               </Box>
               <Box ref={fieldRefs.joiningDate}>
                 <CustomInputLabel label="Joining Date *" />
-                <DatePicker value={formData.joiningDate} onChange={handleDateChange}
-                  slotProps={{
-                    textField: {
-                      size: "small", fullWidth: true,
-                      placeholder: "dd/mm/yyyy",
-                      error: !!errors.joiningDate,
-                    },
-                    popper: { sx: GlobalStyle.datePickerPopperSx },
-                  }}
-                  sx={GlobalStyle.datePickerStyle}
-                />
+               <DatePicker value={formData.joiningDate} onChange={handleDateChange}
+                minDate={new Date(2000, 0, 1)}
+                maxDate={new Date()}
+                slotProps={{
+                  textField: {
+                    size: "small", fullWidth: true,
+                    placeholder: "dd/mm/yyyy",
+                    error: !!errors.joiningDate,
+                  },
+                  popper: { sx: GlobalStyle.datePickerPopperSx },
+                }}
+                sx={GlobalStyle.datePickerStyle}
+              />
                 {errors.joiningDate && (
                   <Typography fontSize="12px" color="error" mt={0.5}>{errors.joiningDate}</Typography>
                 )}

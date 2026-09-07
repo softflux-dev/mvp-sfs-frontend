@@ -68,6 +68,13 @@ const computeSpanHours = (checkIn, checkOut) => {
   return diffMin / 60;
 };
 
+// Returns true when two same-day time ranges genuinely overlap (touching
+// endpoints, e.g. one ending exactly when the other starts, is NOT an overlap).
+const rangesOverlap = (aStart, aEnd, bStart, bEnd) => {
+  if (!aStart?.isValid?.() || !aEnd?.isValid?.() || !bStart?.isValid?.() || !bEnd?.isValid?.()) return false;
+  return aStart.isBefore(bEnd) && bStart.isBefore(aEnd);
+};
+
 // ── Same "Xh Ym" formatting used everywhere else in the app, kept local so
 // this dialog doesn't need to import the hooks-file helper. ─────────────────
 const formatHoursLabel = (decimal) => {
@@ -143,10 +150,10 @@ const EditAttendanceDialog = ({
         offsiteCheckIn: hasOffsite ? parseTime(record.offSiteCheckIn) : null,
         offsiteCheckOut: hasOffsite ? parseTime(record.offSiteCheckOut) : null,
         useExtra: hasExtra, extraHoursValue: hasExtra ? String(record.extraHoursRaw) : "",
-        // Extra Hours check-in/check-out isn't persisted server-side (only the
-        // resulting decimal is), so these start empty even in edit mode; the
-        // previously-saved total still shows via extraHoursValue below.
-        extraCheckIn: null, extraCheckOut: null,
+        // Extra Hours Check-In/Check-Out are now persisted server-side, so
+        // prefill them the same way On-Site/Off-Site are.
+        extraCheckIn: hasExtra ? parseTime(record.extraCheckIn) : null,
+        extraCheckOut: hasExtra ? parseTime(record.extraCheckOut) : null,
       });
     } else if (manualEntry) {
       setForm({ ...INITIAL, date: manualEntry.date ? dayjs(manualEntry.date) : dayjs(), useOnsite: true });
@@ -239,6 +246,20 @@ const EditAttendanceDialog = ({
       setFormError("Off-Site is selected — enter both Check-In and Check-Out, or turn it off.");
       return;
     }
+    
+    const overlapMsg = "The selected time overlaps with an existing attendance period. Please select a different time.";
+    if (useOnsite && useOffsite && rangesOverlap(form.onsiteCheckIn, form.onsiteCheckOut, form.offsiteCheckIn, form.offsiteCheckOut)) {
+      setFormError(overlapMsg);
+      return;
+    }
+    if (useOnsite && useExtra && rangesOverlap(form.onsiteCheckIn, form.onsiteCheckOut, form.extraCheckIn, form.extraCheckOut)) {
+      setFormError(overlapMsg);
+      return;
+    }
+    if (useOffsite && useExtra && rangesOverlap(form.offsiteCheckIn, form.offsiteCheckOut, form.extraCheckIn, form.extraCheckOut)) {
+      setFormError(overlapMsg);
+      return;
+    }
 
     const payload = {
       attendanceStatus: form.attendanceStatus || undefined,
@@ -246,7 +267,18 @@ const EditAttendanceDialog = ({
     };
     if (useOnsite)  payload.onsite  = { checkIn: formatTime(form.onsiteCheckIn),  checkOut: formatTime(form.onsiteCheckOut) };
     if (useOffsite) payload.offsite = { checkIn: formatTime(form.offsiteCheckIn), checkOut: formatTime(form.offsiteCheckOut) };
-    if (useExtra)   payload.extraHours = Math.max(0, extraHoursFinal);
+        if (useExtra) {
+      payload.extraHours = Math.max(0, extraHoursFinal);
+      payload.extra = { checkIn: formatTime(form.extraCheckIn), checkOut: formatTime(form.extraCheckOut) };
+    } else if (!isCreateMode) {
+      // Extra Hours was unchecked during an edit — explicitly clear it AND
+      // tell the backend to skip re-adding any on-site/off-site overflow,
+      // otherwise a day whose on-site hours exceed the daily budget will
+      // silently regenerate the same Extra Hours we just tried to remove.
+      payload.extraHours = 0;
+      payload.extra = { checkIn: "", checkOut: "" };
+      payload.clearExtra = true;   
+    }
 
     if (isCreateMode) {
       payload.employeeId = manualEntry.employeeId;

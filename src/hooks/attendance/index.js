@@ -111,6 +111,8 @@ export const useAttendanceDetail = (employeeId, month, year) => {
                   checkOut:         updated.checkOut,
                    offSiteCheckIn:   updated.offSiteCheckIn  || "",
                   offSiteCheckOut:  updated.offSiteCheckOut || "",
+                  extraCheckIn:     updated.extraCheckIn    || "",   
+                  extraCheckOut:    updated.extraCheckOut   || "",
                   hours:            updated.hours,
                   onSiteHours:      updated.hours || "0h 0m",
                   offSiteHoursRaw:  offSiteRaw,

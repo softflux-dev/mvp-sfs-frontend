@@ -107,26 +107,18 @@ const ProjectCard = ({
             ))}
           </AvatarGroup>
         ) : (
-          <Box
-            onClick={(e) => { e.stopPropagation(); onAddTeam?.(); }}
+          <Typography
+            onClick={onAddTeam ? (e) => { e.stopPropagation(); onAddTeam(); } : undefined}
+            fontSize="11px"
+            fontWeight={500}
+            color="text.secondary"
             sx={{
-              display: "flex", alignItems: "center", gap: 0.5,
               cursor: onAddTeam ? "pointer" : "default",
-              "&:hover": onAddTeam ? { "& .add-team-text": { textDecoration: "underline" } } : undefined,
+              "&:hover": onAddTeam ? { textDecoration: "underline" } : undefined,
             }}
           >
-            <Box sx={{
-              width: 28, height: 28, borderRadius: "50%",
-              border: "1.5px dashed #C9CDD4",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0,
-            }}>
-              <Typography fontSize="14px" color="#9CA3AF" lineHeight={1}>+</Typography>
-            </Box>
-            <Typography className="add-team-text" fontSize="11px" fontWeight={500} color="text.secondary">
-              Add Team
-            </Typography>
-          </Box>
+            {onAddTeam ? "Add Team" : "No team added"}
+          </Typography>
         )}
 
         {/* Due date + task count */}

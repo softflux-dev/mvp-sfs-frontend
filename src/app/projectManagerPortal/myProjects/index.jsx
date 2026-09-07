@@ -40,7 +40,8 @@ const MyProjects = () => {
     return matchSearch && matchStatus;
   });
 
-  // ── Normalize API shape → ProjectCard props ───────────────────────────────
+  
+   // ── Normalize API shape → ProjectCard props ───────────────────────────────
   const toCardProps = (p) => ({
     id:          p._id,
     projectName: p.projectName,
@@ -54,7 +55,9 @@ const MyProjects = () => {
         })
       : "—",
     taskCount:   p.totalTasks ?? 0,
-    members:     (p.assignees || []).map((a) => a.avatar || ""),
+    members:     (p.assignees || [])
+      .filter((a) => a && a._id)
+      .map((a) => a.avatar || ""),
   });
 
   // ── Build full navigation state ───────────────────────────────────────────
