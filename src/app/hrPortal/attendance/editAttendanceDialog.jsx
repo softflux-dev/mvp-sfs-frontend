@@ -1,5 +1,5 @@
 // hrPortal/attendance/editAttendanceDialog.jsx —
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Box, MenuItem, Typography, Button } from "@mui/material";
 import { TimePicker }          from "@mui/x-date-pickers/TimePicker";
 import { DatePicker }          from "@mui/x-date-pickers/DatePicker";
@@ -22,18 +22,23 @@ import GlobalStyle         from "../../../style/style";
 const STATUS_OPTIONS = [
   { value: "Present", label: "Present" },
   { value: "Absent",  label: "Absent"  },
-  { value: "Late",    label: "Late"    },
   { value: "Leave",   label: "Leave"   },
   { value: "Holiday", label: "Holiday" },
 ];
 
 const MAX_HOURS_PER_DAY = 24;
 
+// ── Status-first flow: these statuses can't carry On-Site/Off-Site
+// Check-In/Check-Out times — Absent must have none, Leave/Holiday don't
+// need them either since no attendance was expected that day. Present/Late/
+// Auto-detect keep Check-In/Check-Out available as before. ──────────────────
+const NO_TIME_STATUSES = ["Absent", "Leave", "Holiday"];
+
 const INITIAL = {
   date: null, attendanceStatus: "", notes: "",
   useOnsite: false, onsiteCheckIn: null, onsiteCheckOut: null,
   useOffsite: false, offsiteCheckIn: null, offsiteCheckOut: null,
-  useExtra: false, extraHoursValue: "",
+  useExtra: false, extraHoursValue: "", extraCheckIn: null, extraCheckOut: null,
 };
 
 const parseTime = (timeStr) => {
@@ -51,6 +56,25 @@ const parseTime = (timeStr) => {
 const formatTime = (dayjsObj) => {
   if (!dayjsObj || !dayjsObj.isValid()) return "";
   return dayjsObj.format("HH:mm");
+};
+
+// ── Span between two dayjs time values, in decimal hours. Returns null when
+// either value is missing/invalid or check-out isn't after check-in, so the
+// caller can tell "no valid duration yet" apart from "0 hours". ─────────────
+const computeSpanHours = (checkIn, checkOut) => {
+  if (!checkIn || !checkOut || !checkIn.isValid?.() || !checkOut.isValid?.()) return null;
+  const diffMin = checkOut.diff(checkIn, "minute");
+  if (diffMin <= 0) return null;
+  return diffMin / 60;
+};
+
+// ── Same "Xh Ym" formatting used everywhere else in the app, kept local so
+// this dialog doesn't need to import the hooks-file helper. ─────────────────
+const formatHoursLabel = (decimal) => {
+  if (!decimal || decimal <= 0) return "0h 0m";
+  const h = Math.floor(decimal);
+  const m = Math.round((decimal - h) * 60);
+  return `${h}h ${m}m`;
 };
 
 const validateHoursField = (raw) => {
@@ -76,6 +100,16 @@ const validateHoursField = (raw) => {
  *
  * Both save through the same backend logic (upsert-merge, capped against
  * required daily hours, overflow spills into Extra Hours).
+ *
+ * Status/time rules (status-first flow):
+ * - Absent, Leave, and Holiday cannot carry On-Site/Off-Site Check-In/
+ *   Check-Out times — selecting one of these turns those entry types off and
+ *   clears their times, and the toggle buttons are disabled while any of
+ *   them is selected.
+ * - Present, Late, and Auto-detect keep On-Site/Off-Site Check-In/Check-Out
+ *   available as before.
+ * - Extra Hours is entered as a Check-In/Check-Out pair (never break-adjusted);
+ *   the resulting duration is shown in a read-only "Xh Ym" field.
  */
 const EditAttendanceDialog = ({
   open, onClose, record = null, manualEntry = null, onSave, loading = false, errorMessage = "",
@@ -88,20 +122,31 @@ const EditAttendanceDialog = ({
   useEffect(() => {
     if (!open) return;
     setFieldErrors({ extraHoursValue: "" });
-        setFormError("");
+    setFormError("");
     if (record) {
       const status = record.attendanceStatus === "Partial" ? "Present" : (record.attendanceStatus || "");
-      const hasOnsite  = !!(record.checkIn || record.checkOut);
-      const hasOffsite = !!(record.offSiteCheckIn && record.offSiteCheckOut);
+      const noTimeStatus = NO_TIME_STATUSES.includes(status);
+      const hasOnsite  = !noTimeStatus && !!(record.checkIn || record.checkOut);
+      const hasOffsite = !noTimeStatus && !!(record.offSiteCheckIn && record.offSiteCheckOut);
       const hasExtra   = (record.extraHoursRaw || 0) > 0;
       setForm({
         ...INITIAL,
         date: record.rawDate ? dayjs(record.rawDate) : null,
         attendanceStatus: status,
         notes: record.notes || "",
-        useOnsite: hasOnsite, onsiteCheckIn: parseTime(record.checkIn), onsiteCheckOut: parseTime(record.checkOut),
-        useOffsite: hasOffsite, offsiteCheckIn: parseTime(record.offSiteCheckIn), offsiteCheckOut: parseTime(record.offSiteCheckOut),
+        // Absent/Leave/Holiday can never carry On-Site/Off-Site times — clear
+        // them even if stale/inconsistent data exists on the record.
+        useOnsite: hasOnsite,
+        onsiteCheckIn: hasOnsite ? parseTime(record.checkIn) : null,
+        onsiteCheckOut: hasOnsite ? parseTime(record.checkOut) : null,
+        useOffsite: hasOffsite,
+        offsiteCheckIn: hasOffsite ? parseTime(record.offSiteCheckIn) : null,
+        offsiteCheckOut: hasOffsite ? parseTime(record.offSiteCheckOut) : null,
         useExtra: hasExtra, extraHoursValue: hasExtra ? String(record.extraHoursRaw) : "",
+        // Extra Hours check-in/check-out isn't persisted server-side (only the
+        // resulting decimal is), so these start empty even in edit mode; the
+        // previously-saved total still shows via extraHoursValue below.
+        extraCheckIn: null, extraCheckOut: null,
       });
     } else if (manualEntry) {
       setForm({ ...INITIAL, date: manualEntry.date ? dayjs(manualEntry.date) : dayjs(), useOnsite: true });
@@ -109,6 +154,44 @@ const EditAttendanceDialog = ({
       setForm(INITIAL);
     }
   }, [record, manualEntry, open]);
+
+  // ── Live Extra Hours duration — computed from the Check-In/Check-Out pair
+  // when both are set; otherwise falls back to the previously saved value
+  // (e.g. when re-opening an edit and not touching Extra Hours). ─────────────
+  const computedExtraHours = useMemo(() => {
+    const spanned = computeSpanHours(form.extraCheckIn, form.extraCheckOut);
+    if (spanned !== null) return spanned;
+    const fallback = parseFloat(form.extraHoursValue);
+    return isNaN(fallback) ? 0 : fallback;
+  }, [form.extraCheckIn, form.extraCheckOut, form.extraHoursValue]);
+
+  const timesDisabled = NO_TIME_STATUSES.includes(form.attendanceStatus);
+
+  const handleStatusChange = (e) => {
+    const newStatus = e.target.value;
+    setFormError("");
+    setForm((prev) => ({
+      ...prev,
+      attendanceStatus: newStatus,
+      // Absent/Leave/Holiday can't carry Check-In/Check-Out times — turn
+      // those entry types off and clear their values the moment one of
+      // these statuses is selected.
+      ...(NO_TIME_STATUSES.includes(newStatus)
+        ? {
+            useOnsite: false, onsiteCheckIn: null, onsiteCheckOut: null,
+            useOffsite: false, offsiteCheckIn: null, offsiteCheckOut: null,
+          }
+        : {}),
+    }));
+  };
+
+  const handleEntryTypeToggle = (key) => {
+    // Guard against enabling On-Site/Off-Site while a no-time status is
+    // selected (buttons are disabled visually too, but this keeps state
+    // consistent if disabled styling is ever bypassed).
+    if (timesDisabled && key !== "useExtra") return;
+    setForm((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const handleHoursChange = (field) => (e) => {
     const raw = e.target.value;
@@ -118,11 +201,17 @@ const EditAttendanceDialog = ({
     setForm((prev) => ({ ...prev, [field]: raw }));
   };
 
-    const handleSave = () => {
+  const handleSave = () => {
     const { useOnsite, useOffsite, useExtra } = form;
     const hasAnyEntry = useOnsite || useOffsite || useExtra;
 
     setFormError("");
+
+    // Absent/Leave/Holiday can never be saved together with On-Site/Off-Site times.
+    if (timesDisabled && (useOnsite || useOffsite)) {
+      setFormError(`${form.attendanceStatus} status can't include Check-In/Check-Out times. Turn off On-Site/Off-Site, or change the status.`);
+      return;
+    }
 
     // Creating a brand-new record needs at least one entry type. Editing an
     // EXISTING record can still save a status/notes-only change with no
@@ -132,10 +221,12 @@ const EditAttendanceDialog = ({
       return;
     }
 
+    let extraHoursFinal = 0;
     if (useExtra) {
-      const check = validateHoursField(form.extraHoursValue);
-      if (!check.valid || !form.extraHoursValue || Number(form.extraHoursValue) <= 0) {
-        setFieldErrors((prev) => ({ ...prev, extraHoursValue: check.error || "Enter hours worked" }));
+      const spanned = computeSpanHours(form.extraCheckIn, form.extraCheckOut);
+      extraHoursFinal = spanned !== null ? spanned : (parseFloat(form.extraHoursValue) || 0);
+      if (!extraHoursFinal || extraHoursFinal <= 0) {
+        setFieldErrors((prev) => ({ ...prev, extraHoursValue: "Enter Check-In and Check-Out for Extra Hours" }));
         setFormError("Please fix the errors below before saving.");
         return;
       }
@@ -155,7 +246,7 @@ const EditAttendanceDialog = ({
     };
     if (useOnsite)  payload.onsite  = { checkIn: formatTime(form.onsiteCheckIn),  checkOut: formatTime(form.onsiteCheckOut) };
     if (useOffsite) payload.offsite = { checkIn: formatTime(form.offsiteCheckIn), checkOut: formatTime(form.offsiteCheckOut) };
-    if (useExtra)   payload.extraHours = Math.max(0, parseFloat(form.extraHoursValue) || 0);
+    if (useExtra)   payload.extraHours = Math.max(0, extraHoursFinal);
 
     if (isCreateMode) {
       payload.employeeId = manualEntry.employeeId;
@@ -167,7 +258,7 @@ const EditAttendanceDialog = ({
     onSave?.(payload);
   };
 
-    const saveDisabled = form.useExtra && !!fieldErrors.extraHoursValue;
+  const saveDisabled = form.useExtra && !!fieldErrors.extraHoursValue;
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -197,7 +288,22 @@ const EditAttendanceDialog = ({
               </Box>
             )}
 
-            {/* Entry Type — checkboxes, any combination */}
+            {/* Status — moved above Entry Type so Absent can gate the toggles below */}
+            <Box>
+              <CustomInputLabel label="Status" />
+              <CustomSelect
+                value={form.attendanceStatus}
+                onChange={handleStatusChange}
+                fullWidth height="45px" inputBgColor="#fff"
+              >
+                <MenuItem value="">Auto-detect (based on hours entered)</MenuItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
+                ))}
+              </CustomSelect>
+            </Box>
+
+            {/* Entry Type — checkboxes, any combination (On-Site/Off-Site disabled for Absent/Leave/Holiday) */}
             <Box>
               <CustomInputLabel label="Entry Type — select any combination" />
               <Box display="flex" gap={1}>
@@ -205,24 +311,29 @@ const EditAttendanceDialog = ({
                   { key: "useOnsite",  label: "On-Site"     },
                   { key: "useOffsite", label: "Off-Site"    },
                   { key: "useExtra",   label: "Extra Hours" },
-                ].map((t) => (
-                  <Button
-                    key={t.key}
-                    variant={form[t.key] ? "gradient" : "button"}
-                    onClick={() => setForm((prev) => ({ ...prev, [t.key]: !prev[t.key] }))}
-                    sx={{ flex: 1, height: "40px", fontSize: "13px", fontWeight: 500 }}
-                  >
-                    {t.label}
-                  </Button>
-                ))}
+                ].map((t) => {
+                  const disabledByStatus = timesDisabled && t.key !== "useExtra";
+                  return (
+                    <Button
+                      key={t.key}
+                      variant={form[t.key] ? "gradient" : "button"}
+                      disabled={disabledByStatus}
+                      onClick={() => handleEntryTypeToggle(t.key)}
+                      sx={{ flex: 1, height: "40px", fontSize: "13px", fontWeight: 500, opacity: disabledByStatus ? 0.5 : 1 }}
+                    >
+                      {t.label}
+                    </Button>
+                  );
+                })}
               </Box>
               <Typography fontSize="11px" color="text.secondary" mt={0.75}>
-                Combine On-Site and Off-Site for a split day. A break is deducted
-                from each. Extra Hours is never break-adjusted.
+                {timesDisabled
+                  ? `${form.attendanceStatus || "This status"} is selected — On-Site and Off-Site Check-In/Check-Out are disabled.`
+                  : "Combine On-Site and Off-Site for a split day. A break is deducted from each. Extra Hours is never break-adjusted."}
               </Typography>
             </Box>
 
-            {form.useOnsite && (
+            {form.useOnsite && !timesDisabled && (
               <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
                 <Box>
                   <CustomInputLabel label="Check-In (On-Site)" />
@@ -245,7 +356,7 @@ const EditAttendanceDialog = ({
               </Box>
             )}
 
-            {form.useOffsite && (
+            {form.useOffsite && !timesDisabled && (
               <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
                 <Box>
                   <CustomInputLabel label="Check-In (Off-Site)" />
@@ -268,36 +379,53 @@ const EditAttendanceDialog = ({
               </Box>
             )}
 
+            {/* Extra Hours — entered as Check-In/Check-Out; duration is derived
+                and shown in a read-only field, never typed directly. */}
             {form.useExtra && (
-              <Box>
-                <CustomInputLabel label="Extra Hours Worked" />
-                <TextInput
-                  placeholder="0" type="text" inputMode="decimal"
-                  value={form.extraHoursValue}
-                  onChange={handleHoursChange("extraHoursValue")}
-                  inputBgColor="#fff" fullWidth
-                  error={!!fieldErrors.extraHoursValue}
-                />
-                {fieldErrors.extraHoursValue && (
-                  <Typography fontSize="11px" color="error" mt={0.5}>{fieldErrors.extraHoursValue}</Typography>
-                )}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
+                  <Box>
+                    <CustomInputLabel label="Check-In (Extra Hours)" />
+                    <TimePicker
+                      value={form.extraCheckIn}
+                      onChange={(val) => {
+                        setFieldErrors((prev) => ({ ...prev, extraHoursValue: "" }));
+                        setForm((prev) => ({ ...prev, extraCheckIn: val }));
+                      }}
+                      slotProps={{ textField: { size: "small", fullWidth: true, placeholder: "06:00 PM" } }}
+                      sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
+                    />
+                  </Box>
+                  <Box>
+                    <CustomInputLabel label="Check-Out (Extra Hours)" />
+                    <TimePicker
+                      value={form.extraCheckOut}
+                      onChange={(val) => {
+                        setFieldErrors((prev) => ({ ...prev, extraHoursValue: "" }));
+                        setForm((prev) => ({ ...prev, extraCheckOut: val }));
+                      }}
+                      slotProps={{ textField: { size: "small", fullWidth: true, placeholder: "08:00 PM" } }}
+                      sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
+                    />
+                  </Box>
+                </Box>
+
+                <Box>
+                  <CustomInputLabel label="Extra Hours Worked" />
+                  <TextInput
+                    value={formatHoursLabel(computedExtraHours)}
+                    inputBgColor="#EFEFEF"
+                    fullWidth
+                    disabled
+                    inputProps={{ readOnly: true }}
+                    error={!!fieldErrors.extraHoursValue}
+                  />
+                  {fieldErrors.extraHoursValue && (
+                    <Typography fontSize="11px" color="error" mt={0.5}>{fieldErrors.extraHoursValue}</Typography>
+                  )}
+                </Box>
               </Box>
             )}
-
-            {/* Status */}
-            <Box>
-              <CustomInputLabel label="Status" />
-              <CustomSelect
-                value={form.attendanceStatus}
-                onChange={(e) => setForm((prev) => ({ ...prev, attendanceStatus: e.target.value }))}
-                fullWidth height="45px" inputBgColor="#fff"
-              >
-                <MenuItem value="">Auto-detect (based on hours entered)</MenuItem>
-                {STATUS_OPTIONS.map((s) => (
-                  <MenuItem key={s.value} value={s.value}>{s.label}</MenuItem>
-                ))}
-              </CustomSelect>
-            </Box>
 
             {/* Notes */}
             <Box>
@@ -310,7 +438,7 @@ const EditAttendanceDialog = ({
                 fullWidth
               />
             </Box>
-                        {formError && (
+            {formError && (
               <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", backgroundColor: "#FFF0F0", border: "1px solid #FFCCCC", borderRadius: "10px", px: 2, py: 1.5 }}>
                 <AlertCircle size={16} color="#FF3B30" style={{ flexShrink: 0, marginTop: 1 }} />
                 <Typography fontSize="12px" color="error">{formError}</Typography>

@@ -8,9 +8,16 @@
 //  • Single-date lock for short leave — one day only, no range (spec §2.2.1).
 //  • paymentPreference is sent in the payload.
 //  • Removed the old "Approved leave is paid…" reassurance (contradicts the new flow).
+//
+// FIX: a failed submission (e.g. backend rejects because the employee already
+// has a pending/approved leave overlapping the chosen date(s)) used to be
+// swallowed silently — the dialog just sat there with no feedback. Now shows
+// the backend's message (e.g. "Leave has already been applied for this
+// date...") in an inline error banner instead of closing/succeeding.
 
 import { useState, useEffect }        from "react";
 import { Box, Typography, MenuItem }  from "@mui/material";
+import { AlertCircle }                from "lucide-react";
 import { DatePicker }                 from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider }       from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns }             from "@mui/x-date-pickers/AdapterDateFns";
@@ -72,9 +79,10 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
   const [errors,      setErrors]      = useState({});
   const [successOpen, setSuccessOpen] = useState(false);
   const [zeroBalanceWarning, setZeroBalanceWarning] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
-    if (!open) { setFormData(INITIAL_FORM); setErrors({}); setZeroBalanceWarning(false); }
+    if (!open) { setFormData(INITIAL_FORM); setErrors({}); setZeroBalanceWarning(false); setSubmitError(""); }
   }, [open]);
 
   const isSingleDate = SINGLE_DATE_TYPES.includes(formData.leaveType);
@@ -100,6 +108,7 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
     const val = e?.target ? e.target.value : e;
     setFormData((prev) => ({ ...prev, [field]: val }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+    if (submitError) setSubmitError("");
   };
 
   // From-date change — for single-date types, keep toDate pinned to fromDate.
@@ -110,6 +119,7 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
       toDate: SINGLE_DATE_TYPES.includes(prev.leaveType) ? v : prev.toDate,
     }));
     if (errors.fromDate) setErrors((p) => ({ ...p, fromDate: "" }));
+    if (submitError) setSubmitError("");
   };
 
   const validate = () => {
@@ -135,6 +145,8 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) { setErrors(validationErrors); return; }
 
+    setSubmitError("");
+
     const effectiveTo = isSingleDate ? formData.fromDate : formData.toDate;
 
     const payload = {
@@ -147,13 +159,18 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
     };
 
     const result = await onSubmit?.(payload);
-    if (result?.success !== false) {
-      handleClose();
-      setSuccessOpen(true);
+    if (result?.success === false) {
+      // e.g. "Leave has already been applied for this date. You cannot
+      // submit another leave request." — surfaced instead of silently
+      // closing or doing nothing.
+      setSubmitError(result?.message || "Failed to submit leave request.");
+      return;
     }
+    handleClose();
+    setSuccessOpen(true);
   };
 
-  const handleClose = () => { setFormData(INITIAL_FORM); setErrors({}); setZeroBalanceWarning(false); onClose?.(); };
+  const handleClose = () => { setFormData(INITIAL_FORM); setErrors({}); setZeroBalanceWarning(false); setSubmitError(""); onClose?.(); };
 
   // Small toggle button for Paid / Unpaid
   const ToggleBtn = ({ value, label }) => {
@@ -236,7 +253,7 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
                     <DatePicker
                   value={formData.toDate}
                   minDate={formData.fromDate || undefined}
-                  onChange={(v) => { setFormData((p) => ({ ...p, toDate: v })); if (errors.toDate) setErrors((p) => ({ ...p, toDate: "" })); }}
+                  onChange={(v) => { setFormData((p) => ({ ...p, toDate: v })); if (errors.toDate) setErrors((p) => ({ ...p, toDate: "" })); if (submitError) setSubmitError(""); }}
                   slotProps={{
                     textField: { size: "small", fullWidth: true, error: !!errors.toDate },
                     popper: { sx: GlobalStyle.datePickerPopperSx },
@@ -296,6 +313,15 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
                   helperText={errors.reason}
                 />
               </Box>
+
+              {/* Submit-time error — e.g. duplicate/overlapping-date leave
+                  rejected by the backend. */}
+              {submitError && (
+                <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start", backgroundColor: "#FFF0F0", border: "1px solid #FFCCCC", borderRadius: "10px", px: 2, py: 1.5 }}>
+                  <AlertCircle size={16} color="#FF3B30" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <Typography fontSize="12px" color="error">{submitError}</Typography>
+                </Box>
+              )}
 
             </Box>
           </DialogBody>
