@@ -54,8 +54,8 @@ const AddBonusDialog = ({
     if (editingBonus) {
       setForm({
         // month/year from the bonus record to seed the picker
-        monthYear:   (editingBonus.month !== undefined && editingBonus.year)
-          ? new Date(editingBonus.year, editingBonus.month, 1)
+          monthYear:   (editingBonus.monthIndex !== undefined && editingBonus.year)
+          ? new Date(editingBonus.year, editingBonus.monthIndex, 1)
           : null,
         amount:      String(editingBonus.amount || ""),
         employeeIds: [editingBonus.employeeId].filter(Boolean),
@@ -164,31 +164,29 @@ const AddBonusDialog = ({
             {/* Month/Year DatePicker */}
             <Box ref={fieldRefs.monthYear}>
               <CustomInputLabel label="Bonus Month *" />
-              <DatePicker
-                value={form.monthYear}
-                onChange={(val) => {
-                  setForm((prev) => ({ ...prev, monthYear: val }));
-                  if (errors.monthYear) setErrors((prev) => ({ ...prev, monthYear: "" }));
-                }}
-                views={["year", "month"]}
-                openTo="month"
-                slotProps={{
-                  textField: { size: "small", fullWidth: true, error: !!errors.monthYear },
-                  // ── Same fix as elsewhere: MUI X renders selected month/year
-                  // buttons with role="radio" + aria-checked="true" regardless of
-                  // version, so target that stable attribute instead of guessing
-                  // internal class names. ─────────────────────────────────────────
-                  popper: {
-                    sx: {
-                      "& [role='radio'][aria-checked='true']": {
-                        background: "linear-gradient(90deg, #AA2493 0%, #022179 100%) !important",
-                        color: "#ffffff !important",
+             <DatePicker
+                    value={form.monthYear}
+                    onChange={(val) => {
+                      setForm((prev) => ({ ...prev, monthYear: val }));
+                      if (errors.monthYear) setErrors((prev) => ({ ...prev, monthYear: "" }));
+                    }}
+                    views={["year", "month"]}
+                    openTo="month"
+                    minDate={new Date(2000, 0, 1)}
+                    maxDate={new Date(new Date().getFullYear(), 11, 31)}
+                    slotProps={{
+                      textField: { size: "small", fullWidth: true, error: !!errors.monthYear },
+                      popper: {
+                        sx: {
+                          "& [role='radio'][aria-checked='true']": {
+                            background: "linear-gradient(90deg, #AA2493 0%, #022179 100%) !important",
+                            color: "#ffffff !important",
+                          },
+                        },
                       },
-                    },
-                  },
-                }}
-                sx={GlobalStyle.datePickerStyle}
-              />
+                    }}
+                    sx={GlobalStyle.datePickerStyle}
+                  />
               {errors.monthYear && (
                 <Typography fontSize="12px" color="error" mt={0.5}>{errors.monthYear}</Typography>
               )}

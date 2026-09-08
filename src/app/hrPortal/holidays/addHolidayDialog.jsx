@@ -157,18 +157,20 @@ const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loadin
           <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
             <Box ref={fieldRefs.fromDate}>
               <CustomInputLabel label="Start Date *" />
-              <DatePicker
-                value={formData.fromDate}
-                onChange={handleFromDateChange}
-                slotProps={{
-                  textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
-                  popper: { sx: GlobalStyle.datePickerPopperSx },
-                }}
-                sx={{
-                  ...GlobalStyle.datePickerStyle, width: "100%",
-                  "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } },
-                }}
-              />
+             <DatePicker
+            value={formData.fromDate}
+            onChange={handleFromDateChange}
+            minDate={dayjs("2000-01-01")}
+            maxDate={dayjs().endOf("year")}
+            slotProps={{
+              textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
+              popper: { sx: GlobalStyle.datePickerPopperSx },
+            }}
+            sx={{
+              ...GlobalStyle.datePickerStyle, width: "100%",
+              "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } },
+            }}
+          />
               {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.fromDate}</Typography>}
             </Box>
             <Box ref={fieldRefs.toDate}>
@@ -176,7 +178,8 @@ const AddHolidayDialog = ({ open, onClose, onSave, editingHoliday = null, loadin
               <DatePicker
                 value={formData.toDate}
                 onChange={handleChange("toDate")}
-                minDate={formData.fromDate || undefined}
+                minDate={formData.fromDate || dayjs("2000-01-01")}
+                maxDate={dayjs().endOf("year")}
                 slotProps={{
                   textField: { size: "small", fullWidth: true, error: !!errors.toDate },
                   popper: { sx: GlobalStyle.datePickerPopperSx },

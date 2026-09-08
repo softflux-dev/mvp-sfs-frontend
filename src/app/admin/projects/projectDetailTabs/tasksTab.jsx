@@ -202,7 +202,7 @@ const handleSave = async (formData) => {
     startDate:   formData.startDate   || null,
     endDate:     formData.endDate     || null,
     description: formData.description || "",
-    links:       formData.links        || [],
+   links:       formData.links       || [],
   };
  
   const result = editingTask
@@ -337,6 +337,7 @@ const handleSave = async (formData) => {
         editingTask={editingTask}
         loading={actionLoading}
         apiError={apiError}
+        role={role}
         moduleOptions={modules}
         departmentOptions={teamDepts}
         teamEmployees={teamEmployees}

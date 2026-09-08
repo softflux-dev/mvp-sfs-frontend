@@ -263,19 +263,22 @@ const handleSave = () => {
             <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
               <Box ref={fieldRefs.startDate}>
                 <CustomInputLabel label="Start Date *" />
-                <DatePicker value={formData.startDate} onChange={handleDateChange("startDate") } 
-                  slotProps={{
-                    textField: { size: "small", fullWidth: true, error: !!errors.startDate },
-                    popper: { sx: GlobalStyle.datePickerPopperSx },
-                  }}
-                  sx={GlobalStyle.datePickerStyle}
-                />
+                <DatePicker value={formData.startDate} onChange={handleDateChange("startDate")}
+                minDate={new Date(2000, 0, 1)}
+                maxDate={new Date(new Date().getFullYear(), 11, 31)}
+                slotProps={{
+                  textField: { size: "small", fullWidth: true, error: !!errors.startDate },
+                  popper: { sx: GlobalStyle.datePickerPopperSx },
+                }}
+                sx={GlobalStyle.datePickerStyle}
+              />
                 {errors.startDate && <Typography fontSize="12px" color="error" mt={0.5}>{errors.startDate}</Typography>}
               </Box>
               <Box ref={fieldRefs.endDate}>
                 <CustomInputLabel label="End Date *" />
                 <DatePicker value={formData.endDate} onChange={handleDateChange("endDate")} 
-                minDate={formData.startDate ? new Date(formData.startDate) : undefined}
+                  minDate={formData.startDate ? new Date(formData.startDate) : new Date(2000, 0, 1)}
+                  maxDate={new Date(new Date().getFullYear(), 11, 31)}
                   slotProps={{
                     textField: { size: "small", fullWidth: true, error: !!errors.endDate },
                     popper: { sx: GlobalStyle.datePickerPopperSx },

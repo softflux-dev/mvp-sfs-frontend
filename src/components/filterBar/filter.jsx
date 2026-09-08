@@ -868,17 +868,10 @@ holidays: [
     ],
   },
   {
-    type: "select",
+    type: "year",
     key: "year",
     placeholder: "All Years",
     grid: { xs: 12, md: 4 },
-    options: [
-      { v: "",     l: "All Years" },
-      { v: "2024", l: "2024"      },
-      { v: "2025", l: "2025"      },
-      { v: "2026", l: "2026"      },
-      { v: "2027", l: "2027"      },
-    ],
   },
 ],
 
@@ -948,11 +941,12 @@ holidays: [
                   ))}
                 </CustomSelect>
               )}
-            {f.type === "date" && (
+ {f.type === "date" && (
   <DatePicker
     value={values[f.key] || null}
     onChange={(v) => setVal(f.key, v)}
-    minDate={f.minDateKey && values[f.minDateKey] ? new Date(values[f.minDateKey]) : undefined}
+    minDate={f.minDateKey && values[f.minDateKey] ? new Date(values[f.minDateKey]) : new Date(2000, 0, 1)}
+    maxDate={new Date(new Date().getFullYear(), 11, 31)}
     sx={{
       ...GlobalStyle.datePickerStyle,
       "& input": {
@@ -976,12 +970,14 @@ holidays: [
     }}
   />
 )}
-            {f.type === "monthyear" && (
+    {f.type === "monthyear" && (
   <DatePicker
     views={["year", "month"]}
     openTo="month"
     value={values[f.key] || null}
     onChange={(v) => setVal(f.key, v)}
+    minDate={new Date(2000, 0, 1)}
+    maxDate={new Date(new Date().getFullYear(), 11, 31)}
     sx={{
       ...GlobalStyle.datePickerStyle,
       "& input": {
@@ -999,10 +995,6 @@ holidays: [
         fullWidth: true,
         inputProps: { placeholder: f.placeholder },
       },
-      // ── Version-agnostic fix: MUI X renders month/year buttons with
-      // role="radio" + aria-checked, regardless of internal class names,
-      // which differ across MUI X versions and were the reason the
-      // earlier class-name-based overrides silently didn't match. ────────
       popper: {
         sx: {
           "& [role='radio'][aria-checked='true']": {
@@ -1014,21 +1006,21 @@ holidays: [
     }}
   />
 )}
-          {f.type === "year" && (
-              <DatePicker
-                views={["year"]}
-                openTo="year"
-                value={values[f.key] || null}
-                onChange={(v) => setVal(f.key, v)}
-                minDate={new Date(new Date().getFullYear() - 9, 0, 1)}  
-                maxDate={new Date(new Date().getFullYear(), 11, 31)}     
-                sx={{ ...GlobalStyle.datePickerStyle, "& input": { color: values[f.key] ? "inherit" : "transparent" } }}
-                slotProps={{
-                  textField: { label: "", fullWidth: true, inputProps: { placeholder: f.placeholder } },
-                  popper: { sx: GlobalStyle.datePickerPopperSx },
-                }}
-              />
-            )}
+    {f.type === "year" && (
+    <DatePicker
+      views={["year"]}
+      openTo="year"
+      value={values[f.key] || null}
+      onChange={(v) => setVal(f.key, v)}
+      minDate={new Date(2000, 0, 1)}
+      maxDate={new Date(new Date().getFullYear(), 11, 31)}     
+      sx={{ ...GlobalStyle.datePickerStyle, "& input": { color: values[f.key] ? "inherit" : "transparent" } }}
+      slotProps={{
+        textField: { label: "", fullWidth: true, inputProps: { placeholder: f.placeholder } },
+        popper: { sx: GlobalStyle.datePickerPopperSx },
+      }}
+    />
+  )}
             </Grid>
             );
           })}

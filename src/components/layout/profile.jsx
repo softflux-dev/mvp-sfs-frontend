@@ -15,6 +15,7 @@ import useUserStore from "../../zustand/useUserStore";
 import { useCompanyLogoStore } from "../../zustand/useCompanyLogoStore";
 import { getCompanyProfileApi } from "../../api/modules/companySettings";
 import { baseUrl } from "../../api/index";
+import { useUnsavedChangesStore } from "../../zustand/useUnsavedChangesStore";
 
 const getBackendOrigin = () => baseUrl.replace(/\/api\/?$/, "");
 const resolveFileUrl = (path) => {
@@ -27,6 +28,7 @@ export default function Profile() {
   const [anchorEl, setAnchorEl] = useState(null);
   const { user, clearUserData } = useUserStore();
   const navigate = useNavigate();
+  const guardNavigate = useUnsavedChangesStore((s) => s.guardNavigate);
 
   const isAdmin = user?.role === "ADMIN";
 
@@ -49,14 +51,19 @@ export default function Profile() {
     })();
   }, [isAdmin, companyLogo, setCompanyLogo]);
 
-  const handleLogout = () => {
-    clearUserData();
-    navigate("/login");
+    const handleLogout = () => {
+    setAnchorEl(null);
+    guardNavigate(() => {
+      clearUserData();
+      navigate("/login");
+    });
   };
 
   const handleProfileClick = () => {
     setAnchorEl(null);
-    navigate(isAdmin ? "/settings" : "/profile");
+    guardNavigate(() => {
+      navigate(isAdmin ? "/settings" : "/profile");
+    });
   };
 
   // What to actually show:

@@ -298,24 +298,26 @@ if (importableRecords.length === 0) {
                   <MenuItem key={m} value={idx}>{m}</MenuItem>
                 ))}
               </CustomSelect>
-             <DatePicker
-              views={["year"]}
-              value={yearDate}
-              onChange={(val) => val && setYearDate(val)}
-              sx={{
-                ...GlobalStyle.datePickerStyle,
-                width: "100%",
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "#fff",
-                  borderRadius: "14px",
-                  "& fieldset": { border: "none" },
-                },
-              }}
-              slotProps={{
-                textField: { size: "small", fullWidth: true },
-                popper: { sx: GlobalStyle.datePickerPopperSx },
-              }}
-            />
+            <DatePicker
+            views={["year"]}
+            value={yearDate}
+            onChange={(val) => val && setYearDate(val)}
+            minDate={dayjs("2000-01-01")}
+            maxDate={dayjs()}
+            sx={{
+              ...GlobalStyle.datePickerStyle,
+              width: "100%",
+              "& .MuiOutlinedInput-root": {
+                backgroundColor: "#fff",
+                borderRadius: "14px",
+                "& fieldset": { border: "none" },
+              },
+            }}
+            slotProps={{
+              textField: { size: "small", fullWidth: true },
+              popper: { sx: GlobalStyle.datePickerPopperSx },
+            }}
+          />
             </Box>
           </Box>
 

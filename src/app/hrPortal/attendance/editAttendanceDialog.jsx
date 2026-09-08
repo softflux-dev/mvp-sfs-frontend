@@ -305,11 +305,13 @@ const EditAttendanceDialog = ({
               <Box>
                 <CustomInputLabel label="Date" />
                 <DatePicker
-                  value={form.date}
-                  onChange={(val) => setForm((prev) => ({ ...prev, date: val }))}
-                  slotProps={{ textField: { size: "small", fullWidth: true }, popper: { sx: GlobalStyle.datePickerPopperSx } }}
-                  sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
-                />
+                value={form.date}
+                onChange={(val) => setForm((prev) => ({ ...prev, date: val }))}
+                minDate={dayjs("2000-01-01")}
+                maxDate={dayjs().endOf("year")}
+                slotProps={{ textField: { size: "small", fullWidth: true }, popper: { sx: GlobalStyle.datePickerPopperSx } }}
+                sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
+              />
               </Box>
             ) : (
               <Box>

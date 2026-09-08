@@ -367,6 +367,8 @@ const PayrollManagement = () => {
             onChange={handleDateChange} 
             views={["year","month"]} 
             openTo="month"
+            minDate={new Date(2000, 0, 1)}
+            maxDate={new Date(new Date().getFullYear(), 11, 31)}
             slotProps={{ 
               textField: { size: "small", sx: { width: 200 } },
               popper: {

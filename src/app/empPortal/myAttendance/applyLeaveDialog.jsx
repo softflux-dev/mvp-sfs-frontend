@@ -222,9 +222,11 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
               {isSingleDate ? (
                 <Box>
                   <CustomInputLabel label="Date *" />
-                  <DatePicker
+                 <DatePicker
                     value={formData.fromDate}
                     onChange={handleFromDateChange}
+                    minDate={new Date(2000, 0, 1)}
+                    maxDate={new Date(new Date().getFullYear(), 11, 31)}
                     slotProps={{
                       textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
                       popper: { sx: GlobalStyle.datePickerPopperSx },
@@ -237,29 +239,32 @@ const ApplyLeaveDialog = ({ open, onClose, onSubmit, loading = false, balance = 
                 <Box sx={{ display: "flex", gap: 2, "& > *": { flex: 1, minWidth: 0 } }}>
                   <Box>
                     <CustomInputLabel label="From Date *" />
-                   <DatePicker
-                      value={formData.fromDate}
-                      onChange={handleFromDateChange}
-                      slotProps={{
-                        textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
-                        popper: { sx: GlobalStyle.datePickerPopperSx },
-                      }}
-                      sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
-                    />
-                    {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.fromDate}</Typography>}
-                  </Box>
-                  <Box>
-                    <CustomInputLabel label="To Date *" />
-                    <DatePicker
-                  value={formData.toDate}
-                  minDate={formData.fromDate || undefined}
-                  onChange={(v) => { setFormData((p) => ({ ...p, toDate: v })); if (errors.toDate) setErrors((p) => ({ ...p, toDate: "" })); if (submitError) setSubmitError(""); }}
+                  <DatePicker
+                  value={formData.fromDate}
+                  onChange={handleFromDateChange}
+                  minDate={new Date(2000, 0, 1)}
+                  maxDate={new Date(new Date().getFullYear(), 11, 31)}
                   slotProps={{
-                    textField: { size: "small", fullWidth: true, error: !!errors.toDate },
+                    textField: { size: "small", fullWidth: true, error: !!errors.fromDate },
                     popper: { sx: GlobalStyle.datePickerPopperSx },
                   }}
                   sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
                 />
+                    {errors.fromDate && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.fromDate}</Typography>}
+                  </Box>
+                  <Box>
+                    <CustomInputLabel label="To Date *" />
+                   <DatePicker
+                    value={formData.toDate}
+                    minDate={formData.fromDate || new Date(2000, 0, 1)}
+                    maxDate={new Date(new Date().getFullYear(), 11, 31)}
+                    onChange={(v) => { setFormData((p) => ({ ...p, toDate: v })); if (errors.toDate) setErrors((p) => ({ ...p, toDate: "" })); if (submitError) setSubmitError(""); }}
+                    slotProps={{
+                      textField: { size: "small", fullWidth: true, error: !!errors.toDate },
+                      popper: { sx: GlobalStyle.datePickerPopperSx },
+                    }}
+                    sx={{ ...GlobalStyle.datePickerStyle, width: "100%", "& .MuiOutlinedInput-root": { backgroundColor: "#fff", borderRadius: "14px", "& fieldset": { border: "none" } } }}
+                  />
                     {errors.toDate && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.toDate}</Typography>}
                   </Box>
                 </Box>

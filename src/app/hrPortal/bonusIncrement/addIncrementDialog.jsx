@@ -267,12 +267,14 @@ const AddIncrementDialog = ({
            {/* Effective Date */}
             <Box ref={fieldRefs.effectiveDate}>
               <CustomInputLabel label="Effective Date *" />
-              <DatePicker
+             <DatePicker
                 value={form.effectiveDate}
                 onChange={(val) => {
                   setForm((p) => ({ ...p, effectiveDate: val }));
                   if (errors.effectiveDate) setErrors((p) => ({ ...p, effectiveDate: "" }));
                 }}
+                minDate={new Date(2000, 0, 1)}
+                maxDate={new Date(new Date().getFullYear(), 11, 31)}
                 slotProps={{
                   textField: { size: "small", fullWidth: true, error: !!errors.effectiveDate },
                   popper: { sx: GlobalStyle.datePickerPopperSx },

@@ -64,6 +64,7 @@ const AddTask = ({
   editingTask       = null,
   loading           = false,
   apiError          = "",
+  role              = "admin", 
   // ── Static props (used when opened from project detail TasksTab) ──────────
   moduleOptions     = [],
   departmentOptions = [],
@@ -168,8 +169,12 @@ const endMinDate = formData.startDate
   const [selectedMembers, setSelectedMembers] = useState([]);
 
   const deptEmployees = selectedDept
-    ? activeTeam.filter((e) => e.departmentId === selectedDept)
-    : [];
+  ? activeTeam.filter(
+      (e) =>
+        e.departmentId === selectedDept &&
+        !(role === "pm" && e.designation === "Project Manager") 
+    )
+  : [];
 
   const selectedIds = selectedMembers.map((m) => m._id);
 

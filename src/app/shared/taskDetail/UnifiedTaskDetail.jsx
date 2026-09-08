@@ -166,7 +166,7 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
         startDate:   formData.startDate   || null,
         endDate:     formData.endDate     || null,
         description: formData.description || "",
-        link:        formData.link        || "",
+        links:       formData.links       || [],
       };
       const res = await updateTaskApi(projectId, taskId, payload);
       if (res?.status === 200 || res?.status === 201) {
@@ -271,31 +271,33 @@ const UnifiedTaskDetail = ({ backLabel = "Back" }) => {
             </Box>
           </Box>
           {/* Link */}
-            <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
-              <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>Link</Typography>
-              {!displayTask.link ? (
-                <Typography fontSize="13px" color="text.secondary">No link added.</Typography>
-              ) : (
-                <Box
-                  display="flex" alignItems="center" justifyContent="space-between" gap={1}
-                  sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}
-                >
-                  <Typography
-                    fontSize="13px" color="#022179" fontWeight={500}
-                    sx={{ wordBreak: "break-all", cursor: "pointer", textDecoration: "underline" }}
-                    onClick={() => window.open(displayTask.link, "_blank", "noopener,noreferrer")}
+          <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>
+            <Typography fontSize="16px" fontWeight={700} color="text.primary" mb={1.5}>Links</Typography>
+            {!displayTask.links?.length ? (
+              <Typography fontSize="13px" color="text.secondary">No links added.</Typography>
+            ) : (
+              <Box display="flex" flexDirection="column" gap={1}>
+                {displayTask.links.map((link, i) => (
+                  <Box
+                    key={i}
+                    display="flex" alignItems="center" justifyContent="space-between" gap={1}
+                    sx={{ backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5 }}
                   >
-                    {displayTask.link}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={() => navigator.clipboard.writeText(displayTask.link)}
-                  >
-                    <Copy size={14} color="#808080" />
-                  </IconButton>
-                </Box>
-              )}
-            </Box>
+                    <Typography
+                      fontSize="13px" color="#022179" fontWeight={500}
+                      sx={{ wordBreak: "break-all", cursor: "pointer", textDecoration: "underline" }}
+                      onClick={() => window.open(link, "_blank", "noopener,noreferrer")}
+                    >
+                      {link}
+                    </Typography>
+                    <IconButton size="small" onClick={() => navigator.clipboard.writeText(link)}>
+                      <Copy size={14} color="#808080" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
 
           {/* Attachments */}
           <Box sx={{ backgroundColor: "#fff", borderRadius: "16px", p: 3, mb: 3 }}>

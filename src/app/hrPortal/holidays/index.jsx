@@ -144,7 +144,7 @@ const HolidayManagement = () => {
           handleFilterChange({
             search: filterValues.search || "",
             type:   filterValues.type   || "",
-            year:   filterValues.year   || "",
+            year: filterValues.year ? new Date(filterValues.year).getFullYear() : "",
           });
         }}
       />
