@@ -566,6 +566,7 @@ attendance_detail: [
       { v: "Absent",   l: "Absent"     },
       { v: "Late",     l: "Late"       },
       { v: "Leave",    l: "Leave"      },
+      { v: "Off-Day",  l: "Weekend / Off-Day" },
     ],
   },
   {

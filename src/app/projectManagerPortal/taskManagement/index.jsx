@@ -250,6 +250,7 @@ const TaskManagement = () => {
         editingTask={editingTask}
         loading={actionLoading}
         apiError={apiError}
+        role="pm" 
         showProjectSelector={true}
         projects={projects}
       />

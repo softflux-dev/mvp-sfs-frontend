@@ -24,6 +24,7 @@ const STATUS_OPTIONS = [
   { value: "Absent",  label: "Absent"  },
   { value: "Leave",   label: "Leave"   },
   { value: "Holiday", label: "Holiday" },
+    { value: "Off-Day", label: "Weekend / Off-Day" },
 ];
 
 const MAX_HOURS_PER_DAY = 24;
@@ -361,10 +362,12 @@ const EditAttendanceDialog = ({
                 })}
               </Box>
               <Typography fontSize="11px" color="text.secondary" mt={0.75}>
-                {timesDisabled
-                  ? `${form.attendanceStatus || "This status"} is selected — On-Site and Off-Site Check-In/Check-Out are disabled.`
-                  : "Combine On-Site and Off-Site for a split day. A break is deducted from each. Extra Hours is never break-adjusted."}
-              </Typography>
+              {timesDisabled
+                ? `${form.attendanceStatus || "This status"} is selected — On-Site and Off-Site Check-In/Check-Out are disabled.`
+                : form.attendanceStatus === "Off-Day"
+                ? "This is a non-working day — every hour logged here (On-Site, Off-Site, or Extra) counts as Extra Hours."
+                : "Combine On-Site and Off-Site for a split day. A break is deducted from each. Extra Hours is never break-adjusted."}
+            </Typography>
             </Box>
 
             {form.useOnsite && !timesDisabled && (

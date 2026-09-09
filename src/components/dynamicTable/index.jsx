@@ -81,6 +81,7 @@ const PRIORITY_CONFIG = {
    Holiday: { bg: "#AA24931A", color: "#AA2493" },
    Weekend: { bg: "#F5F5F5",   color: "#9CA3AF" },
   "Off Day": { bg: "#F5F5F5", color: "#9CA3AF" },
+   "Off-Day": { bg: "#F97316" + "1A", color: "#F97316" },
  };
 function TaskAssigneesCell({ row }) {
   const [showAll, setShowAll] = useState(false);
@@ -1807,6 +1808,7 @@ case "att_mon_status": {
     Late:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
     Leave:   { bg: "#04C3731A", color: "#04C373" },
     Holiday: { bg: "#9E9E9E1A", color: "#9E9E9E" },
+    "Off-Day": { bg: "#F973161A", color: "#F97316" },
   };
   // Treat legacy "Partial" as "Present" until migration script is run
   const displayStatus = row.attendanceStatus === "Partial" ? "Present" : (row.attendanceStatus || "Present");
