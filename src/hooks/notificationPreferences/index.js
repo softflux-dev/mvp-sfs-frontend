@@ -6,11 +6,10 @@ import {
 
 const NOTIFICATION_KEYS = [
   "newTaskAssignment",
-  "deadlineReminder",
   "leaveRequestSubmitted",
   "leaveApprovedRejected",
   "taskStatusUpdate",
-  "projectUpdate",
+  "projectTeamUpdated",     
   "newMessageReceived",
 ];
 

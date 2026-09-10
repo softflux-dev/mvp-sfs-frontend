@@ -214,7 +214,7 @@ const PayrollReportTab = forwardRef((props, ref) => {
             tableData={tableData}
             displayRows={displayRows}
             isLoading={loading}
-            hidepagination
+            
           />
 
           <Box

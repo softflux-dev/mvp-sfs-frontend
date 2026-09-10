@@ -97,7 +97,7 @@ const TaskManagement = () => {
       startDate:   formData.startDate   ? new Date(formData.startDate).toISOString() : null,
       endDate:     formData.endDate     ? new Date(formData.endDate).toISOString()   : null,
       description: formData.description || "",
-      link:        formData.link        || "",
+     links:       formData.links       || [],
     };
 
     let result;

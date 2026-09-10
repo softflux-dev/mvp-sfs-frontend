@@ -207,15 +207,22 @@ export const usePMTasks = () => {
 }, [filters]);
 
   const createTask = useCallback(async (projectId, payload) => {
-    setActionLoading(true);
-    try {
-      const res = await pmCreateTaskApi(projectId, payload);
-      if (res?.status === 200 || res?.status === 201) { await fetchTasks(); return { success: true, message: "Task created successfully." }; }
-      const msg = res?.data?.message || "Failed to create task.";
-      setError(msg); return { success: false, message: msg };
-    } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
-    finally   { setActionLoading(false); }
-  }, [fetchTasks]);
+  setActionLoading(true);
+  try {
+    const res = await pmCreateTaskApi(projectId, payload);
+    if (res?.status === 200 || res?.status === 201) {
+      await fetchTasks();
+      return {
+        success: true,
+        message: "Task created successfully.",
+        data: res.data.data,          
+      };
+    }
+    const msg = res?.data?.message || "Failed to create task.";
+    setError(msg); return { success: false, message: msg };
+  } catch { setError("Something went wrong."); return { success: false, message: "Something went wrong." }; }
+  finally   { setActionLoading(false); }
+}, [fetchTasks]);
 
   const updateTask = useCallback(async (projectId, taskId, payload) => {
     setActionLoading(true);
