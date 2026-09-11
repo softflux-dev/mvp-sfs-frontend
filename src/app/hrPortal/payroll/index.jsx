@@ -50,7 +50,7 @@ const isSendWindowOpen = (month, year) => {
 const isGenerateWindowOpen = (month, year) => {
   const today = new Date();
   const windowStart = new Date(year, month, 5, 0, 0, 0);
-  const windowEnd   = new Date(year, month + 1, 10, 23, 59, 59, 999); // TEMP: was 5, extended for testing — revert to 5 later
+  const windowEnd   = new Date(year, month + 1, 18, 23, 59, 59, 999); // TEMP: was 5, extended for testing — revert to 5 later
   return today >= windowStart && today <= windowEnd;
 };
 
