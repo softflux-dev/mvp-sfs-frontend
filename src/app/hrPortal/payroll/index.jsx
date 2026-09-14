@@ -68,6 +68,7 @@ const tableHeader = [
   { id: "overtime",   label: "Overtime"    },
   { id: "deductions", label: "Deductions"  },
   { id: "netPay",     label: "Net Pay"     },
+  { id: "status",     label: "Status"      },
   { id: "actions",    label: ""            },
 ];
 
@@ -87,17 +88,19 @@ const displayRows = [
   "payroll_overtime",
   "payroll_deductions_col",
   "payroll_net",
+   "payroll_status", 
   "actions_menu",
 ];
 
 const menuOptions = [
   { value: "view_payslip", label: "View Payslip" },
   { value: "edit_payroll", label: "Edit Payroll"  },
+  { value: "finalize_payroll", label: "Finalize Payroll" },
   { value: "send",         label: "Send Payslip"  },
 ];
 
 const PayrollManagement = () => {
- const { payrolls, loading, actionLoading, error, attendanceImported, fetchPayroll, generatePayroll, updatePayroll } = usePayroll();
+const { payrolls, loading, actionLoading, error, attendanceImported, fetchPayroll, generatePayroll, updatePayroll, finalizePayroll } = usePayroll();
   const { profile: companyProfile } = useCompanyProfile();
 
   const [selectedDate,    setSelectedDate]    = useState(new Date());
@@ -232,6 +235,55 @@ const PayrollManagement = () => {
   runGenerate();
 };
 
+  const runFinalize = async (row) => {
+    const result = await finalizePayroll(row.id);
+    if (result.success) {
+      setSuccessMsg(`Payroll finalized for ${row.name}. It is now visible on their salary page.`);
+      setShowSuccess(true);
+    } else {
+      setApiError(result.message);
+    }
+  };
+
+  const handleFinalizeRow = (row) => {
+    if (row.status === "finalized") {
+      setApiError(`${row.name}'s payroll is already finalized.`);
+      return;
+    }
+    confirmRef.current?.open({
+      title: "Finalize Payroll?",
+      description:
+        `Finalizing ${row.name}'s payroll for ${MONTH_NAMES[currentMonth]} ${currentYear} locks it — ` +
+        `bonus/deductions can no longer be edited and it becomes visible on their My Salary page. This can't be undone. Continue?`,
+      confirmText: "Yes, Finalize",
+      cancelText:  "Cancel",
+      onConfirm:   () => runFinalize(row),
+    });
+  };
+
+  const draftRows = tableData.filter((r) => r.status !== "finalized");
+
+  const handleFinalizeAll = () => {
+    if (!draftRows.length) return;
+    confirmRef.current?.open({
+      title: "Finalize All Draft Payrolls?",
+      description:
+        `This will finalize ${draftRows.length} draft payroll record(s) for ${MONTH_NAMES[currentMonth]} ${currentYear}. ` +
+        `Once finalized, they can no longer be edited or regenerated, and become visible to each employee on their My Salary page. This can't be undone. Continue?`,
+      confirmText: "Yes, Finalize All",
+      cancelText:  "Cancel",
+      onConfirm: async () => {
+        let successCount = 0;
+        for (const row of draftRows) {
+          const result = await finalizePayroll(row.id);
+          if (result.success) successCount++;
+        }
+        setSuccessMsg(`Finalized ${successCount} of ${draftRows.length} payroll record(s).`);
+        setShowSuccess(true);
+      },
+    });
+  };
+
   const handleSelectRow = (id) =>
     setSelectedRows((prev) => prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]);
   const handleSelectAll = () =>
@@ -293,9 +345,10 @@ const PayrollManagement = () => {
     }
   };
 
-  const handleMenuAction = (action, row) => {
-    if (action === "view_payslip") { setSelectedPayroll(row); setViewOpen(true); }
-    if (action === "edit_payroll") { setSelectedPayroll(row); setEditOpen(true); }
+   const handleMenuAction = (action, row) => {
+    if (action === "view_payslip")     { setSelectedPayroll(row); setViewOpen(true); }
+    if (action === "edit_payroll")     { setSelectedPayroll(row); setEditOpen(true); }
+    if (action === "finalize_payroll") { handleFinalizeRow(row); }
     if (action === "send") {
       confirmRef.current?.open({
         title: "Send Payslip?", description: `Send payslip to ${row.name}?`,
@@ -340,11 +393,11 @@ const PayrollManagement = () => {
                   {selectedRows.length > 0 && (
                     <CustomButton btnLabel={sending ? "Sending..." : `Send to Selected (${selectedRows.length})`}
                     variant="outlined" handlePressBtn={handleSendSelected}
-                    isDisabled={actionLoading || sending || !isSendWindowOpen(currentMonth, currentYear)} />
+                    disabled={actionLoading || sending || !isSendWindowOpen(currentMonth, currentYear)} />
                   )}
                   <CustomButton btnLabel={sending ? "Sending..." : "Send All Payslips"}
                   variant="outlined" handlePressBtn={handleSendAll}
-                  isDisabled={actionLoading || sending || !isSendWindowOpen(currentMonth, currentYear)} />
+                  disabled={actionLoading || sending || !isSendWindowOpen(currentMonth, currentYear)} />
                 </>
               )}
             </Box>
@@ -393,14 +446,34 @@ const PayrollManagement = () => {
         {hasGenerated && tableData.length > 0 && (
           <Typography fontSize="12px" color="#04C373" fontWeight={500}>✓ {MONTH_NAMES[currentMonth]} {currentYear}</Typography>
         )}
+        {hasGenerated && tableData.length > 0 && (
+          <CustomButton
+            btnLabel={draftRows.length > 0 ? `Finalize All (${draftRows.length})` : "All Finalized"}
+            variant="outlined"
+            handlePressBtn={handleFinalizeAll}
+            disabled={actionLoading || draftRows.length === 0}
+          />
+        )}
+        {hasGenerated && tableData.length > 0 && draftRows.length === 0 && (
+          <Typography fontSize="12px" color="#04C373" fontWeight={500}>
+            ✓ All payroll records finalized
+          </Typography>
+        )}
+            
 
         {!isGenerateWindowOpen(currentMonth, currentYear) && (
           <Typography fontSize="11px" color="text.secondary" mt={0.5}>
             {hasGenerated ? "Re-generation" : "Generation"} for {MONTH_NAMES[currentMonth]} is only allowed between the 5th of {MONTH_NAMES[currentMonth]} and the 5th of {MONTH_NAMES[(currentMonth + 1) % 12]}.
           </Typography>
+        )}  
+         </Box>
+         {hasGenerated && !loading && draftRows.length > 0 && draftRows.length < tableData.length && (
+          <Box mb={2} px={2.5} py={1.75} sx={{ backgroundColor: "#F0F9FF", borderRadius: "12px", border: "1px solid #BAE6FD" }}>
+            <Typography fontSize="13px" color="#0369A1" fontWeight={500}>
+              {draftRows.length} of {tableData.length} payroll record(s) are still in draft — employees won't see these until finalized.
+            </Typography>
+          </Box>
         )}
-         
-        </Box>
 
         {sending && (
           <Box mb={2} px={2} py={1.5} sx={{ backgroundColor: "#F0F9FF", borderRadius: "10px", border: "1px solid #BAE6FD", display: "flex", alignItems: "center", gap: 1.5 }}>

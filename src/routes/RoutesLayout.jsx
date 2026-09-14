@@ -19,7 +19,7 @@ const ALWAYS_ALLOWED_PATTERNS = [
 // Fallback static paths — used only when user has no rolePages assigned
 const ROLE_FALLBACK_PATHS = {
   ADMIN: [
-    "/", "/projects", "/employees", "/performance", "/roles",
+     "/admin-dashboard", "/projects", "/employees", "/performance", "/roles",
     "/messages", "/documents", "/reports", "/integrations", "/settings",
     "/hr-dashboard", "/attendance-monitoring", "/leave-management",
     "/payroll-management", "/hr-messages", "/hr-documents",
@@ -42,7 +42,7 @@ const ROLE_FALLBACK_PATHS = {
 };
 
 const ROLE_HOME = {
-  ADMIN:           "/",
+  ADMIN:          "/admin-dashboard",
   HR:              "/hr-dashboard",
   PROJECT_MANAGER: "/dashboard",
   EMPLOYEE:        "/employee-dashboard",
@@ -83,7 +83,7 @@ export const ProtectedLayout = () => {
   }
 
   if (!isPathAllowed(user, location.pathname)) {
-    const home = ROLE_HOME[user?.role] || "/";
+    const home = ROLE_HOME[user?.role] ||   "/admin-dashboard";
     return <Navigate to={home} replace />;
   }
 
@@ -95,7 +95,7 @@ export const AuthProtectedLayout = () => {
   const { user } = useUserStore();
 
   if (user) {
-    const home = ROLE_HOME[user?.role] || "/";
+    const home = ROLE_HOME[user?.role] || "/admin-dashboard";
     return <Navigate to={home} replace />;
   }
 

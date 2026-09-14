@@ -28,40 +28,63 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-
+// ── Calendar-aware date validation — never silently trust an unvalidated
+// day/month combination (e.g. "8/32/2026") through to the backend. ────────
+const daysInMonth = (y, m /* 1-indexed */) => new Date(y, m, 0).getDate();
+const isValidCalendarDate = (y, m, d) => {
+  if (!y || !m || !d) return false;
+  if (m < 1 || m > 12) return false;
+  if (d < 1 || d > daysInMonth(y, m)) return false;
+  return true;
+};
 const normalize = (str) => String(str || "").trim().toLowerCase().replace(/\s+/g, " ");
 
-// ── Excel date/time cells now come through as real JS Date objects
-// (because of cellDates: true below) — normalize both those AND legacy
-// plain-text cells into consistent strings. ──────────────────────────────
 const cellToDateStr = (val) => {
-  if (val instanceof Date) {
-    const y = val.getUTCFullYear();
-    const m = String(val.getUTCMonth() + 1).padStart(2, "0");
-    const d = String(val.getUTCDate()).padStart(2, "0");
+ if (val instanceof Date) {
+    // Same local-vs-UTC mismatch as cellToTimeStr — use local getters.
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, "0");
+    const d = String(val.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   }
 
-  //  — text-formatted date cells (e.g. "8/1/26", "8/12/2026") never come
-  // through as a Date object, only as a raw string. Without parsing these,
-  // every row's `date` stays as "8/1/26" and gets compared as a STRING
-  // against "YYYY-MM-DD" — "8/1/26" >= "2026-09-03" is true for every row
-  // (since "8" > "2" as characters), making the whole file look future-dated.
   const str = String(val || "").trim();
+  if (!str) return null;
+
+  // Text-formatted M/D/YYYY or M/D/YY cells
   const mdyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (mdyMatch) {
     let [, m, d, y] = mdyMatch;
-    if (y.length === 2) y = (Number(y) < 70 ? "20" : "19") + y; // 2-digit year → 4-digit
+    if (y.length === 2) y = (Number(y) < 70 ? "20" : "19") + y;
+    if (!isValidCalendarDate(Number(y), Number(m), Number(d))) return null;
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
 
-  return str;
+  // Text-formatted ISO cells (e.g. typed directly as "2026-08-32")
+  const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    if (!isValidCalendarDate(Number(y), Number(m), Number(d))) return null;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  // Anything else isn't a recognizable date — reject rather than guess.
+  return null;
 };
 
 const cellToTimeStr = (val) => {
   if (val instanceof Date) {
-    const hh = String(val.getUTCHours()).padStart(2, "0");
-    const mm = String(val.getUTCMinutes()).padStart(2, "0");
+    // SheetJS (cellDates:true) builds time-only cells using LOCAL wall-clock
+    // components (new Date(y, m, d, H, M) in the browser's timezone), NOT
+    // UTC. Reading it back with getUTCHours/getUTCMinutes was skewing every
+    // imported check-in/check-out by the local timezone offset — worse,
+    // for these epoch-era (1899) dates JS applies the *historical* LMT
+    // offset for the zone (e.g. UTC+4:28 for Pakistan pre-standardization),
+    // not the modern UTC+5, producing the "extra ~30 minutes" corruption.
+    // Local getters match how the value was constructed, so they're
+    // timezone-independent for this purpose.
+    const hh = String(val.getHours()).padStart(2, "0");
+    const mm = String(val.getMinutes()).padStart(2, "0");
     return `${hh}:${mm}`;
   }
   return String(val || "").trim();
@@ -200,19 +223,35 @@ const ImportAttendanceDialog = ({ open, onClose, onImport }) => {
         .slice(headerRowIndex + 1)
         .filter((r) => r.some((cell) => String(cell).trim() !== ""));
 
-      const parsedRecords = dataRows.map((row) => ({
-        empId:    String(row[mapping.empId]    || "").trim(),
-        name:     String(row[mapping.name]     || "").trim(),
-        date:     cellToDateStr(row[mapping.date]),
-        checkIn:  cellToTimeStr(row[mapping.checkIn]),
-        checkOut: cellToTimeStr(row[mapping.checkOut]),
-        duration: String(row[mapping.duration] || "").trim(),
+      const parsedRecords = dataRows.map((row, idx) => ({
+        empId:        String(row[mapping.empId] || "").trim(),
+        name:         String(row[mapping.name]  || "").trim(),
+        date:         cellToDateStr(row[mapping.date]),
+        rawDateValue: row[mapping.date],
+        rowNumber:    headerRowIndex + 2 + idx, // 1-indexed, accounting for header row
+        checkIn:      cellToTimeStr(row[mapping.checkIn]),
+        checkOut:     cellToTimeStr(row[mapping.checkOut]),
+        duration: cellToTimeStr(row[mapping.duration]),   
       }))
-      // Filter out subtotal/total rows (no empId or name)
       .filter((r) => r.empId || r.name);
 
       if (parsedRecords.length === 0) {
         setError("No valid data rows found in the file.");
+        setParsing(false);
+        return;
+      }
+      // ── Reject the whole file if any row has an invalid/unparseable date
+      // (e.g. "8/32/2026") instead of silently dropping or rolling it over. ─────
+      const invalidDateRows = parsedRecords.filter((r) => !r.date);
+      if (invalidDateRows.length > 0) {
+        const preview = invalidDateRows
+          .slice(0, 5)
+          .map((r) => `row ${r.rowNumber} ("${r.rawDateValue}")`)
+          .join(", ");
+        setError(
+          `${invalidDateRows.length} row(s) have an invalid date (e.g. ${preview}). ` +
+          `Fix these dates in the sheet and re-upload — invalid dates are not imported.`
+        );
         setParsing(false);
         return;
       }

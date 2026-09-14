@@ -2,7 +2,7 @@
 
 
 export const adminPages = [
-  { id: "admin-dashboard",    title: "Dashboard",    path: "/"               },
+  { id: "admin-dashboard",    title: "Dashboard",    path: "/admin-dashboard"               },
   { id: "admin-projects",     title: "Projects",     path: "/projects"       },
   { id: "admin-employees",    title: "Employees",    path: "/employees"      },
   { id: "admin-performance",  title: "Performance",  path: "/performance"    },

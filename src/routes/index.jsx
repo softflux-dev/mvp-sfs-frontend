@@ -128,7 +128,7 @@ const ADMIN_ROUTES = [
     nameKey: "Dashboard",
     component: <Dashboard />,
     exact: "exact",
-    path: "/",
+    path: "/admin-dashboard",
     activeIcon: (
       <img
         src={DashboardActiveIcon}

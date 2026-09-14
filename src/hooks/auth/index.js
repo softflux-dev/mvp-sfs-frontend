@@ -12,7 +12,7 @@ import useUserStore from "../../zustand/useUserStore";
 import { getSecuritySettingsApi } from "../../api/modules/securitySettings";
 
 const ROLE_HOME = {
-  ADMIN:           "/",
+  ADMIN:          "/admin-dashboard",
   HR:              "/hr-dashboard",
   PROJECT_MANAGER: "/dashboard",
   EMPLOYEE:        "/employee-dashboard",
@@ -53,7 +53,7 @@ export const useAuth = () => {
         const loggedInUser = { ...(user || {}), role: jwtRole, rolePages };
         setUserData(loggedInUser);
 
-        const home = ROLE_HOME[jwtRole] || "/";
+        const home = ROLE_HOME[jwtRole] || "/admin-dashboard";
         navigate(home, { replace: true });
         return { success: true };
       }

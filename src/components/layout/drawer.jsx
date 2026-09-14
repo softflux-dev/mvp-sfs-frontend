@@ -35,7 +35,7 @@ const ROLE_ROUTE_MAP = {
 
 // Each role's dashboard landing path — where the logo click should go.
 const ROLE_HOME = {
-  ADMIN:           "/",
+  ADMIN:           "/admin-dashboard",
   HR:              "/hr-dashboard",
   PROJECT_MANAGER: "/dashboard",
   EMPLOYEE:        "/employee-dashboard",
@@ -52,7 +52,7 @@ export default function Drawer({ drawerOpen, handleNavigation, toggleDrawer }) {
   const location  = useLocation();
   const { user }  = useUserStore();
   const theme     = useTheme();
-  const homePath = ROLE_HOME[user?.role] || "/";
+  const homePath = ROLE_HOME[user?.role] || "/admin-dashboard";
   const isMobileOrTablet = useMediaQuery(theme.breakpoints.down("md"));
 
   const [openSubmenu, setOpenSubmenu] = React.useState({});
@@ -70,7 +70,7 @@ const pathMatchesTemplate = (pathname, template) => {
 };
 
  const isRouteActive = (path) => {
-  if (path === "/") return location.pathname === "/";
+  if (path === "/admin-dashboard") return location.pathname === "/admin-dashboard";
   if (location.pathname === path || location.pathname.startsWith(path + "/")) {
     return true;
   }

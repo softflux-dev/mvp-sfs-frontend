@@ -1,4 +1,4 @@
-// app/hrPortal/dashboard/recentLeaveRequests.jsx — 
+// app/hrPortal/dashboard/recentLeaveRequests.jsx —
 import { useState, useRef } from "react";
 import { Box, Typography, CircularProgress } from "@mui/material";
 import PaginatedTable           from "../../../components/dynamicTable";
@@ -6,7 +6,9 @@ import LeaveRequestDetailDialog from "../leaves/leaveRequestDetailDialog";
 import ConfirmationDialog       from "../../../components/popups/confirmation";
 import SuccessPopup             from "../../../components/popups/confirmationDialog";
 import { useHRLeaves }          from "../../../hooks/leave";
-import viewIcon from "../../../assets/icons/view.svg";
+import viewIcon    from "../../../assets/icons/view.svg";
+import approveIcon from "../../../assets/icons/complete-active.svg";
+import rejectIcon  from "../../../assets/icons/close-icon.svg";
 
 const tableHeader = [
   { id: "employee", label: "Employee"          },
@@ -16,12 +18,15 @@ const tableHeader = [
   { id: "actions",  label: "Actions"           },
 ];
 
+// Switched to "lm_actions" — the SAME renderer leaveRequestsTab.jsx uses.
+// Only viewIcon/onViewClick are passed below (no onApproveClick/onRejectClick),
+// so it renders just the View icon here instead of the Approve/Reject pair.
 const displayRows = [
   "hr_leave_employee",
   "hr_leave_type",
   "hr_leave_dates",
   "hr_leave_status",
-  "hr_leave_actions",
+  "lm_actions",
 ];
 
 const LEAVE_TYPE_LABELS = {
@@ -31,7 +36,6 @@ const LEAVE_TYPE_LABELS = {
 };
 
 const RecentLeaveRequests = ({ leaves: propLeaves = [], loading: propLoading = false, onRefresh }) => {
-  // Use hook for approve/reject actions only — display data comes from props (parent fetched it)
   const { reviewLeave, actionLoading } = useHRLeaves();
 
   const [viewOpen,      setViewOpen]      = useState(false);
@@ -41,36 +45,49 @@ const RecentLeaveRequests = ({ leaves: propLeaves = [], loading: propLoading = f
 
   const confirmRef = useRef();
 
-  // Map prop leaves to table row shape
+  // Dates formatted CLIENT-SIDE from raw ISO — same as leaveRequestsTab.jsx —
+  // fixes the one-day-earlier display.
   const tableData = propLeaves.map((l) => ({
     id:              l.id || l._id,
     name:            l.name     || "—",
     avatar:          l.avatar   || "",
     empId:           l.empId    || "",
     role:            l.role     || "—",
-    designation:     l.role     || "—",
+    designation:     l.designation || l.role || "—",
     leaveType:       LEAVE_TYPE_LABELS[l.leaveTypeRaw] || l.leaveType || "—",
     leaveTypeRaw:    l.leaveTypeRaw || "",
-    fromDate:        l.fromDate || "—",
-    toDate:          l.toDate   || "—",
+    fromDate:        l.fromDate ? new Date(l.fromDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+    toDate:          l.toDate   ? new Date(l.toDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })   : "—",
+    _rawFromDate:    l.fromDate ? new Date(l.fromDate) : null,
+    _rawToDate:      l.toDate   ? new Date(l.toDate)   : null,
+    submittedDate:   l.submittedDate ? new Date(l.submittedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
     days:            l.days     || 1,
     reason:          l.reason?.length > 35 ? l.reason.slice(0, 35) + "..." : l.reason || "—",
     reasonFull:      l.reason   || "",
     status:          "Pending",
     hrNotes:         l.hrNotes  || "",
+    paymentPreference: l.paymentPreference || "paid",
+    audit:           l.audit || [],
     employeeMongoId: l.employeeMongoId || "",
+    escalationRequired:     !!l.escalationRequired,
+    escalationHrLocked:     !!l.escalationHrLocked,
+    escalationAdminStatus:  l.escalationAdminStatus || "none",
+    _adminCapFromDate: l._adminCapFromDate ? new Date(l._adminCapFromDate) : null,
+    _adminCapToDate:   l._adminCapToDate   ? new Date(l._adminCapToDate)   : null,
   }));
 
-  const handleApprove = (row, hrNotes = "") => {
+  // NEW payload-based signature — matches hooks/leave.js reviewLeave(leaveId, payload)
+  const handleApprove = (row, payload) => {
     confirmRef.current?.open({
-      title:       "Approve Leave?",
-      description: `Approve leave request for ${row.name}?`,
-      confirmText: "Yes, Approve",
+      title: payload?.decision === "approve_custom" ? "Approve Custom Range?" : "Approve Leave?",
+      description: `Confirm this decision for ${row.name}'s leave request?`,
+      confirmText: "Yes, Confirm",
       cancelText:  "Cancel",
+      icon: approveIcon,
       onConfirm: async () => {
-        const result = await reviewLeave(row.id, "approved", hrNotes);
+        const result = await reviewLeave(row.id, payload);
         if (result.success) {
-          setActionSuccess({ open: true, message: "Leave approved successfully." });
+          setActionSuccess({ open: true, message: result.message || "Leave reviewed successfully." });
           setViewOpen(false);
           onRefresh?.();
         } else {
@@ -80,14 +97,15 @@ const RecentLeaveRequests = ({ leaves: propLeaves = [], loading: propLoading = f
     });
   };
 
-  const handleReject = (row, hrNotes = "") => {
+  const handleReject = (row, payload) => {
     confirmRef.current?.open({
-      title:       "Reject Leave?",
-      description: `Reject leave request for ${row.name}?`,
+      title: "Reject Leave?",
+      description: payload?.hrNotes ? `Reject leave for ${row.name}?\nReason: "${payload.hrNotes}"` : `Reject leave request for ${row.name}?`,
       confirmText: "Yes, Reject",
       cancelText:  "Cancel",
+      icon: rejectIcon,
       onConfirm: async () => {
-        const result = await reviewLeave(row.id, "rejected", hrNotes);
+        const result = await reviewLeave(row.id, { decision: "reject_all", hrNotes: payload?.hrNotes || "" });
         if (result.success) {
           setActionSuccess({ open: true, message: "Leave rejected." });
           setViewOpen(false);
@@ -121,16 +139,15 @@ const RecentLeaveRequests = ({ leaves: propLeaves = [], loading: propLoading = f
         isLoading={propLoading}
         viewIcon={viewIcon}
         onViewClick={(row) => { setSelectedLeave(row); setViewOpen(true); }}
-        onApproveClick={handleApprove}
-        onRejectClick={handleReject}
       />
 
       <LeaveRequestDetailDialog
         open={viewOpen}
         onClose={() => { setViewOpen(false); setSelectedLeave(null); }}
         leave={selectedLeave || {}}
-        onApprove={(row, notes) => { setViewOpen(false); handleApprove(row, notes); }}
-        onReject={(row, notes)  => { setViewOpen(false); handleReject(row, notes);  }}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onEscalationResolved={onRefresh}
         loading={actionLoading}
       />
 
@@ -143,6 +160,7 @@ const RecentLeaveRequests = ({ leaves: propLeaves = [], loading: propLoading = f
         autoClose
         autoCloseDelay={2000}
       />
+      <SuccessPopup open={!!apiError} onClose={() => setApiError("")} message={apiError} />
     </Box>
   );
 };

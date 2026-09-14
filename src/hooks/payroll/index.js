@@ -128,6 +128,31 @@ const updatePayroll = useCallback(async (id, payload) => {
   }
 }, []);
 
+  // ── Finalize payroll — locks it from further edits/regeneration and makes
+  // it visible on the employee's own My Salary page (getMySalary only ever
+  // returns status: "finalized" records). Irreversible from the UI. ────────
+  const finalizePayroll = useCallback(async (id) => {
+    setActionLoading(true);
+    setError("");
+    try {
+      const response = await finalizePayrollApi(id);
+      if (response?.status === 200 || response?.status === 201) {
+        const updated = response.data.data.payroll;
+        setPayrolls((prev) => prev.map((p) => (p.id === id ? updated : p)));
+        return { success: true, message: response.data.message || "Payroll finalized successfully.", data: updated };
+      }
+      const msg = response?.data?.message || "Failed to finalize payroll.";
+      setError(msg);
+      return { success: false, message: msg };
+    } catch {
+      const msg = "Something went wrong.";
+      setError(msg);
+      return { success: false, message: msg };
+    } finally {
+      setActionLoading(false);
+    }
+  }, []);
+
  return {
     payrolls,
     loading,
@@ -140,5 +165,6 @@ const updatePayroll = useCallback(async (id, payload) => {
     isMonthGenerated,
     sendPayslipEmails,
     updatePayroll,
+    finalizePayroll,
   };
 };

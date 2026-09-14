@@ -206,11 +206,16 @@ const getTheme = (direction = "ltr") =>
       MuiButton: {
         styleOverrides: {
           root: {
-            textTransform: "none",
-            borderRadius: 12,
-            fontWeight: 400,
-            fontFamily: '"Poppins", sans-serif',
-          },
+      textTransform: "none",
+      borderRadius: 12,
+      fontWeight: 400,
+      fontFamily: '"Poppins", sans-serif',
+      "&.Mui-disabled": {
+        opacity: 0.45,
+        borderColor: "currentColor",
+        color: "inherit",
+      },
+    },
         },
         variants: [
           {

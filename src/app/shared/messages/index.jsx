@@ -13,7 +13,7 @@ const getCurrentUser = () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) return null;
-    let b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    let b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/admin-dashboard");
     while (b64.length % 4) b64 += "=";
     const payload = JSON.parse(atob(b64));
     return {
