@@ -1,5 +1,9 @@
 import React, { useState } from "react";
+<<<<<<< HEAD
 import { Box, MenuItem, Typography, Avatar, Checkbox } from "@mui/material";
+=======
+import { Box, MenuItem, Typography } from "@mui/material";
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
 import {
   DialogContainer,
   DialogHeader,
@@ -11,7 +15,10 @@ import DialogActionButtons from "../../../components/dialog/dialogAction";
 import UploadBox           from "../../../components/uploadBox";
 import UploadIcon          from "../../../assets/icons/upload.svg";
 
+<<<<<<< HEAD
 // ── Option lists ──────────────────────────────────────────────────────────
+=======
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
 const DOC_TYPE_OPTIONS = [
   { value: "employment_contract",   label: "Employment Contract"   },
   { value: "nda",                   label: "NDA"                   },
@@ -20,6 +27,7 @@ const DOC_TYPE_OPTIONS = [
   { value: "other",                 label: "Other"                 },
 ];
 
+<<<<<<< HEAD
 const PROJECT_TYPE_OPTIONS = [
   { value: "development", label: "Development" },
   { value: "seo",         label: "SEO"         },
@@ -125,12 +133,16 @@ const INITIAL_FORM = {
   description: "",
   files:       [],
 };
+=======
+const INITIAL_FORM = { title: "", type: "", files: [] };
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
 
 const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
   const [formData,   setFormData]   = useState(INITIAL_FORM);
   const [errors,     setErrors]     = useState({});
   const [dragActive, setDragActive] = useState(false);
 
+<<<<<<< HEAD
   const rules       = FIELD_RULES[formData.type] || {};
   const projectList = PROJECTS_BY_TYPE[formData.projectType] || [];
   const taskList    = TASKS_BY_PROJECT[formData.projectId]   || [];
@@ -167,6 +179,14 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
 
   const handleChange = (field) => (e) => set(field, e?.target ? e.target.value : e);
 
+=======
+  const handleChange = (field) => (e) => {
+    const val = e?.target ? e.target.value : e;
+    setFormData((prev) => ({ ...prev, [field]: val }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
+  };
+
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
   const handleFileSelect = (e) => {
     const selected = Array.from(e.target.files || []);
     setFormData((prev) => ({ ...prev, files: [...prev.files, ...selected] }));
@@ -181,13 +201,23 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
     if (errors.files) setErrors((prev) => ({ ...prev, files: "" }));
   };
 
+<<<<<<< HEAD
   const handleRemoveFile = (index) =>
     setFormData((prev) => ({ ...prev, files: prev.files.filter((_, i) => i !== index) }));
+=======
+  const handleRemoveFile = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+    }));
+  };
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
 
   const validate = () => {
     const e = {};
     if (!formData.title.trim()) e.title = "Document title is required";
     if (!formData.type)         e.type  = "Document type is required";
+<<<<<<< HEAD
     if (rules.projectType) {
       if (!formData.projectType) e.projectType = "Project type is required";
       if (!formData.projectId)   e.projectId   = "Project is required";
@@ -198,13 +228,23 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
       if (!rules.singleAssignee && !formData.assigneeIds.length)
         e.assigneeIds = "Please assign at least one person";
     }
+=======
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
     if (!formData.files.length) e.files = "Please select at least one file";
     return e;
   };
 
   const handleSave = () => {
+<<<<<<< HEAD
     const errs = validate();
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
+=======
+    const validationErrors = validate();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
     onSave?.(formData);
     handleClose();
   };
@@ -215,6 +255,7 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
     onClose?.();
   };
 
+<<<<<<< HEAD
   // ── Render value for MULTI assignee select (nda, project_documentation) ──
   const renderMultiAssigneeValue = (selected) => {
     if (!selected || selected.length === 0)
@@ -252,6 +293,8 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
     );
   };
 
+=======
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
   return (
     <DialogContainer open={open} onClose={handleClose} maxWidth="580px" fullWidth>
       <DialogHeader title="Upload Document" onClose={handleClose} />
@@ -264,11 +307,14 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
           display: "flex",
           flexDirection: "column",
           gap: 2.5,
+<<<<<<< HEAD
           maxHeight: "62vh",
           overflowY: "auto",
           "&::-webkit-scrollbar": { width: "4px" },
           "&::-webkit-scrollbar-track": { background: "transparent" },
           "&::-webkit-scrollbar-thumb": { background: "#D1D5DB", borderRadius: "4px" },
+=======
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
         }}
       >
         {/* Document Title */}
@@ -291,6 +337,7 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
           <CustomSelect
             value={formData.type}
             onChange={handleChange("type")}
+<<<<<<< HEAD
             fullWidth height="45px" inputBgColor="#fff"
           >
             <MenuItem value="">Select type</MenuItem>
@@ -448,6 +495,27 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
         )}
 
         {/* File Upload — always last */}
+=======
+            fullWidth
+            height="45px"
+            inputBgColor="#fff"
+          >
+            <MenuItem value="">Select type</MenuItem>
+            {DOC_TYPE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </CustomSelect>
+          {errors.type && (
+            <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>
+              {errors.type}
+            </Typography>
+          )}
+        </Box>
+
+        {/* File Upload */}
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
         <Box>
           <CustomInputLabel label="File" />
           <UploadBox
@@ -460,10 +528,20 @@ const UploadDocument = ({ open, onClose, onSave, loading = false }) => {
             onFileSelect={handleFileSelect}
             selectedFiles={formData.files}
             onRemoveFile={handleRemoveFile}
+<<<<<<< HEAD
             showCategory={false}
             showFileList={true}
           />
           {errors.files && <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>{errors.files}</Typography>}
+=======
+            showFileList={true}
+          />
+          {errors.files && (
+            <Typography fontSize="12px" color="error" mt={0.5} ml={0.5}>
+              {errors.files}
+            </Typography>
+          )}
+>>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
         </Box>
       </Box>
 
