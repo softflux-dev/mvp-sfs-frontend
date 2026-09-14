@@ -688,7 +688,6 @@ hr_documents: [
     ],
   },
 ],
-<<<<<<< HEAD
 pm_projects: [
   {
     type: "search",
@@ -876,8 +875,6 @@ holidays: [
     grid: { xs: 12, md: 4 },
   },
 ],
-=======
->>>>>>> 9f89486f29e67c1dc343325e54894f7563f16c72
 
     // ── Full (default fallback) ───────────────────────────────────────────────
     full: [
