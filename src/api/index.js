@@ -1,4 +1,4 @@
-// src/api/index.js file
+// src/api/index.js filee
 import axios from "axios";
 export const baseUrl = "https://api.sprintexa.com/api/";
 //export const baseUrl = "https://gknmkz56-5000.inc1.devtunnels.ms/api/";
