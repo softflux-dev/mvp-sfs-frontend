@@ -7,7 +7,7 @@ import MainLayout from "./components/layout";
 
 function App() {
   return (
-    <BrowserRouter basename="/login">
+    <BrowserRouter>
       <Routes>
 
         {/* ── Auth routes (redirect to "/" if already logged in) ─────────── */}
