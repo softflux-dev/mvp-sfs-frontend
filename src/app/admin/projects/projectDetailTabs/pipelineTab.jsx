@@ -391,6 +391,7 @@ const PipelineTab = ({ project = {}, stages = DEFAULT_STAGES, onStagesChange, ro
                           assigneeName={task.assigneeName}
                           assignee={task.assigneeAvatar}
                           project={task.projectName}
+                          module={task.module}
                           comments={task.comments}
                           attachments={task.attachments}
                           assignees={task.assignees}

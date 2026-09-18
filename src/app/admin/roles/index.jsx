@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Box, Grid, Typography } from "@mui/material";
+import { Box, Grid, Typography, Tooltip } from "@mui/material";
 
 import HeaderText         from "../../../components/headerText";
 import CustomButton       from "../../../components/customButton";
@@ -49,16 +49,45 @@ const Roles = () => {
 
   const confirmDialogRef = useRef();
 
-  // ── Map API shape → table row shape ───────────────────────────────────────
-  const tableData = roles.map((role) => ({
-    id:            role._id,
-    roleName:      role.roleName,
-    description:   role.description || "—",
-    employees:     role.employeeCount ?? 0,   // ← from model
-    pages:         role.pages        || [],
-    isSystem:      role.isSystem     || false,
-    department:    role.department?._id || role.department || "",
-  }));
+const MAX_DESC_LENGTH = 60;
+
+
+// ── Small inline component for expandable description ──────────────────────
+const ExpandableDescription = ({ text }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isTruncated = text.length > MAX_DESC_LENGTH;
+
+  if (!isTruncated) return <Typography fontSize="inherit">{text}</Typography>;
+
+  return (
+    <Typography fontSize="inherit" sx={{ wordBreak: "break-word" }}>
+      {expanded ? text : `${text.slice(0, MAX_DESC_LENGTH).trim()}...`}{" "}
+      <Typography
+        component="span"
+        onClick={() => setExpanded((prev) => !prev)}
+        sx={{
+          fontSize: "inherit",
+          fontWeight: 600,
+          color: "#AA2493",
+          cursor: "pointer",
+          "&:hover": { textDecoration: "underline" },
+        }}
+      >
+        {expanded ? " See Less" : " See More"}
+      </Typography>
+    </Typography>
+  );
+};
+
+const tableData = roles.map((role) => ({
+  id:            role._id,
+  roleName:      role.roleName,
+  description:   <ExpandableDescription text={role.description || "—"} />,
+  employees:     role.employeeCount ?? 0,
+  pages:         role.pages        || [],
+  isSystem:      role.isSystem     || false,
+  department:    role.department?._id || role.department || "",
+}));
 
   const menuOptions = [
     { value: "view",   label: "View"                     },

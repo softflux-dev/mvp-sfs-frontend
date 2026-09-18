@@ -49,6 +49,30 @@ const Settings = () => {
     setDirty(false);
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Defensive cleanup for a known MUI Modal/Dialog issue: if the dialog
+  // is closed and reopened in quick succession (exactly what can happen
+  // right after "Discard & Leave" triggers a tab switch), MUI's internal
+  // Modal manager can leave the page's scroll-lock / aria-hidden state
+  // stuck even though the dialog is visually gone — leaving every click
+  // on the page silently dead until a hard refresh. Once we know the
+  // dialog is closed, force-clear any leftover lock state as a safety net.
+  useEffect(() => {
+    if (dialogOpen) return;
+    const timer = setTimeout(() => {
+      document.body.style.removeProperty("overflow");
+      document.body.style.removeProperty("padding-right");
+
+      const appRoot = document.getElementById("root");
+      if (appRoot?.getAttribute("aria-hidden") === "true") {
+        appRoot.removeAttribute("aria-hidden");
+      }
+      if (appRoot?.hasAttribute("inert")) {
+        appRoot.removeAttribute("inert");
+      }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [dialogOpen]);
+
   // ── Only 2 buttons: "Save Changes" (primary, calls confirmSave) and
   // "Discard & Leave" (secondary, calls confirmDiscard). No neutral
   // "stay/cancel" option — this is a deliberate two-choice dialog now.
@@ -61,7 +85,7 @@ const Settings = () => {
         cancelText:  "Discard & Leave",
         confirmDisabled: saving,
         onConfirm:   confirmSave,
-        onClose:     confirmDiscard,   // the cancelText button routes here, not a plain close
+       onCancel:    confirmDiscard,
       });
     } else {
       confirmDialogRef.current?.close?.();

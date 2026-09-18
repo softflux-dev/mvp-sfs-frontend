@@ -341,7 +341,7 @@ const EditAttendanceDialog = ({
             {/* Entry Type — checkboxes, any combination (On-Site/Off-Site disabled for Absent/Leave/Holiday) */}
             <Box>
               <CustomInputLabel label="Entry Type — select any combination" />
-              <Box display="flex" gap={1}>
+                            <Box display="flex" gap={1} flexWrap="wrap">
                 {[
                   { key: "useOnsite",  label: "On-Site"     },
                   { key: "useOffsite", label: "Off-Site"    },
@@ -354,7 +354,19 @@ const EditAttendanceDialog = ({
                       variant={form[t.key] ? "gradient" : "button"}
                       disabled={disabledByStatus}
                       onClick={() => handleEntryTypeToggle(t.key)}
-                      sx={{ flex: 1, height: "40px", fontSize: "13px", fontWeight: 500, opacity: disabledByStatus ? 0.5 : 1 }}
+                      sx={{
+                        flex: "1 1 90px",
+                        minHeight: "40px",
+                        height: "auto",
+                        py: 0.75,
+                        px: 1,
+                        fontSize: { xs: "11px", sm: "13px" },
+                        fontWeight: 500,
+                        lineHeight: 1.3,
+                        whiteSpace: "normal",
+                        textAlign: "center",
+                        opacity: disabledByStatus ? 0.5 : 1,
+                      }}
                     >
                       {t.label}
                     </Button>

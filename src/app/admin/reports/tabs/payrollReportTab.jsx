@@ -11,18 +11,24 @@ import { useFormatCurrency, formatCurrencyForPdf } from "../../../../utils/forma
 
 
 const tableHeader = [
-  { id: "name",       label: "Employee"   },
-  { id: "baseSalary", label: "Base Salary"},
-  { id: "bonus",      label: "Bonus"      },
-  { id: "deductions", label: "Deductions" },
-  { id: "netPay",     label: "Net Pay"    },
+  { id: "name",                 label: "Employee"               },
+  { id: "baseSalary",           label: "Base Salary"            },
+  { id: "extraHours",           label: "Extra Hours Pay"        },
+  { id: "bonus",                label: "Bonus"                  },
+  { id: "shortfallDeduction",   label: "Shortfall Deduction"    },
+  { id: "unpaidLeaveDeduction", label: "Unpaid Leave Deduction" },
+  { id: "totalDeduction",       label: "Total Deduction"        },
+  { id: "netPay",               label: "Net Pay"                },
 ];
 
 const displayRows = [
   "payroll_member",
   "payroll_base_salary",
+  "payroll_overtime",                 // Extra Hours Pay — amount + "Xh × Ymultiplier"
   "payroll_bonus",
-  "payroll_deductions",
+  "payroll_shortfall_deduction",      // Shortfall Deduction (row.deductions)
+  "payroll_unpaid_leave_deduction",   // Unpaid Leave Deduction — amount + "N day(s)"
+  "payroll_total_deduction",          // bold sum of the two above
   "payroll_net_pay",
 ];
 
@@ -103,8 +109,17 @@ const PayrollReportTab = forwardRef((props, ref) => {
       name:       p.name || "—",
       baseSalary: p.monthlySalary ?? 0,
       bonus:      p.bonusAmount   ?? 0,
-      deductions: p.deductionAmount ?? 0,
+      deductions: p.deductionAmount ?? 0, // shortfall deduction — same field the shortfall column reads
       netPay:     p.netSalary     ?? 0,
+
+      // Extra Hours Pay — same fields payroll_overtime cell reads
+      extraHours:   p.extraHours   ?? 0,
+      extraAmount:  p.extraAmount  ?? 0,
+      otMultiplier: p.otMultiplier ?? 1,
+
+      // Unpaid Leave — same fields payroll_unpaid_leave_deduction cell reads
+      unpaidLeaveDays:      p.unpaidLeaveDays      || 0,
+      unpaidLeaveDeduction: p.unpaidLeaveDeduction || 0,
     }));
   }, [payrolls]);
 
@@ -121,30 +136,37 @@ const PayrollReportTab = forwardRef((props, ref) => {
 
       const doc = await createReportDoc("Payroll Report", `${monthName} ${year}`, branding);
 
-      const totalBase       = tableData.reduce((s, r) => s + r.baseSalary, 0);
-      const totalBonus      = tableData.reduce((s, r) => s + r.bonus, 0);
-      const totalDeductions = tableData.reduce((s, r) => s + r.deductions, 0);
+      const totalBase              = tableData.reduce((s, r) => s + r.baseSalary, 0);
+      const totalExtraHours        = tableData.reduce((s, r) => s + r.extraAmount, 0);
+      const totalBonus             = tableData.reduce((s, r) => s + r.bonus, 0);
+      const totalShortfall         = tableData.reduce((s, r) => s + r.deductions, 0);
+      const totalUnpaidLeave       = tableData.reduce((s, r) => s + r.unpaidLeaveDeduction, 0);
+      const totalDeductionCombined = totalShortfall + totalUnpaidLeave;
 
      
         let y = addSummaryCards(doc, [
-          { label: "Employees",        value: tableData.length },
-          { label: "Total Base",       value: formatCurrencyForPdf(totalBase, { decimals: 0 }) },
-          { label: "Total Bonus",      value: formatCurrencyForPdf(totalBonus, { decimals: 0 }), color: [4, 195, 115] },
-          { label: "Total Deductions", value: formatCurrencyForPdf(totalDeductions, { decimals: 0 }), color: [255, 0, 0] },
+          { label: "Employees",          value: tableData.length },
+          { label: "Total Base",         value: formatCurrencyForPdf(totalBase, { decimals: 0 }) },
+          { label: "Total Extra Hours Pay", value: formatCurrencyForPdf(totalExtraHours, { decimals: 0 }), color: [4, 195, 115] },
+          { label: "Total Bonus",        value: formatCurrencyForPdf(totalBonus, { decimals: 0 }), color: [4, 195, 115] },
+          { label: "Total Deductions",   value: formatCurrencyForPdf(totalDeductionCombined, { decimals: 0 }), color: [255, 0, 0] },
         ]);
 
       y = addReportTable(doc, {
-        head: ["Employee", "Base Salary", "Bonus", "Deductions", "Net Pay"],
+        head: ["Employee", "Base Salary", "Extra Hours Pay", "Bonus", "Shortfall Deduction", "Unpaid Leave Deduction", "Total Deduction", "Net Pay"],
         
           body: tableData.map((p) => [
             p.name,
             formatCurrencyForPdf(p.baseSalary, { decimals: 0 }),
+            formatCurrencyForPdf(p.extraAmount, { decimals: 0 }),
             formatCurrencyForPdf(p.bonus,      { decimals: 0 }),
             formatCurrencyForPdf(p.deductions, { decimals: 0 }),
+            formatCurrencyForPdf(p.unpaidLeaveDeduction, { decimals: 0 }),
+            formatCurrencyForPdf(p.deductions + p.unpaidLeaveDeduction, { decimals: 0 }),
             formatCurrencyForPdf(p.netPay,     { decimals: 0 }),
           ]),
         startY: y,
-        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } },
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" }, 6: { halign: "right" }, 7: { halign: "right" } },
         companyName: branding.companyName,
       });
 

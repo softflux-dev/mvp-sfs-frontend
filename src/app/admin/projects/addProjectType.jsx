@@ -10,6 +10,8 @@ import SuccessPopup        from "../../../components/popups/confirmationDialog";
 import ConfirmationDialog  from "../../../components/popups/confirmation";
 import { useProjectType }  from "../../../hooks/projectType"; 
 
+const MAX_LEN = 70;
+
 const AddProjectType = ({ open, onClose, onSave }) => {
   const {
     projectTypes,
@@ -45,6 +47,10 @@ const AddProjectType = ({ open, onClose, onSave }) => {
       setInputError("Project type name is required");
       return;
     }
+    if (typeName.trim().length > MAX_LEN) {
+      setInputError(`Project type name must be under ${MAX_LEN} characters.`);
+      return;
+    }
     const result = await createProjectType(typeName.trim());
     if (result.success) {
       onSave?.(result.projectType);  
@@ -61,6 +67,10 @@ const AddProjectType = ({ open, onClose, onSave }) => {
   // ── Inline edit confirm ────────────────────────────────────────────────────
   const confirmEdit = async (type) => {
     if (!inlineEditVal.trim()) return;
+    if (inlineEditVal.trim().length > MAX_LEN) {
+      setInputError(`Project type name must be under ${MAX_LEN} characters.`);
+      return;
+    }
     const result = await updateProjectType(type._id, inlineEditVal.trim());
     if (result.success) {
       setInlineEditId(null);
@@ -132,12 +142,19 @@ const AddProjectType = ({ open, onClose, onSave }) => {
                 placeholder="e.g. Fixed Price, Retainer…"
                 value={typeName}
                 onChange={(e) => {
-                  setTypeName(e.target.value);
-                  if (inputError) setInputError("");
+                  const val = e.target.value;
+                  setTypeName(val);
+                  if (val.length >= MAX_LEN) {
+                    setInputError(`Max ${MAX_LEN} characters allowed.`);
+                  } else if (inputError) {
+                    setInputError("");
+                  }
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
                 inputBgColor="#fff"
                 fullWidth
+                inputProps={{ maxLength: MAX_LEN }}
+                helperText={`${typeName.length}/${MAX_LEN}`}
               />
             </Box>
 
@@ -164,7 +181,15 @@ const AddProjectType = ({ open, onClose, onSave }) => {
                         <>
                           <TextInput
                             value={inlineEditVal}
-                            onChange={(e) => setInlineEditVal(e.target.value)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setInlineEditVal(val);
+                              if (val.length >= MAX_LEN) {
+                                setInputError(`Max ${MAX_LEN} characters allowed.`);
+                              } else if (inputError) {
+                                setInputError("");
+                              }
+                            }}
                             inputBgColor="#F5F5F5"
                             fullWidth
                             onKeyDown={(e) => {
@@ -172,6 +197,8 @@ const AddProjectType = ({ open, onClose, onSave }) => {
                               if (e.key === "Escape") setInlineEditId(null);
                             }}
                             autoFocus
+                            inputProps={{ maxLength: MAX_LEN }}
+                            helperText={`${inlineEditVal.length}/${MAX_LEN}`}
                           />
                           <Box display="flex" gap={0.5}>
                             <IconButton size="small" onClick={() => confirmEdit(type)}
@@ -190,13 +217,24 @@ const AddProjectType = ({ open, onClose, onSave }) => {
                         </>
                       ) : (
                         <>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Typography fontSize="13px" fontWeight={500} color="text.primary">
+                          <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0, flex: 1 }}>
+                            <Typography
+                              fontSize="13px"
+                              fontWeight={500}
+                              color="text.primary"
+                              title={type.label}
+                              sx={{
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                maxWidth: "260px",
+                              }}
+                            >
                               {type.label}
                             </Typography>
                             {type.isSystem && (
                               <Typography fontSize="10px" color="text.secondary"
-                                sx={{ backgroundColor: "#F0F0F0", px: 0.8, py: 0.2, borderRadius: "4px" }}>
+                                sx={{ backgroundColor: "#F0F0F0", px: 0.8, py: 0.2, borderRadius: "4px", flexShrink: 0 }}>
                                 system
                               </Typography>
                             )}

@@ -3,6 +3,21 @@ import { create } from "zustand";
 
 const SAVE_TIMEOUT_MS = 15000;
 
+// Gives MUI's Dialog/Modal enough time to run its own exit transition and
+// fully unmount before we tear down the page underneath it. Navigating in
+// the SAME tick that closes the dialog can leave MUI's modal manager
+// thinking a Modal is still open — it never gets to restore body scroll /
+// pointer-events, and the whole app appears frozen until a hard refresh.
+// This is exactly what was happening on "Discard & Leave": pendingNavigation()
+// fired immediately, sometimes tearing down the entire page (route change)
+// mid-transition.
+const DIALOG_CLOSE_DELAY_MS = 300;
+
+const leaveAfterDialogCloses = (navigateFn) => {
+  if (!navigateFn) return;
+  setTimeout(() => navigateFn(), DIALOG_CLOSE_DELAY_MS);
+};
+
 export const useUnsavedChangesStore = create((set, get) => ({
   isDirty: false,
   dialogOpen: false,
@@ -13,22 +28,25 @@ export const useUnsavedChangesStore = create((set, get) => ({
   setDirty: (value) => set({ isDirty: value }),
   setSaveHandler: (fn) => set({ saveHandler: fn }),
 
-  guardNavigate: (navigateFn) => {
-    if (!get().isDirty) {
-      navigateFn();
-      return;
-    }
-    // Always open fresh — clears any stale "saving" state left over from
-    // a previous attempt (e.g. a hung/unwired tab), so the dialog never
-    // opens already showing a spinner for work that isn't actually running.
-    set({ dialogOpen: true, pendingNavigation: navigateFn, saving: false });
-  },
+ // src/zustand/useUnsavedChangesStore.js
+guardNavigate: (navigateFn) => {
+  if (!get().isDirty) {
+    navigateFn();
+    return;
+  }
+  // Don't reopen while a previous dialog instance is still closing —
+  // this exact "close then immediately reopen" sequence is what can
+  // leave MUI's Modal manager in a stuck, unclickable state.
+  if (get().closing) return;
+  set({ dialogOpen: true, pendingNavigation: navigateFn, saving: false });
+},
 
-  confirmDiscard: () => {
-    const { pendingNavigation } = get();
-    set({ dialogOpen: false, pendingNavigation: null, isDirty: false, saving: false });
-    pendingNavigation?.();
-  },
+confirmDiscard: () => {
+  const { pendingNavigation } = get();
+  set({ dialogOpen: false, pendingNavigation: null, isDirty: false, saving: false, closing: true });
+  setTimeout(() => set({ closing: false }), 350);
+  leaveAfterDialogCloses(pendingNavigation);
+},
 
   confirmSave: async () => {
     const { saveHandler, pendingNavigation } = get();
@@ -51,7 +69,7 @@ export const useUnsavedChangesStore = create((set, get) => ({
       const result = await Promise.race([saveHandler(), timeout]);
       if (result?.success) {
         set({ dialogOpen: false, pendingNavigation: null, isDirty: false, saving: false });
-        pendingNavigation?.();
+        leaveAfterDialogCloses(pendingNavigation);
       } else {
         set({ saving: false });
       }

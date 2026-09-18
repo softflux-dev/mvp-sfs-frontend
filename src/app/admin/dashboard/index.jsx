@@ -69,7 +69,7 @@ const Dashboard = () => {
 
   const statsData = [
     {
-      id: 1, title: "Total Employees",
+      id: 1, title: "Total Active Employees",
      value: String(stats?.totalEmployees ?? "0"),  
       description: "Active employees", icon: enrollIcon, iconHover: employeeIconWhite,
       onClick: () => navigate("/employees"),

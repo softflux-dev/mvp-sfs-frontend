@@ -24,29 +24,34 @@ const MONTH_INDEX = {
 };
 
 const Row = ({ label, value, bold, color, sub }) => (
-  <Box display="flex" justifyContent="space-between" alignItems="center" py={1.25}
+  <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1} py={1.25}
     sx={{ borderBottom: "1px solid #F3F4F6" }}>
-    <Box>
-      <Typography fontSize="13px" color="text.secondary" fontWeight={bold ? 600 : 400}>{label}</Typography>
+    <Box sx={{ minWidth: 0, flex: "1 1 160px" }}>
+      <Typography fontSize="13px" color="text.secondary" fontWeight={bold ? 600 : 400} sx={{ overflowWrap: "anywhere" }}>
+        {label}
+      </Typography>
       {sub && <Typography fontSize="10px" color="text.secondary">{sub}</Typography>}
     </Box>
     <Typography fontSize={bold ? "14px" : "13px"} fontWeight={bold ? 700 : 500}
-      color={color || (bold ? "#AA2493" : "text.primary")}>{value}</Typography>
+      color={color || (bold ? "#AA2493" : "text.primary")}
+      sx={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+      {value}
+    </Typography>
   </Box>
 );
 
-// NEW — indented sub-row used under "Leave Days" to break out Paid vs Unpaid.
 const SubRow = ({ label, value, dotColor }) => (
-  <Box display="flex" justifyContent="space-between" alignItems="center" py={0.75} pl={2.5}
+  <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1} py={0.75} pl={2.5}
     sx={{ borderBottom: "1px solid #F3F4F6" }}>
-    <Box display="flex" alignItems="center" gap={0.75}>
+    <Box display="flex" alignItems="center" gap={0.75} sx={{ minWidth: 0, flex: "1 1 140px" }}>
       <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: dotColor, flexShrink: 0 }} />
-      <Typography fontSize="12px" color="text.secondary">{label}</Typography>
+      <Typography fontSize="12px" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>{label}</Typography>
     </Box>
-    <Typography fontSize="12px" fontWeight={600} color="text.primary">{value}</Typography>
+    <Typography fontSize="12px" fontWeight={600} color="text.primary" sx={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+      {value}
+    </Typography>
   </Box>
 );
-
 const SectionLabel = ({ children }) => (
   <Typography fontSize="11px" fontWeight={700} color="text.secondary"
     textTransform="uppercase" letterSpacing="0.6px" mt={2} mb={0.5}>

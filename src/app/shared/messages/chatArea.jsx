@@ -99,9 +99,13 @@ const ChatArea = ({
     addIncomingMessage, applyMessageEdit, applyMessageDelete,
   } = useMessages(conversation?._id, currentUser?._id);
 
-  const { renameGroup, deleteConversation, kickMember } = useConversationActions();
+  const { renameGroup, deleteConversation, kickMember, makeGroupAdmin, removeGroupAdmin, transferOwnership } = useConversationActions();
 
-  const isGroup = conversation?.type === "project";
+   // Both "project" (Admin/PM-created team chats) and "group" (Employee
+  // personal groups) are multi-person conversations — the header must show
+  // the conversation's own name in either case, not fall through to the
+  // "direct chat, show the other participant" branch below.
+  const isGroup = conversation?.type === "project" || conversation?.type === "group";
 
   // ── Group members eligible to be @mentioned (everyone but yourself) ─────
   const mentionableMembers = (conversation?.participants || [])
@@ -568,6 +572,12 @@ const ChatArea = ({
           }}
           onKickMember={async (memberId) => await kickMember(conversation._id, memberId)}
           onMembersAdded={onMembersAdded}
+           onMakeGroupAdmin={async (memberId) => await makeGroupAdmin(conversation._id, memberId)}
+          onRemoveGroupAdmin={async (memberId) => await removeGroupAdmin(conversation._id, memberId)}
+          onTransferOwnership={async (memberId) => {
+            const result = await transferOwnership(conversation._id, memberId);
+            if (result.success) onMembersAdded?.(); // reuse existing refresh callback
+          }}
         />
       )}
 

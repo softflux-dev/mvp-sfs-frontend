@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Box, CircularProgress, MenuItem, Typography } from "@mui/material";
+import { Box, CircularProgress, MenuItem, Typography, Tooltip } from "@mui/material";
 import {
   DialogContainer,
   DialogHeader,
@@ -169,7 +169,7 @@ const AddRoleDialog = ({
                 fullWidth
                 multiline
                 rows={3}
-               
+                inputProps={{ maxLength: 300 }}
               />
             </Box>
 

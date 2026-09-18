@@ -27,6 +27,7 @@ function TextInput({
   helperText,
   error,
   label,
+   inputProps,
   sx = {}, // 🟢 sx ko default empty object rakha
 }) {
   const [showPass, setShowPass] = useState(false);
@@ -67,6 +68,10 @@ function TextInput({
           onWheel={(e) => e.target.blur()}
           fontFamily={"Poppins"}
           onKeyDown={onKeyDown}
+          inputProps={{
+            maxLength: 100, // 🟢 hard safety cap even if callers forget to pass one
+            ...inputProps,  // 🟢 caller-provided overrides (e.g. maxLength: 80) win
+          }}
           
           // Line 56-108 ke sx object ko replace karo:
           sx={{

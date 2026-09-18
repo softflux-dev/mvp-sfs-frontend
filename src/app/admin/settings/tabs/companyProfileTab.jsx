@@ -708,7 +708,13 @@ const handleFormatsChange = (next) => {
 
           {/* ── Company Phone Numbers (optional) ───────────────────────── */}
           <Grid size={{ xs: 12 }}>
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={1} mt={1} gap={2}>
+                        <Box
+              display="flex"
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              justifyContent="space-between"
+              flexWrap="wrap"
+              mb={1} mt={1} gap={1.5}
+            >
               <Box>
                 <CustomInputLabel label="Company Phone Numbers (Optional)" />
                 <Typography fontSize="11px" color="text.secondary">
@@ -726,6 +732,7 @@ const handleFormatsChange = (next) => {
                     ? 0.5 : 1,
                   border: "1px solid #E5E7EB", fontSize: "12px", fontWeight: 500,
                   whiteSpace: "nowrap", flexShrink: 0,
+                  ml: { xs: "auto", sm: 0 },
                   "&:hover": { backgroundColor: "#F9FAFB" },
                 }}
               >

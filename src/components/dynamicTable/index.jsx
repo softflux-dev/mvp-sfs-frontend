@@ -1452,7 +1452,42 @@ case "payroll_deductions":
       </Typography>
     </TableCell>
   );
+// ── Payroll — shortfall deduction (red) ───────────────────────────────────
+case "payroll_shortfall_deduction":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#FF0000">
+        {row.deductions ? format(row.deductions, { decimals: 0 }) : "-"}
+      </Typography>
+    </TableCell>
+  );
 
+// ── Payroll — unpaid leave deduction (red) ────────────────────────────────
+case "payroll_unpaid_leave_deduction":
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={500} color="#FF0000">
+        {row.unpaidLeaveDeduction ? format(row.unpaidLeaveDeduction, { decimals: 0 }) : "-"}
+      </Typography>
+      {row.unpaidLeaveDeduction > 0 && (
+        <Typography fontSize="10px" color="text.secondary">
+          {row.unpaidLeaveDays || 0} day(s)
+        </Typography>
+      )}
+    </TableCell>
+  );
+
+// ── Payroll — total deduction (shortfall + unpaid leave), bold ───────────
+case "payroll_total_deduction": {
+  const total = (row.deductions || 0) + (row.unpaidLeaveDeduction || 0);
+  return (
+    <TableCell key={val}>
+      <Typography fontSize="13px" fontWeight={700} color="#FF0000">
+        {total ? format(total, { decimals: 0 }) : "-"}
+      </Typography>
+    </TableCell>
+  );
+}
 case "payroll_net_pay":
   return (
     <TableCell key={val}>
@@ -2905,6 +2940,24 @@ case "dept_employees":
       </Typography>
     </TableCell>
   );
+
+  // ── Department status chip (Active / Inactive) ─────────────────────────────
+case "dept_status": {
+  const isActive = row.status !== "Inactive";
+  return (
+    <TableCell key={val}>
+      <Chip
+        label={isActive ? "Active" : "Inactive"}
+        sx={{
+          height: "24px", fontSize: "12px", fontWeight: 500,
+          px: 1, borderRadius: "12px",
+          backgroundColor: isActive ? "#04C3731A" : "#FF00001A",
+          color:           isActive ? "#04C373"   : "#FF0000",
+        }}
+      />
+    </TableCell>
+  );
+}
 case "task_assignees": {
   const ALL_ASSIGNEES = [
     { value: "sara_ahmed", label: "Sara Ahmed"    },
@@ -3489,8 +3542,8 @@ case "att_summary_balance":
     : tableData?.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   return (
-    <TableContainer>
-      <Table sx={{ width: tableWidth || "100%", borderCollapse: "separate", borderSpacing: "0 8px" }}>
+    <TableContainer sx={{ overflowX: "auto" }}>
+      <Table sx={{ width: tableWidth || "100%", minWidth: "900px", borderCollapse: "separate", borderSpacing: "0 8px" }}>
         <TableHead>
           <TableRow>
             {tableHeader.map((h, index) => (

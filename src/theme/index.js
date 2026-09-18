@@ -633,6 +633,27 @@ const getTheme = (direction = "ltr") =>
           },
         ],
       },
+      MuiButtonBase: {
+  styleOverrides: {
+    root: {
+      // Mouse/touch clicks were leaving the browser's default focus
+      // ring "stuck" on the element until the user clicked elsewhere —
+      // :focus fires on any click, not just keyboard nav. Suppressing
+      // it here (system-wide, since every IconButton/Button/clickable
+      // Chip extends MuiButtonBase) while keeping :focus-visible means
+      // mouse clicks get the normal brief hover/active feedback and
+      // return to normal, but keyboard (Tab) navigation still shows a
+      // clear focus ring for accessibility.
+      "&:focus:not(.Mui-focusVisible)": {
+        outline: "none",
+      },
+      "&.Mui-focusVisible": {
+        outline: "2px solid #AA2493",
+        outlineOffset: "2px",
+      },
+    },
+  },
+},
 
       MuiTypography: {
         styleOverrides: {

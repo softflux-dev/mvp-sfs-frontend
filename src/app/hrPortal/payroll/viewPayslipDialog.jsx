@@ -124,10 +124,9 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
            {[
               { label: "Required Hours",  value: `${payroll.requiredHours  || 0} hrs` },
               { label: "Actual Hours",    value: `${payroll.actualHours    || 0} hrs` },
-              (payroll.extraHours || 0) > 0
-                ? { label: "Extra Hours (Paid)", value: `${payroll.extraHours} hrs`, color: "#04C373" }
-                : { label: "Shortfall Hours", value: `${payroll.shortfallHours || 0} hrs`, color: (payroll.shortfallHours||0) > 0 ? "#FF3B30" : "text.primary" },
-             { label: "Hourly Rate", value: `${format(payroll.hourlyRate || 0)}/hr` },
+              { label: "Extra Hours (Paid)", value: `${payroll.extraHours || 0} hrs`, color: (payroll.extraHours || 0) > 0 ? "#04C373" : "text.secondary" },
+              { label: "Shortfall Hours",    value: `${payroll.shortfallHours || 0} hrs`, color: (payroll.shortfallHours || 0) > 0 ? "#FF3B30" : "text.secondary" },
+              { label: "Hourly Rate", value: `${format(payroll.hourlyRate || 0)}/hr` },
             ].map((r) => (
               <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
                 <Typography fontSize="13px" color="text.secondary">{r.label}</Typography>
@@ -135,25 +134,43 @@ const ViewPayslipDialog = ({ open, onClose, payroll = {}, month, year }) => {
               </Box>
             ))}
             <Divider sx={{ my: 1.5, borderColor: "#E5E7EB" }} />
-            {[
-             { label: "Base Salary", value: format(payroll.baseSalary || 0, { decimals: 0 }) },
-             { label: "Bonus",       value: `+ ${format(payroll.bonus || 0, { decimals: 0 })}`, color: "#04C373" },
-            ...(payroll.extraAmount > 0 ? [{ label: "Overtime Pay", value: `+ ${format(payroll.extraAmount || 0, { decimals: 0 })}`, color: "#04C373" }] : []),
-            { label: "Shortfall Deduction",  value: `- ${format(payroll.deductions || 0, { decimals: 0 })}`, color: "#FF3B30" },
-            // NEW — was missing entirely, even though netSalary already
-            // subtracts it. Without this row the visible breakdown never
-            // added up to the Net Pay shown below.
-            ...(payroll.unpaidLeaveDeduction > 0 ? [{
-              label: "Unpaid Leave Deduction",
-              value: `- ${format(payroll.unpaidLeaveDeduction || 0, { decimals: 0 })}`,
-              color: "#FF3B30",
-            }] : []),
-            ].map((r) => (
-              <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
-                <Typography fontSize="13px" color="text.secondary">{r.label}</Typography>
-                <Typography fontSize="13px" fontWeight={500} color={r.color || "text.primary"}>{r.value}</Typography>
-              </Box>
-            ))}
+           {[
+ { label: "Base Salary", value: format(payroll.baseSalary || 0, { decimals: 0 }) },
+ { label: "Bonus",       value: `+ ${format(payroll.bonus || 0, { decimals: 0 })}`, color: "#04C373" },
+{ label: "Extra Hours Pay", value: `+ ${format(payroll.extraAmount || 0, { decimals: 0 })}`, color: (payroll.extraAmount || 0) > 0 ? "#04C373" : "text.secondary" },
+].map((r) => (
+  <Box key={r.label} display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
+    <Typography fontSize="13px" color="text.secondary">{r.label}</Typography>
+    <Typography fontSize="13px" fontWeight={500} color={r.color || "text.primary"}>{r.value}</Typography>
+  </Box>
+))}
+
+{/* ── Deductions — always shown as three clearly separate rows ─────────── */}
+<Box display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
+  <Typography fontSize="13px" color="text.secondary">Shortfall Deduction</Typography>
+  <Typography fontSize="13px" fontWeight={500} color="#FF3B30">
+    - {format(payroll.deductions || 0, { decimals: 0 })}
+  </Typography>
+</Box>
+
+<Box display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
+  <Box>
+    <Typography fontSize="13px" color="text.secondary">Unpaid Leave Deduction</Typography>
+    {(payroll.unpaidLeaveDays || 0) > 0 && (
+      <Typography fontSize="10px" color="text.secondary">{payroll.unpaidLeaveDays} day(s)</Typography>
+    )}
+  </Box>
+  <Typography fontSize="13px" fontWeight={500} color="#FF3B30">
+    - {format(payroll.unpaidLeaveDeduction || 0, { decimals: 0 })}
+  </Typography>
+</Box>
+
+<Box display="flex" justifyContent="space-between" py={1} sx={{ borderBottom: "1px solid #F3F4F6" }}>
+  <Typography fontSize="13px" fontWeight={700} color="text.primary">Total Deduction</Typography>
+  <Typography fontSize="13px" fontWeight={700} color="#FF3B30">
+    - {format((payroll.deductions || 0) + (payroll.unpaidLeaveDeduction || 0), { decimals: 0 })}
+  </Typography>
+</Box>
             <Divider sx={{ my: 1.5, borderColor: "#E5E7EB" }} />
             <Box display="flex" justifyContent="space-between" alignItems="center" py={1}>
               <Typography fontSize="15px" fontWeight={700} color="text.primary">Net Pay</Typography>

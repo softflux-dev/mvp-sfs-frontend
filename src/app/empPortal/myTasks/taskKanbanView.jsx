@@ -206,6 +206,7 @@ const TaskKanbanView = ({ tasks = [], loading, stages = DEFAULT_STAGES, onTaskSt
                             assignee={task.assigneeAvatar || task.assignees?.[0]?.avatar || ""}
                             assignees={task.assignees}
                             project={task.projectName || task.project || ""}
+                              module={task.module}   
                             onClick={() =>
                               navigate(`/emp/tasks/${task._id || task.id}`, {
                                 state: { task, role: "employee" },

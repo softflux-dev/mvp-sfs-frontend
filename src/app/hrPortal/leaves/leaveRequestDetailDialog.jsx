@@ -65,10 +65,19 @@ const BalanceRow = ({ label, total, used, remaining, highlight }) => {
   const pct      = total > 0 ? Math.min(Math.round((used / total) * 100), 100) : 0;
   const depleted = remaining <= 0;
   return (
-    <Box sx={{ p: 1.5, borderRadius: "10px", border: highlight ? "1.5px solid #AA2493" : "1px solid #F0F0F0", backgroundColor: highlight ? "#FAF0FF" : "transparent" }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={0.75}>
-        <Typography fontSize="12px" fontWeight={highlight ? 700 : 500} color="text.primary">{label}</Typography>
-        <Typography fontSize="12px" fontWeight={700} color={depleted ? "#DC2626" : "#04C373"}>{remaining} / {total} left</Typography>
+        <Box sx={{ p: 1.5, borderRadius: "10px", border: highlight ? "1.5px solid #AA2493" : "1px solid #F0F0F0", backgroundColor: highlight ? "#FAF0FF" : "transparent", minWidth: 0, overflow: "hidden" }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" rowGap={0.5} mb={0.75}>
+       <Typography
+          fontSize="12px"
+          fontWeight={highlight ? 700 : 500}
+          color="text.primary"
+          sx={{ minWidth: 0, flex: "1 1 140px", overflowWrap: "anywhere", wordBreak: "break-word" }}
+        >
+          {label}
+        </Typography>
+        <Typography fontSize="12px" fontWeight={700} color={depleted ? "#DC2626" : "#04C373"} sx={{ whiteSpace: "nowrap", flexShrink: 0 }}>
+          {remaining} / {total} left
+        </Typography>
       </Box>
       <Box sx={{ height: 5, borderRadius: 3, backgroundColor: "#F0F0F0", overflow: "hidden" }}>
         <Box sx={{ height: "100%", width: `${pct}%`, borderRadius: 3, backgroundColor: depleted ? "#DC2626" : "#AA2493", transition: "width 0.3s ease" }} />
@@ -241,16 +250,16 @@ const LeaveRequestDetailDialog = ({ open, onClose, leave = {}, onApprove, onReje
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
 
             {/* Employee */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 2, backgroundColor: "#F5F5F5", borderRadius: "14px", px: 2.5, py: 2 }}>
-              <Avatar src={leave.avatar} sx={{ width: 52, height: 52, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "20px", fontWeight: 700 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap", rowGap: 1, backgroundColor: "#F5F5F5", borderRadius: "14px", px: 2.5, py: 2 }}>
+              <Avatar src={leave.avatar} sx={{ width: 52, height: 52, background: "linear-gradient(135deg, #AA2493, #022179)", fontSize: "20px", fontWeight: 700, flexShrink: 0 }}>
                 {leave.name?.charAt(0)}
               </Avatar>
-              <Box>
-                <Typography fontSize="16px" fontWeight={700} color="text.primary">{leave.name || "—"}</Typography>
-                <Typography fontSize="12px" color="text.secondary">{leave.role || "—"}</Typography>
-                {leave.empId && <Typography fontSize="11px" color="text.secondary">{leave.empId}</Typography>}
+              <Box sx={{ minWidth: 0, flex: "1 1 auto" }}>
+                <Typography fontSize="16px" fontWeight={700} color="text.primary" noWrap>{leave.name || "—"}</Typography>
+                <Typography fontSize="12px" color="text.secondary" noWrap>{leave.role || "—"}</Typography>
+                {leave.empId && <Typography fontSize="11px" color="text.secondary" noWrap>{leave.empId}</Typography>}
               </Box>
-              <Box ml="auto">
+              <Box sx={{ ml: { xs: 0, sm: "auto" }, flexShrink: 0 }}>
                 <Chip label={leave.status || "Pending"} size="small" sx={{ height: "26px", fontSize: "12px", fontWeight: 600, px: 1, borderRadius: "8px", backgroundColor: statusCfg.bg, color: statusCfg.color }} />
               </Box>
             </Box>
@@ -567,19 +576,20 @@ const LeaveRequestDetailDialog = ({ open, onClose, leave = {}, onApprove, onReje
             <Divider />
 
             {/* HR Notes */}
-            <Box>
-              <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
-                <CustomInputLabel label={isPending ? "HR Notes / Rejection Reason" : "HR Notes"} />
-                {isPending && <Typography fontSize="11px" color="text.secondary">(optional unless rejecting)</Typography>}
+              <Box>
+                <Box display="flex" alignItems="center" gap={0.5} mb={0.5}>
+                  <CustomInputLabel label={isPending ? "HR Notes / Rejection Reason" : "HR Notes"} />
+                  {isPending && <Typography fontSize="11px" color="text.secondary">(optional unless rejecting)</Typography>}
+                </Box>
+                <TextInput
+              placeholder={isPending ? "Add a note, or explain the reason if rejecting..." : (leave.hrNotes || "No notes added.")}
+              value={hrNotes}
+              onChange={(e) => { if (!isPending) return; setHrNotes(e.target.value); if (notesError) setNotesError(""); }}
+              inputBgColor="#F5F5F5" fullWidth multiline rows={3}
+              readonly={!isPending}
+              error={!!notesError} helperText={notesError}
+            />
               </Box>
-              <TextInput
-                placeholder={isPending ? "Add a note, or explain the reason if rejecting..." : (leave.hrNotes || "No notes added.")}
-                value={hrNotes}
-                onChange={(e) => { if (!isPending) return; setHrNotes(e.target.value); if (notesError) setNotesError(""); }}
-                inputBgColor="#F5F5F5" fullWidth multiline rows={3}
-                InputProps={{ readOnly: !isPending }} error={!!notesError} helperText={notesError}
-              />
-            </Box>
 
           </Box>
         </DialogBody>

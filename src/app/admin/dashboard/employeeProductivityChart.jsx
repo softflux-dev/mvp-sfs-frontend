@@ -75,14 +75,27 @@ const EmployeeProductivityChart = () => {
           <ChevronDown size={16} />
         </Box>
 
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={() => setAnchorEl(null)}
-          PaperProps={{ sx: { borderRadius: "18px", minWidth: 200, p: "12px", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", mt: 1 } }}
-          transformOrigin={{ horizontal: "right", vertical: "top" }}
-          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-        >
+       <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={() => setAnchorEl(null)}
+        PaperProps={{
+          sx: {
+            borderRadius: "18px",
+            width: 220,
+            maxHeight: 280,
+            overflowY: "auto",
+            p: "12px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+            mt: 1,
+            "&::-webkit-scrollbar": { width: 6 },
+            "&::-webkit-scrollbar-track": { background: "transparent" },
+            "&::-webkit-scrollbar-thumb": { background: "#E0E0E0", borderRadius: 4 },
+          },
+        }}
+        transformOrigin={{ horizontal: "right", vertical: "top" }}
+        anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+      >
           <MenuItem
             onClick={() => { setSelectedEmployee(null); setAnchorEl(null); }}
             sx={{

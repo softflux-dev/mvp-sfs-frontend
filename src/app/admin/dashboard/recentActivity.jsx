@@ -1,6 +1,7 @@
 // RecentActivity.jsx
 import React from "react";
 import { Box, Typography, Stack, CircularProgress, styled } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import RecentActivityCard from "../../../components/cards/recentActivityCard";
 
 const ScrollContainer = styled(Box)({
@@ -13,6 +14,8 @@ const ScrollContainer = styled(Box)({
 });
 
 const RecentActivity = ({ activity = [], loading = false }) => {
+  const navigate = useNavigate();
+
   return (
     <Box sx={{
       backgroundColor: "#fff",
@@ -41,7 +44,11 @@ const RecentActivity = ({ activity = [], loading = false }) => {
         <ScrollContainer>
           <Stack spacing={1.5}>
             {activity.map((item) => (
-              <RecentActivityCard key={item.id} item={item} />
+              <RecentActivityCard
+                key={item.id}
+                item={item}
+                onClick={item.taskDocId ? () => navigate(`/projects/tasks/${item.taskDocId}`) : undefined}
+              />
             ))}
           </Stack>
         </ScrollContainer>

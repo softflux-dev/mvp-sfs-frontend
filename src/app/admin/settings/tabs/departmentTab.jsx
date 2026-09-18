@@ -13,10 +13,11 @@ const tableHeader = [
   { id: "name",        label: "Department Name" },
   { id: "description", label: "Description"     },
   { id: "employees",     label: "Employees"       },
+   { id: "status",      label: "Status"          },
   { id: "actions",     label: "Actions"         },
 ];
 
-const displayRows = ["dept_name", "dept_description", "dept_employees", "actions_menu"];
+const displayRows = ["dept_name", "dept_description", "dept_employees","dept_status", "actions_menu"];
 
 const menuOptions = [
   { value: "edit",   label: "Edit"                     },
@@ -45,38 +46,74 @@ const DepartmentTab = () => {
 
   const confirmDialogRef = useRef();
 
-  // map API shape → table row shape
-  const tableData = departments.map((dept) => ({
-    id:          dept._id,
-    name:        dept.name,
-    description: dept.description || "—",
-    employees:     dept.employeeCount ?? 0, 
-  }));
+ // map API shape → table row shape
+const tableData = departments.map((dept) => ({
+  id:          dept._id,
+  name:        dept.name,
+  description: dept.description || "—",
+  employees:   dept.employeeCount ?? 0,
+  status:      dept.isActive === false ? "Inactive" : "Active",   
+  isActive:    dept.isActive !== false,
+}));
+
+// ── Dynamic menu per row — Deactivate/Activate replaces a static list ──────
+const menuOptions = (row) => [
+  { value: "edit", label: "Edit" },
+  {
+    value: row.isActive ? "deactivate" : "activate",
+    label: row.isActive ? "Deactivate" : "Activate",
+  },
+  { value: "delete", label: "Delete", color: "#FF0000" },
+];
 
   const handleMenuAction = (action, row) => {
-    if (action === "edit") {
-      setEditingDept(row);
-      setOpenModal(true);
-    }
+  if (action === "edit") {
+    setEditingDept(row);
+    setOpenModal(true);
+  }
 
-    if (action === "delete") {
-      confirmDialogRef.current?.open({
-        title:       "Delete Department?",
-        description: `"${row.name}" will be permanently removed.`,
-        confirmText: "Yes, Delete",
-        cancelText:  "Cancel",
-        onConfirm:   async () => {
-          const result = await deleteDepartment(row.id);
-          if (result.success) {
-            setSuccessMsg(result.message);
-            setShowSuccess(true);
-          } else {
-            setApiError(result.message);
-          }
-        },
-      });
-    }
-  };
+  // ── Deactivate / Activate — keeps the department (and its history)
+  // in the system, just flips isActive so it stops showing up as an
+  // option when assigning new employees. ─────────────────────────────────
+  if (action === "deactivate" || action === "activate") {
+    const nextActive = action === "activate";
+    confirmDialogRef.current?.open({
+      title:       nextActive ? "Activate Department?" : "Deactivate Department?",
+      description: nextActive
+        ? `"${row.name}" will become available again for assigning employees.`
+        : `"${row.name}" will no longer be available when assigning new employees. Existing employees and historical data stay as they are.`,
+      confirmText: nextActive ? "Yes, Activate" : "Yes, Deactivate",
+      cancelText:  "Cancel",
+      onConfirm: async () => {
+        const result = await updateDepartment(row.id, { isActive: nextActive });
+        if (result.success) {
+          setSuccessMsg(nextActive ? "Department activated successfully." : "Department deactivated successfully.");
+          setShowSuccess(true);
+        } else {
+          setApiError(result.message);
+        }
+      },
+    });
+  }
+
+  if (action === "delete") {
+    confirmDialogRef.current?.open({
+      title:       "Delete Department?",
+      description: `"${row.name}" will be permanently removed.`,
+      confirmText: "Yes, Delete",
+      cancelText:  "Cancel",
+      onConfirm:   async () => {
+        const result = await deleteDepartment(row.id);
+        if (result.success) {
+          setSuccessMsg(result.message);
+          setShowSuccess(true);
+        } else {
+          setApiError(result.message);   // ← now shows the reassignment-required message
+        }
+      },
+    });
+  }
+};
 
   const handleSave = async (formData) => {
     let result;
@@ -107,7 +144,7 @@ const DepartmentTab = () => {
     <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", p: 3 }}>
 
       {/* Header */}
-      <Grid container alignItems="center" mb={3}>
+            <Grid container alignItems="center" spacing={1.5} mb={3}>
         <Grid size={{ xs: 12, md: 8 }}>
           <Typography fontSize="18px" fontWeight={600} color="text.darkGray">
             Departments
@@ -117,7 +154,7 @@ const DepartmentTab = () => {
           </Typography>
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <Box display="flex" justifyContent="flex-end">
+          <Box display="flex" justifyContent={{ xs: "flex-start", md: "flex-end" }} mt={{ xs: 1, md: 0 }}>
             <CustomButton
               btnLabel="Add Department"
               variant="gradient"

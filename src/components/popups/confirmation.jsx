@@ -150,6 +150,7 @@ const ConfirmationDialog = forwardRef(({ defaultOptions = {} }, ref) => {
           handlePressBtn={handleConfirm}
           variant="gradient"
           width="120px"
+           isDisabled={dialogState.confirmDisabled} 
         />
       </Box>
     </DialogContainer>

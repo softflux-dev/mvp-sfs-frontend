@@ -16,7 +16,7 @@ const DAY_STATUS_CONFIG = {
 
 // Friendlier chip label for the unpaid variant — the raw enum value reads oddly.
 const DAY_STATUS_LABEL = {
-  "Leave-Unpaid": "Unpaid Leave",
+  "Leave-Unpaid": "Absent (Unpaid Leave)",  
 };
 
 const LegendDot = ({ color, label }) => (
@@ -96,7 +96,7 @@ const MonthlyAttendanceView = ({ selectedMonth, selectedYear }) => {
             <LegendDot color="#FF0000" label="Absent"  />
             <LegendDot color="#F97316" label="Late"    />
             <LegendDot color="#2B6EFF" label="Leave (Paid)" />
-            <LegendDot color="#F59E0B" label="Leave (Unpaid)" />
+           <LegendDot color="#F59E0B" label="Absent (Unpaid Leave)" />
             <LegendDot color="#AA2493" label="Holiday" />
             <LegendDot color="#9CA3AF" label="Off Day" />
           </Box>

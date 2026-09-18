@@ -6,7 +6,7 @@ import {
   sendMessageRestApi, getConversationUsersApi,
   editMessageRestApi, deleteMessageRestApi,
   updateConversationApi, deleteConversationApi,
-  removeMemberApi, uploadAttachmentsApi,
+  removeMemberApi, uploadAttachmentsApi, makeGroupAdminApi, removeGroupAdminApi, transferOwnershipApi,
 } from "../../api/modules/messages";
 import { getSocket, emitWithAck } from "../../utils/socketManager";
 
@@ -280,7 +280,34 @@ export const useConversationActions = () => {
     finally { setLoading(false); }
   }, []);
 
-  return { loading, renameGroup, deleteConversation, kickMember };
+ const makeGroupAdmin = useCallback(async (convId, memberId) => {
+  setLoading(true);
+  try {
+    const res = await makeGroupAdminApi(convId, memberId);
+    return res?.status === 200 ? { success: true } : { success: false, message: res?.data?.message };
+  } catch (err) { return { success: false, message: err?.response?.data?.message }; }
+  finally { setLoading(false); }
+}, []);
+
+const removeGroupAdmin = useCallback(async (convId, memberId) => {
+  setLoading(true);
+  try {
+    const res = await removeGroupAdminApi(convId, memberId);
+    return res?.status === 200 ? { success: true } : { success: false, message: res?.data?.message };
+  } catch (err) { return { success: false, message: err?.response?.data?.message }; }
+  finally { setLoading(false); }
+}, []);
+
+const transferOwnership = useCallback(async (convId, newOwnerId) => {
+  setLoading(true);
+  try {
+    const res = await transferOwnershipApi(convId, newOwnerId);
+    return res?.status === 200 ? { success: true } : { success: false, message: res?.data?.message };
+  } catch (err) { return { success: false, message: err?.response?.data?.message }; }
+  finally { setLoading(false); }
+}, []);
+
+return { loading, renameGroup, deleteConversation, kickMember, makeGroupAdmin, removeGroupAdmin, transferOwnership };
 };
 
 // ── useConversationUsers ──────────────────────────────────────────────────────

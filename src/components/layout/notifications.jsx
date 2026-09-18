@@ -97,12 +97,12 @@ function resolveNotificationRoute(n, role) {
   }
 
 // ── Task assigned / task status updated ─────────────────────────────────
-  if (TASK_ASSIGN_STATUS_TYPES.includes(type)) {
-    if (role === "EMPLOYEE" || role === "HR")    return data.taskId ? `/emp/tasks/${data.taskId}` : "/my-tasks";
-    if (role === "PROJECT_MANAGER")              return "/task-management";
-    if (role === "ADMIN" && data.taskId)         return `/projects/tasks/${data.taskId}`;
+if (TASK_ASSIGN_STATUS_TYPES.includes(type)) {
+    if (role === "EMPLOYEE" || role === "HR")       return data.taskId ? `/emp/tasks/${data.taskId}` : "/my-tasks";
+    if (role === "PROJECT_MANAGER")                 return data.taskId ? `/pm-tasks/${data.taskId}` : "/task-management";
+    if (role === "ADMIN" && data.taskId)            return `/projects/tasks/${data.taskId}`;
     return null;
-  }
+}
 
   // ── Other task-related (deadline extended, overdue) ──────────────────
   if (OTHER_TASK_TYPES.includes(type)) {

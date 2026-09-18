@@ -35,3 +35,7 @@ export const uploadAttachmentsApi = (id, formData) =>
 export const getArchivedConversationsApi = ()    => api(`${BASE}/archived`, null, "get");
 export const restoreConversationApi      = (id)  => api(`${BASE}/${id}/restore`, null, "patch");
 export const clearGroupMessagesApi = (id) => api(`${BASE}/${id}/clear-messages`, null, "delete");
+
+export const makeGroupAdminApi    = (id, memberId) => api(`${BASE}/${id}/members/${memberId}/admin`, null, "patch");
+export const removeGroupAdminApi  = (id, memberId) => api(`${BASE}/${id}/members/${memberId}/admin`, null, "delete");
+export const transferOwnershipApi = (id, newOwnerId) => api(`${BASE}/${id}/transfer-ownership`, { newOwnerId }, "patch");

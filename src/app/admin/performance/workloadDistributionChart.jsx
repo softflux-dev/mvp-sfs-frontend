@@ -35,6 +35,12 @@ const CustomTooltip = ({ active, payload }) => {
 
 const WorkloadDistributionChart = ({ data = [], loading = false }) => {
   const maxVal = Math.max(2, ...data.map((d) => d.activeTasks));
+   // ~8px per character at 13px Poppins is closer to real glyph width, plus a
+  // fixed buffer so short names still get breathing room and nothing gets
+  // clipped by the SVG's own boundary (SVG never lets content overflow its
+  // viewBox — an under-sized width silently truncates the label).
+  const yAxisWidth = Math.min(160, Math.max(80, ...data.map((d) => (d.name || "").length * 8 + 20)));
+
 
   return (
     <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", padding: { xs: "16px", md: "24px" }, height: "100%", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
@@ -52,7 +58,7 @@ const WorkloadDistributionChart = ({ data = [], loading = false }) => {
         </Box>
       ) : (
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={data} layout="vertical" barSize={40} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+           <BarChart data={data} layout="vertical" barSize={40} margin={{ top: 0, right: 20, left: 4, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" horizontal={false} />
             <XAxis
               type="number"
@@ -61,13 +67,14 @@ const WorkloadDistributionChart = ({ data = [], loading = false }) => {
               axisLine={{ stroke: "#E5E7EB" }}
               tickLine={false}
             />
-            <YAxis
+              <YAxis
               type="category"
               dataKey="name"
-              width={60}
+              width={yAxisWidth}
               tick={{ fontSize: 13, fill: "#374151", fontFamily: '"Poppins", sans-serif' }}
               axisLine={false}
               tickLine={false}
+              interval={0}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
             <Bar dataKey="activeTasks" shape={<GradientBar />} radius={[0, 6, 6, 0]} />

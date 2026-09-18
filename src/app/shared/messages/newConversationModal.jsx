@@ -44,11 +44,15 @@ const NewConversationModal = ({ open, onClose, onStart }) => {
     }
   }, [open]);
 
-  // Auto-switch to group mode if more than 1 person selected
-  useEffect(() => {
-    if (selected.length > 1) setIsGroup(true);
-    if (selected.length <= 1 && isGroup && selected.length < 2) setIsGroup(false);
-  }, [selected.length]);
+// Auto-switch to group mode if more than 1 person selected. Works for
+// everyone — Admin/PM AND Employees. An employee ending up in group mode
+// this way is fine: the backend (createOrGetConversation) already routes
+// non-Admin/non-PM group creation to type:"group", so it can never land
+// in Project Chats regardless of who created it.
+useEffect(() => {
+  if (selected.length > 1) setIsGroup(true);
+  if (selected.length <= 1 && isGroup && selected.length < 2) setIsGroup(false);
+}, [selected.length]);
 
   const togglePerson = (person) => {
     const exists = selected.find((p) => p._id === person._id);
@@ -197,16 +201,16 @@ const NewConversationModal = ({ open, onClose, onStart }) => {
                 const isSelected = selected.some((p) => p._id === person._id);
                 return (
                   <Box
-                    key={person._id}
-                    onClick={() => isAdminOrPM || !isGroup ? togglePerson(person) : undefined}
-                    sx={{
-                      display: "flex", alignItems: "center", gap: 1.5,
-                      px: 1.5, py: 1, borderRadius: "10px", cursor: "pointer",
-                      backgroundColor: isSelected ? "#AA249308" : "#fff",
-                      transition: "all 0.15s ease",
-                      "&:hover": { backgroundColor: isSelected ? "#AA249315" : "#F9F9F9" },
-                    }}
-                  >
+                  key={person._id}
+                  onClick={() => togglePerson(person)}
+                  sx={{
+                    display: "flex", alignItems: "center", gap: 1.5,
+                    px: 1.5, py: 1, borderRadius: "10px", cursor: "pointer",
+                    backgroundColor: isSelected ? "#AA249308" : "#fff",
+                    transition: "all 0.15s ease",
+                    "&:hover": { backgroundColor: isSelected ? "#AA249315" : "#F9F9F9" },
+                  }}
+                >
                     {/* Show checkbox in group mode or multi-select */}
                     {(isGroup || isAdminOrPM) && (
                       <Checkbox

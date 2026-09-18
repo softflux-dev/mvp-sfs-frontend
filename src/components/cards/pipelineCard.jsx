@@ -4,9 +4,9 @@ import commentIcon     from "../../assets/icons/message-icon.svg";
 import attachmentIcon  from "../../assets/icons/attach-icon.svg"; 
 
 const PRIORITY_CONFIG = {
-  High:   { bg: "#04C3731A", color: "#04C373" },
-  Medium: { bg: "#AA24931A", color: "#AA2493" },
-  Low:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
+  high:   { bg: "#FF3B301A", color: "#FF3B30" },
+  medium: { bg: "#AA24931A", color: "#AA2493" },
+  low:    { bg: "#2B6EFF1A", color: "#2B6EFF" },
 };
 
 const PipelineCard = ({
@@ -19,9 +19,10 @@ const PipelineCard = ({
   assignee     = "",
   assigneeName = "",
   project      = "",
+   module       = "",  
   onClick, 
 }) => {
-  const pcfg = PRIORITY_CONFIG[priority] || { bg: "#F5F5F5", color: "#757575" };
+    const pcfg = PRIORITY_CONFIG[priority?.toLowerCase()] || { bg: "#F5F5F5", color: "#757575" };
 
   return (
     <Box
@@ -74,10 +75,12 @@ const PipelineCard = ({
         {title}
       </Typography>
 
-      {/* ── Project subtitle ─────────────────────────────────────────────── */}
-      {project && (
+     {/* ── Project + Module subtitle ────────────────────────────────────── */}
+      {(project || module) && (
         <Typography fontSize="11px" color="text.secondary" mb={1.5}>
           {project}
+          {project && module && "  •  "}
+          {module}
         </Typography>
       )}
 

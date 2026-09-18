@@ -113,19 +113,20 @@ useEffect(() => {
         Configurable Notifications
       </Typography>
 
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mb: 3 }}>
         {TOGGLEABLE.map(({ key, label }) => (
           <Box
             key={key}
             sx={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
+              flexWrap: "wrap", rowGap: 1,
               backgroundColor: "#F5F5F5", borderRadius: "12px", px: 2, py: 1.5,
             }}
           >
-            <Typography fontSize="13px" fontWeight={500} color="text.primary">
+            <Typography fontSize="13px" fontWeight={500} color="text.primary" sx={{ minWidth: 0, flexShrink: 1 }}>
               {label}
             </Typography>
-            <Box display="flex" alignItems="center" gap={2}>
+            <Box display="flex" alignItems="center" gap={2} flexWrap="wrap" sx={{ ml: "auto" }}>
               {/* Email toggle */}
               <Box display="flex" alignItems="center" gap={0.75}>
                 <CustomSwitch
@@ -177,11 +178,12 @@ useEffect(() => {
             key={key}
             sx={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
+              flexWrap: "wrap", rowGap: 1,
               backgroundColor: "#F9F9F9", borderRadius: "12px", px: 2, py: 1.5,
               border: "1px solid #F0F0F0",
             }}
           >
-            <Typography fontSize="13px" fontWeight={500} color="text.secondary">
+            <Typography fontSize="13px" fontWeight={500} color="text.secondary" sx={{ minWidth: 0, flexShrink: 1 }}>
               {label}
             </Typography>
             <Box

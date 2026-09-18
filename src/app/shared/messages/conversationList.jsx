@@ -80,6 +80,7 @@ const ArchivedItem = ({ conversation, onRestore, onDelete }) => {
 const ConversationList = ({
   directMessages = [],
   projectChats   = [],
+  personalGroups = [],
   activeId,
   onSelect,
   onNewConversation,
@@ -212,6 +213,22 @@ const ConversationList = ({
                     currentUserRole={currentUserRole}
                     onlineUsers={onlineUsers}
                     onDeleted={handleGroupDeleted}
+                  />
+                ))
+            }
+
+            <SectionLabel label="My Groups" />
+            {personalGroups.length === 0
+              ? <EmptySection label="My Groups" />
+              : personalGroups.map((conv) => (
+                  <ConversationItem
+                    key={conv._id} conversation={conv}
+                    isActive={activeId === conv._id}
+                    onClick={() => onSelect(conv)}
+                    currentUserId={currentUserId}
+                    currentUserRole={currentUserRole}
+                    onlineUsers={onlineUsers}
+                    onDeleted={onConversationDeleted}
                   />
                 ))
             }

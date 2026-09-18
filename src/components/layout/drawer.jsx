@@ -109,6 +109,21 @@ const visibleRoutes = React.useMemo(() => {
     }
   }
 
+  // ── Always guarantee the role's own Dashboard/home page shows up,
+  //    even if it was left out of the role's saved page list. It's
+  //    the landing page login and the logo click already send people
+  //    to (see ROLE_HOME here and in RoutesLayout.jsx), so omitting
+  //    it from a role's permissions is never really an intentional
+  //    restriction — just a checkbox that's easy to miss when
+  //    building a large custom page list. This only ever ADDS the
+  //    home route when missing; every other page still follows
+  //    rolePages exactly as before. ─────────────────────────────────
+  const homePath = ROLE_HOME[user?.role];
+  if (homePath && !seen.has(homePath)) {
+    const homeRoute = ALL_ROUTES.find((r) => !r.isHideMenu && r.path === homePath);
+    if (homeRoute) result.unshift(homeRoute);
+  }
+
   // Always render "Settings" and "Profile" last, regardless of the
   // order rolePages happens to come back in from the backend.
   const isPinnedLast = (route) =>
@@ -118,7 +133,7 @@ const visibleRoutes = React.useMemo(() => {
   const pinned = result.filter((r) => isPinnedLast(r));
 
   return [...normal, ...pinned];
-}, [user?.rolePages, allowedPathSet]);
+}, [user?.rolePages, allowedPathSet, user?.role]);
   
 
     

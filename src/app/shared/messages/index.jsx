@@ -157,6 +157,7 @@ const {
 
   const directMessages = filtered.filter((c) => c.type === "direct");
   const projectChats   = filtered.filter((c) => c.type === "project");
+  const personalGroups = filtered.filter((c) => c.type === "group"); 
 
   return (
     <>
@@ -164,6 +165,7 @@ const {
         <ConversationList
           directMessages={directMessages}
           projectChats={projectChats}
+           personalGroups={personalGroups}
           activeId={activeConversation?._id}
           onSelect={handleSelectConversation}
           onNewConversation={() => setModalOpen(true)}

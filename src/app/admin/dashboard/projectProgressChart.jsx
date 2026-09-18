@@ -1,10 +1,19 @@
 // ProjectProgressChart.jsx
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Menu, MenuItem, CircularProgress } from "@mui/material";
+import { Box, Typography, Menu, MenuItem, CircularProgress, styled } from "@mui/material";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { ChevronDown } from "lucide-react";
 import { getProjectProgressApi } from "../../../api/modules/dashboard";
 import { getProjectTypesApi }    from "../../../api/modules/projectType";
+
+const ScrollContainer = styled(Box)({
+  overflowY: "auto",
+  overflowX: "hidden",
+  paddingRight: "8px",
+  "&::-webkit-scrollbar": { width: 6 },
+  "&::-webkit-scrollbar-track": { background: "transparent" },
+  "&::-webkit-scrollbar-thumb": { background: "#E0E0E0", borderRadius: 4 },
+});
 
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
@@ -22,20 +31,26 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
+// Horizontal gradient — bar now grows left→right, so the gradient stop
+// direction flips from the old vertical (top→bottom) version.
 const GradientBar = (props) => {
   const { x, y, width, height } = props;
   return (
     <g>
       <defs>
-        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="barGradientH" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="#AA2493" />
           <stop offset="100%" stopColor="#022179" />
         </linearGradient>
       </defs>
-      <rect x={x} y={y} width={width} height={height} fill="url(#barGradient)" rx={8} ry={8} />
+      <rect x={x} y={y} width={width} height={height} fill="url(#barGradientH)" rx={6} ry={6} />
     </g>
   );
 };
+
+const BAR_HEIGHT   = 42;   // px per project row
+const MIN_HEIGHT   = 260;
+const MAX_VISIBLE  = 400;  // card never grows past this — beyond it, scroll
 
 const ProjectProgressChart = () => {
   const [projectTypes,    setProjectTypes]    = useState([]);
@@ -44,7 +59,6 @@ const ProjectProgressChart = () => {
   const [anchorEl,        setAnchorEl]        = useState(null);
   const [loading,         setLoading]         = useState(true);
 
-  // Fetch project types for dropdown
   useEffect(() => {
     getProjectTypesApi().then((res) => {
       if (res?.status === 200 || res?.status === 201) {
@@ -53,7 +67,6 @@ const ProjectProgressChart = () => {
     });
   }, []);
 
-  // Fetch projects when filter changes
   useEffect(() => {
     setLoading(true);
     getProjectProgressApi(selectedType?._id || "").then((res) => {
@@ -63,7 +76,12 @@ const ProjectProgressChart = () => {
     }).finally(() => setLoading(false));
   }, [selectedType]);
 
-  const selectedLabel = selectedType?.label || "All Projects";
+  const selectedLabel = selectedType?.label || "All Project Types";
+
+  // Chart itself is always tall enough to give every bar its full row —
+  // no squeezing rows to fit a fixed height. The OUTER container below is
+  // what caps visible height and introduces the scrollbar.
+  const chartHeight = Math.max(MIN_HEIGHT, chartData.length * BAR_HEIGHT);
 
   return (
     <Box sx={{ backgroundColor: "#fff", borderRadius: "25px", padding: { xs: "16px", md: "24px" }, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
@@ -81,14 +99,26 @@ const ProjectProgressChart = () => {
         </Box>
 
         <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={() => setAnchorEl(null)}
-          PaperProps={{ sx: { borderRadius: "18px", minWidth: 200, p: "12px", boxShadow: "0 8px 32px rgba(0,0,0,0.12)", mt: 1 } }}
-          transformOrigin={{ horizontal: "right", vertical: "top" }}
-          anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
-        >
-          {/* All option */}
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+            PaperProps={{
+              sx: {
+                borderRadius: "18px",
+                width: 220,           // ← fixed width, was minWidth: 200
+                maxHeight: 280,        // ← caps the dropdown height
+                overflowY: "auto",     // ← scrollbar appears when content exceeds maxHeight
+                p: "12px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+                mt: 1,
+                "&::-webkit-scrollbar": { width: 6 },
+                "&::-webkit-scrollbar-track": { background: "transparent" },
+                "&::-webkit-scrollbar-thumb": { background: "#E0E0E0", borderRadius: 4 },
+              },
+            }}
+            transformOrigin={{ horizontal: "right", vertical: "top" }}
+            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+          >
           <MenuItem
             onClick={() => { setSelectedType(null); setAnchorEl(null); }}
             sx={{
@@ -98,7 +128,7 @@ const ProjectProgressChart = () => {
               "&:hover": { background: !selectedType ? "linear-gradient(90deg, #AA2493 0%, #022179 100%)" : "#F5F5F5" },
             }}
           >
-            All Projects
+            All Projects Types
           </MenuItem>
           {projectTypes.map((t) => (
             <MenuItem
@@ -126,27 +156,38 @@ const ProjectProgressChart = () => {
           <Typography fontSize={13} color="text.secondary">No projects found.</Typography>
         </Box>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} barSize={50}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
-            <XAxis
-              dataKey="name"
-              tick={{ fontSize: 11, fill: "#6B7280", fontFamily: '"Poppins", sans-serif' }}
-              axisLine={{ stroke: "#E5E7EB" }}
-              tickLine={false}
-            />
-            <YAxis
-              domain={[0, 100]}
-              ticks={[0, 25, 50, 75, 100]}
-              tickFormatter={(v) => `${v}%`}
-              tick={{ fontSize: 12, fill: "#6B7280", fontFamily: '"Poppins", sans-serif' }}
-              axisLine={{ stroke: "#E5E7EB" }}
-              tickLine={false}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "transparent" }} />
-            <Bar dataKey="progress" shape={<GradientBar />} radius={[8, 8, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <ScrollContainer sx={{ maxHeight: MAX_VISIBLE }}>
+          <ResponsiveContainer width="100%" height={chartHeight}>
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              margin={{ top: 5, right: 40, bottom: 5, left: 10 }}
+              barCategoryGap={12}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" horizontal={false} />
+              <XAxis
+                type="number"
+                domain={[0, 100]}
+                ticks={[0, 25, 50, 75, 100]}
+                tickFormatter={(v) => `${v}%`}
+                tick={{ fontSize: 12, fill: "#6B7280", fontFamily: '"Poppins", sans-serif' }}
+                axisLine={{ stroke: "#E5E7EB" }}
+                tickLine={false}
+              />
+              <YAxis
+            type="category"
+            dataKey="fullName"
+            width={90}
+            interval={0}
+            tick={{ fontSize: 12, fill: "#374151", fontFamily: '"Poppins", sans-serif' }}
+            axisLine={{ stroke: "#E5E7EB" }}
+            tickLine={false}
+          />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "#F9FAFB" }} />
+              <Bar dataKey="progress" shape={<GradientBar />} barSize={18} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ScrollContainer>
       )}
     </Box>
   );
