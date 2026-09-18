@@ -109,30 +109,25 @@ const visibleRoutes = React.useMemo(() => {
     }
   }
 
-  // ── Always guarantee the role's own Dashboard/home page shows up,
-  //    even if it was left out of the role's saved page list. It's
-  //    the landing page login and the logo click already send people
-  //    to (see ROLE_HOME here and in RoutesLayout.jsx), so omitting
-  //    it from a role's permissions is never really an intentional
-  //    restriction — just a checkbox that's easy to miss when
-  //    building a large custom page list. This only ever ADDS the
-  //    home route when missing; every other page still follows
-  //    rolePages exactly as before. ─────────────────────────────────
+  // Ensure the role's own Dashboard/home page is always included,
+  // even if it was left out of the role's saved page list.
   const homePath = ROLE_HOME[user?.role];
   if (homePath && !seen.has(homePath)) {
     const homeRoute = ALL_ROUTES.find((r) => !r.isHideMenu && r.path === homePath);
-    if (homeRoute) result.unshift(homeRoute);
+    if (homeRoute) result.push(homeRoute);
   }
 
-  // Always render "Settings" and "Profile" last, regardless of the
-  // order rolePages happens to come back in from the backend.
+  // ── Reorder: Dashboard always first, Settings/Profile always last,
+  // everything else keeps its original relative order in the middle. ──
+  const isDashboard = (route) => route.path === homePath;
   const isPinnedLast = (route) =>
     route.nameKey === "Settings" || route.nameKey === "Profile";
 
-  const normal = result.filter((r) => !isPinnedLast(r));
-  const pinned = result.filter((r) => isPinnedLast(r));
+  const dashboard = result.filter(isDashboard);
+  const pinned     = result.filter((r) => !isDashboard(r) && isPinnedLast(r));
+  const middle      = result.filter((r) => !isDashboard(r) && !isPinnedLast(r));
 
-  return [...normal, ...pinned];
+  return [...dashboard, ...middle, ...pinned];
 }, [user?.rolePages, allowedPathSet, user?.role]);
   
 
